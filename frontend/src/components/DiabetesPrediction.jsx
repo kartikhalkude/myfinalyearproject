@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { jsPDF } from 'jspdf';
 import apiClient from "../services/apiClient";
 import { SectionCard, Loader, Badge } from "./UI";
-import { CheckCircle, AlertTriangle, Info, Microscope } from "lucide-react";
+import { CheckCircle, AlertTriangle, Info, Microscope, Download, Trash2 } from "lucide-react";
 
 const FIELDS = [
   { name: "pregnancies", label: "Pregnancies", placeholder: "0", step: "1", min: "0", hint: "Number of times pregnant" },
@@ -41,6 +42,87 @@ export default function DiabetesPrediction() {
       apiClient.get("/predictions").then(r => setHistory(r.data)).catch(() => {});
     } catch (err) { setError(err.response?.data?.error || "Prediction failed."); }
     finally { setLoading(false); }
+  };
+
+  const handleClearHistory = async () => {
+    if (!window.confirm("Are you sure you want to clear your entire diabetes screening history?")) return;
+    try {
+      await apiClient.delete("/clear", { data: { type: 'diabetes' } });
+      setHistory([]);
+    } catch (err) { setError("Failed to clear history."); }
+  };
+
+  const downloadReport = () => {
+    if (!prediction) return;
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(15, 23, 42);
+    doc.text("MEDICAL SCREENING REPORT", 105, 20, { align: "center" });
+    
+    doc.setFontSize(16);
+    doc.setTextColor(29, 181, 133); // Emerald-600
+    doc.text("Diabetes Risk Assessment", 105, 30, { align: "center" });
+    
+    doc.setDrawColor(226, 232, 240);
+    doc.line(20, 35, 190, 35);
+    
+    // Info
+    doc.setFontSize(11);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 20, 45);
+    doc.text(`Report ID: DB-${new Date().getTime().toString().slice(-6)}`, 140, 45);
+    
+    // Metrics Section
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text("INPUT METRICS", 20, 60);
+    
+    doc.setFontSize(11);
+    const metrics = [
+      ["Glucose", `${form.glucose} mg/dL`],
+      ["Blood Pressure", `${form.bloodPressure} mm Hg`],
+      ["BMI", form.bmi],
+      ["Age", `${form.age} years`],
+      ["Insulin", `${form.insulin} uU/mL`],
+      ["Pregnancies", form.pregnancies]
+    ];
+    
+    let y = 70;
+    metrics.forEach(([label, val]) => {
+      doc.text(label + ":", 30, y);
+      doc.text(val, 100, y);
+      y += 8;
+    });
+    
+    // Result
+    y += 10;
+    doc.setFontSize(14);
+    doc.text("ASSESSMENT SUMMARY", 20, y);
+    y += 10;
+    doc.setFontSize(12);
+    doc.text(`Risk Level:`, 20, y);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${prediction.risk_level} Risk`, 60, y);
+    doc.setFont("helvetica", "normal");
+    y += 10;
+    doc.text(`Probability:`, 20, y);
+    doc.text(`${(prediction.probability * 100).toFixed(1)}%`, 60, y);
+    
+    // Disclaimer
+    doc.setDrawColor(254, 243, 199);
+    doc.setFillColor(255, 251, 235);
+    doc.rect(20, y + 20, 170, 30, "FD");
+    
+    doc.setFontSize(10);
+    doc.setTextColor(146, 64, 14);
+    doc.text("IMPORTANT DISCLAIMER:", 25, y + 30);
+    doc.setFontSize(9);
+    doc.text("This AI-generated report is for preliminary screening only. It does not replace a clinical diagnosis", 25, y + 35);
+    doc.text("by a medical professional. Please consult your physician for further tests.", 25, y + 40);
+    
+    doc.save(`Diabetes_Report_${new Date().getTime()}.pdf`);
   };
 
   const inputStyle = { width: "100%", padding: "9px 11px", fontSize: 13.5, fontFamily: "inherit", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 9, outline: "none", boxSizing: "border-box", transition: "border-color 0.15s" };
@@ -129,6 +211,15 @@ export default function DiabetesPrediction() {
                     <div style={{ height: "100%", width: `${(prediction.probability * 100).toFixed(1)}%`, background: riskColor === "green" ? "#22c55e" : riskColor === "red" ? "#ef4444" : "#eab308", borderRadius: 999, transition: "width 0.8s ease" }}></div>
                   </div>
                 </div>
+
+                <button 
+                  onClick={downloadReport}
+                  style={{ width: "100%", marginTop: 16, padding: "10px", background: "#0f172a", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                >
+                  <Download size={16} />
+                  Download Medical Report
+                </button>
+
                 <div style={{ marginTop: 14, padding: "10px 12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, fontSize: 12, color: "#92400e", lineHeight: 1.5 }}>
                   <AlertTriangle size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }} /> This is not a medical diagnosis. Always consult a qualified healthcare provider.
                 </div>
@@ -161,9 +252,15 @@ export default function DiabetesPrediction() {
       {/* History */}
       {history.length > 0 && (
         <SectionCard style={{ marginTop: 24 }}>
-          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Prediction history</div>
-            <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>Last {history.length} assessments</div>
+          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Prediction history</div>
+              <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>Last {history.length} assessments</div>
+            </div>
+            <button onClick={handleClearHistory} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#991b1b", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#fee2e2"}} onMouseLeave={e=>{e.currentTarget.style.background="#fef2f2"}}>
+              <Trash2 size={14} />
+              Clear History
+            </button>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>

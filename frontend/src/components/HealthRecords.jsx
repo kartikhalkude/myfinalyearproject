@@ -3,7 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import apiClient from "../services/apiClient";
 import websocketService from "../services/websocket";
 import { SectionCard, EmptyState, Loader, PageHeader } from "./UI";
-import { X, Plus, Edit2, Trash2, FileText, AlertCircle, CheckCircle, Search, Activity, Thermometer, Heart, ClipboardList, Calendar } from "lucide-react";
+import { X, Plus, Edit2, Trash2, FileText, AlertCircle, CheckCircle, Search, Activity, Thermometer, Heart, ClipboardList, Calendar, MessageSquare, ChevronRight, Bell } from "lucide-react";
 
 function EntitySearch({ entities, value, onChange, placeholder = "Search..." }) {
   const [q, setQ] = useState("");
@@ -78,13 +78,14 @@ const inputCls = { width: "100%", padding: "12px 16px", fontSize: 14, fontFamily
 const onFocus = e => { e.target.style.background = "#fff"; e.target.style.borderColor = "#10b981"; e.target.style.boxShadow = "0 0 0 4px rgba(16, 185, 129, 0.1)"; };
 const onBlur = e => { e.target.style.background = "#f8fafc"; e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; };
 
-export default function HealthRecords({ doctorPatients }) {
+export default function HealthRecords({ doctorPatients, onRefresh }) {
   const { user } = useAuth();
   const [records, setRecords] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [viewingRecord, setViewingRecord] = useState(null);
   const [filterType, setFilterType] = useState("all");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -134,12 +135,51 @@ export default function HealthRecords({ doctorPatients }) {
     fetchRecords();
 
     const onCreated = data => { const r = data?.record || (data?._id ? data : null); if (r) setRecords(prev => prev.some(x => x._id === r._id) ? prev : [r, ...prev]); };
-    const onUpdated = data => { const r = data?.record || (data?._id ? data : null); if (r) setRecords(prev => prev.map(x => (x._id === r._id ? r : x))); };
+    const onUpdated = data => { 
+      const r = data?.record || (data?._id ? data : null); 
+      if (r) {
+        setRecords(prev => prev.map(x => (x._id === r._id ? r : x)));
+        setViewingRecord(prev => (prev?._id === r._id ? r : prev));
+      }
+    };
     const onDeleted = data => { const id = data?.recordId || data?._id; if (id) setRecords(prev => prev.filter(x => x._id !== id)); };
 
     websocketService.onHealthRecordCreated(onCreated); websocketService.onHealthRecordUpdated(onUpdated); websocketService.onHealthRecordDeleted(onDeleted);
     return () => { websocketService.offHealthRecordCreated(onCreated); websocketService.offHealthRecordUpdated(onUpdated); websocketService.offHealthRecordDeleted(onDeleted); };
   }, [user?.role, doctorPatients]);
+
+  const openEdit = (record) => {
+    setEditingRecord(record);
+    setFormData({
+      patientId: record.patientId?._id || record.patientId || "",
+      title: record.title || "",
+      type: record.type || record.recordType || "diagnosis",
+      content: record.content || record.description || "",
+      severity: record.severity || "normal",
+      notes: record.notes || "",
+      date: new Date(record.date || record.createdAt).toISOString().split("T")[0]
+    });
+    setShowModal(true);
+  };
+
+  const openFeedback = (record) => {
+    openEdit(record);
+  };
+
+  const openDetail = async (record) => {
+    setViewingRecord(record);
+    if (user?.role === "patient" && !record.readByPatient) {
+      try {
+        // Update locally immediately for better UX
+        setRecords(prev => prev.map(r => r._id === record._id ? { ...r, readByPatient: true } : r));
+        setViewingRecord(prev => ({ ...prev, readByPatient: true }));
+        
+        await apiClient.patch(`/health-records/${record._id}/read`);
+        // Increased delay to ensure DB aggregation (stats) is fully synchronized
+        setTimeout(() => { if (onRefresh) onRefresh(); }, 800);
+      } catch (err) { console.error("Failed to mark as read"); }
+    }
+  };
 
   const handleSubmit = async e => {
     e.preventDefault(); setError(""); setSuccess("");
@@ -173,7 +213,9 @@ export default function HealthRecords({ doctorPatients }) {
         setRecords(prev => [res.data.record || res.data, ...prev]);
         setSuccess(user?.role === "doctor" ? "Health record created successfully" : "Report sent to doctor successfully");
       }
-      setShowModal(false); setFile(null); setTimeout(() => setSuccess(""), 3000);
+      setShowModal(false); setFile(null); 
+      if (onRefresh) onRefresh();
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) { setError(err.response?.data?.error || "Failed to save record"); }
   };
 
@@ -182,6 +224,7 @@ export default function HealthRecords({ doctorPatients }) {
     try {
       await apiClient.delete(`/health-records/${id}`);
       setRecords(prev => prev.filter(r => r._id !== id));
+      if (onRefresh) onRefresh();
       setSuccess("Record deleted"); setTimeout(() => setSuccess(""), 3000);
     } catch (err) { setError("Failed to delete record"); }
   };
@@ -215,63 +258,121 @@ export default function HealthRecords({ doctorPatients }) {
       {loading ? <Loader message="Loading health records..." /> : filteredRecords.length === 0 ? (
         <SectionCard><EmptyState icon={<ClipboardList size={32} color="#94a3b8" />} title="No health records" subtitle={user?.role === "doctor" ? "Create a record for a patient to see it here." : "Your health records will appear here when added by a doctor."} /></SectionCard>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 20 }}>
-          {filteredRecords.map(record => {
+        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(15,23,42,0.03)" }}>
+          {filteredRecords.map((record, idx) => {
             const rType = RECORD_TYPES.find(t => t.value === (record.type || record.recordType)) || RECORD_TYPES[5];
             const severityStyle = SEVERITY_COLORS[record.severity || "normal"] || SEVERITY_COLORS.normal;
+            const isNew = user?.role === "patient" && !record.readByPatient;
+            
             return (
-              <div key={record._id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 4px 12px rgba(15,23,42,0.03)", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 8px 24px rgba(15,23,42,0.08)";}} onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 4px 12px rgba(15,23,42,0.03)";}}>
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, background: "#fafafa" }}>
-                  <div style={{ display: "flex", gap: 14, minWidth: 0 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: rType.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {rType.icon}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.title}</div>
-                      <div style={{ fontSize: 13, color: "#64748b" }}>{user?.role === "doctor" ? `Patient: ${record.patientId?.name || "Unknown"}` : `Dr. ${record.doctorId?.name || record.doctorName || "Unknown"}`}</div>
-                    </div>
-                  </div>
-                  {user?.role === "doctor" && (
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                      <button onClick={() => openEdit(record)} style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#eff6ff";e.currentTarget.style.borderColor="#bfdbfe";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.borderColor="#e2e8f0";}}><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(record._id)} style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#fef2f2";e.currentTarget.style.borderColor="#fecaca";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.borderColor="#e2e8f0";}}><Trash2 size={14} /></button>
-                    </div>
-                  )}
+              <div 
+                key={record._id} 
+                onClick={() => openDetail(record)}
+                style={{ 
+                  padding: "16px 20px", display: "flex", alignItems: "center", gap: 20, cursor: "pointer", 
+                  borderBottom: idx === filteredRecords.length - 1 ? "none" : "1px solid #f1f5f9",
+                  transition: "background 0.2s", background: isNew ? "#f0fdf4" : "transparent"
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = isNew ? "#dcfce7" : "#f8fafc"}
+                onMouseLeave={e => e.currentTarget.style.background = isNew ? "#f0fdf4" : "transparent"}
+              >
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: rType.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {rType.icon}
                 </div>
                 
-                <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                    <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: "#f1f5f9", color: "#475569" }}>{rType.label}</span>
-                    <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: severityStyle.bg, color: severityStyle.color, border: `1px solid ${severityStyle.border}` }}>Severity: {record.severity?.charAt(0).toUpperCase() + record.severity?.slice(1) || "Normal"}</span>
-                    <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 500, color: "#94a3b8", display: "flex", alignItems: "center", gap: 4 }}><Calendar size={14} />{new Date(record.date || record.createdAt).toLocaleDateString()}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.title}</div>
+                    {isNew && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#10b981", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, textTransform: "uppercase" }}><Bell size={10} fill="currentColor" /> New</span>}
+                    {user?.role === "doctor" && !record.notes && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#fef9c3", color: "#854d0e", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, textTransform: "uppercase", border: "1px solid #fde68a" }}><AlertCircle size={10} /> Feedback Needed</span>}
                   </div>
-                  
-                  <div style={{ background: "#f8fafc", borderRadius: 12, padding: 16, flex: 1, border: "1px solid #f1f5f9" }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Details</div>
-                    <div style={{ fontSize: 14, color: "#1e293b", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{record.content || record.description}</div>
+                  <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>{user?.role === "doctor" ? `Patient: ${record.patientId?.name || "Unknown"}` : `Dr. ${record.doctorId?.name || record.doctorName || "Unknown"}`}</span>
+                    <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#cbd5e1" }}></span>
+                    <span>{new Date(record.date || record.createdAt).toLocaleDateString()}</span>
                   </div>
-                  
-                  {record.notes && (
-                    <div style={{ marginTop: 12, padding: "12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, fontSize: 13, color: "#92400e", display: "flex", gap: 8, alignItems: "flex-start" }}>
-                      <AlertCircle size={16} color="#d97706" style={{ flexShrink: 0, marginTop: 2 }} />
-                      <div style={{ lineHeight: 1.5 }}><strong>Doctor's Note:</strong> {record.notes}</div>
-                    </div>
-                  )}
+                </div>
 
-                  {(record.fileName || record.fileContentType) && (
-                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-                      <a href={`http://localhost:5000/api/health-records/${record._id}/file?token=${localStorage.getItem('token')}`} target="_blank" rel="noopener noreferrer" 
-                        style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "#f1f5f9", color: "#3b82f6", borderRadius: 10, fontSize: 13, fontWeight: 600, textDecoration: "none", transition: "all 0.2s" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "#e0e7ff"} onMouseLeave={e => e.currentTarget.style.background = "#f1f5f9"}>
-                        <FileText size={16} />
-                        View Attachment: {record.fileName || "Report File"}
-                      </a>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: severityStyle.bg, color: severityStyle.color, border: `1px solid ${severityStyle.border}` }}>{record.severity || "normal"}</span>
+                  
+                  {user?.role === "doctor" && (
+                    <div style={{ display: "flex", gap: 4 }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => openEdit(record)} title="Edit" style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><Edit2 size={14} /></button>
+                      <button onClick={() => handleDelete(record._id)} title="Delete" style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={14} /></button>
                     </div>
                   )}
+                  
+                  <ChevronRight size={18} color="#cbd5e1" />
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {viewingRecord && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)", zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 24, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(15,23,42,0.2)" }}>
+            <div style={{ padding: "24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981" }}>
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>Record Details</div>
+                  <div style={{ fontSize: 13, color: "#64748b" }}>{viewingRecord.title}</div>
+                </div>
+              </div>
+              <button onClick={() => setViewingRecord(null)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, cursor: "pointer", color: "#64748b" }}><X size={18} /></button>
+            </div>
+            
+            <div style={{ padding: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+                <div style={{ padding: 12, background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 }}>Date</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "#1e293b" }}>{new Date(viewingRecord.date || viewingRecord.createdAt).toLocaleDateString("en-US", { dateStyle: "long" })}</div>
+                </div>
+                <div style={{ padding: 12, background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 }}>Severity</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: SEVERITY_COLORS[viewingRecord.severity]?.color || "#1e293b" }}>{(viewingRecord.severity || "normal").toUpperCase()}</div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 8 }}>Details & Findings</label>
+                <div style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #f1f5f9", fontSize: 14, color: "#1e293b", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                  {viewingRecord.content || viewingRecord.description}
+                </div>
+              </div>
+
+              {viewingRecord.notes && (
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#10b981", textTransform: "uppercase", marginBottom: 8 }}>Doctor's Feedback</label>
+                  <div style={{ background: "#f0fdf4", padding: 16, borderRadius: 16, border: "1px solid #86efac", display: "flex", gap: 12 }}>
+                    <MessageSquare size={18} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ fontSize: 14, color: "#166534", lineHeight: 1.6 }}>{viewingRecord.notes}</div>
+                  </div>
+                </div>
+              )}
+
+              {(viewingRecord.fileName || viewingRecord.fileContentType) && (
+                <div style={{ marginTop: 8, padding: 16, background: "#eff6ff", borderRadius: 16, border: "1px solid #bfdbfe", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6" }}><FileText size={18} /></div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: "#1e40af" }}>{viewingRecord.fileName || "Medical Report"}</div>
+                  </div>
+                  <a href={`http://localhost:5000/api/health-records/${viewingRecord._id}/file?token=${localStorage.getItem('token')}`} target="_blank" rel="noopener noreferrer" 
+                    style={{ padding: "8px 16px", background: "#3b82f6", color: "#fff", borderRadius: 10, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>View File</a>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => setViewingRecord(null)} style={{ padding: "10px 24px", background: "#0f172a", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Close Details</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -281,8 +382,8 @@ export default function HealthRecords({ doctorPatients }) {
           <div style={{ background: "#fff", borderRadius: 24, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(15,23,42,0.2)" }}>
             <div style={{ padding: "24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
               <div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.01em" }}>{editingRecord ? "Edit Record" : "New Health Record"}</div>
-                <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>{editingRecord ? "Update the patient's record." : "Add a new record for your patient."}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.01em" }}>{editingRecord ? "Update Health Record" : "New Health Record"}</div>
+                <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>{editingRecord ? "Provide feedback or update record details." : "Add a new record for your patient."}</div>
               </div>
               <button onClick={() => setShowModal(false)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, cursor: "pointer", color: "#64748b", transition: "all 0.2s" }}
                 onMouseEnter={e=>{e.currentTarget.style.background="#f1f5f9";e.currentTarget.style.color="#0f172a";}} onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";e.currentTarget.style.color="#64748b";}}>
@@ -342,8 +443,16 @@ export default function HealthRecords({ doctorPatients }) {
                   <input type="date" value={formData.date} onChange={e => setFormData(p => ({ ...p, date: e.target.value }))} style={inputCls} onFocus={onFocus} onBlur={onBlur} />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Doctor's Notes (Optional)</label>
-                  <textarea value={formData.notes} onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))} placeholder="Any additional remarks..." rows={2} style={{ ...inputCls, resize: "vertical" }} onFocus={onFocus} onBlur={onBlur} />
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#10b981", marginBottom: 8 }}>Doctor's Feedback / Remarks</label>
+                  <textarea 
+                    value={formData.notes} 
+                    onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))} 
+                    placeholder={user?.role === "doctor" ? "Provide your medical advice or feedback here..." : "Doctor's feedback will appear here."} 
+                    rows={2} 
+                    style={{ ...inputCls, borderColor: "#10b981", background: "#f0fdf4" }} 
+                    onFocus={onFocus} onBlur={onBlur} 
+                    readOnly={user?.role === "patient"}
+                  />
                 </div>
               </div>
               

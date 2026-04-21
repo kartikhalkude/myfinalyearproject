@@ -173,7 +173,11 @@ const updateHealthRecord = async (req, res) => {
     if (type     !== undefined) record.type     = type;
     if (content  !== undefined) record.content  = content;
     if (severity !== undefined) record.severity = severity;
-    if (notes    !== undefined) record.notes    = notes;
+    if (notes    !== undefined) {
+      record.notes = notes;
+      // Reset read status so patient sees it as "New" again
+      record.readByPatient = false;
+    }
     if (date     !== undefined) record.date     = new Date(date);
 
     record.updatedAt = new Date();
@@ -336,11 +340,48 @@ const getHealthRecordFile = async (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
 
+    // Authorization: Patient must own the record; Doctor must be authorized (simplified for now)
+    if (req.userRole === 'patient' && record.patientId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
     res.set('Content-Type', record.fileContentType || 'application/octet-stream');
     res.set('Content-Disposition', `inline; filename="${record.fileName || 'report'}"`);
     res.send(record.fileData);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch file', details: error.message });
+  }
+};
+
+// ─── Mark as Read ─────────────────────────────────────────────────────────────
+const markAsRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const record = await HealthRecord.findById(id);
+    if (!record) return res.status(404).json({ error: 'Record not found' });
+    
+    // Only patient can mark their own record as read
+    if (String(record.patientId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    record.readByPatient = true;
+    await record.save();
+    
+    const populated = await HealthRecord.findById(id)
+      .populate('doctorId', 'name specialization email')
+      .populate('patientId', 'name email');
+
+    // Notify all patient's tabs that the record is read
+    getIo().to(`user:${req.userId}`).emit('health-record:updated', {
+      type:   'updated',
+      record: populated,
+      initiatorId: req.userId
+    });
+
+    res.json({ success: true, record: populated });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to mark as read' });
   }
 };
 
@@ -353,5 +394,6 @@ module.exports = {
   getRecordsByType,
   getPatientRecords,
   addVitalSign,
-  getHealthRecordFile
+  getHealthRecordFile,
+  markAsRead
 };

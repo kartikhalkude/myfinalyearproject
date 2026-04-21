@@ -8,7 +8,10 @@ const {
   predictHeartDisease,
   getHeartPredictions,
   predictPneumonia,
-  getPneumoniaPredictions
+  getPneumoniaPredictions,
+  predictBrainTumor,
+  getBrainTumorPredictions,
+  clearPredictionHistory
 } = require('../controllers/predictionController');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -17,8 +20,11 @@ router.post('/predict-diabetes',       authMiddleware, predictDiabetes);
 router.get('/predictions',             authMiddleware, getDiabetesPredictions);
 router.post('/predict-heart-disease',  authMiddleware, predictHeartDisease);
 router.get('/heart-predictions',       authMiddleware, getHeartPredictions);
+router.delete('/clear',                authMiddleware, clearPredictionHistory);
 router.post('/predict-pneumonia',      authMiddleware, upload.single('image'), predictPneumonia);
 router.get('/pneumonia-predictions',   authMiddleware, getPneumoniaPredictions);
+router.post('/predict-brain-tumor',    authMiddleware, upload.single('image'), predictBrainTumor);
+router.get('/brain-tumor-predictions', authMiddleware, getBrainTumorPredictions);
 
 
 module.exports = router;

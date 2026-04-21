@@ -3,7 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import apiClient from "../services/apiClient";
 import websocketService from "../services/websocket";
 import { SectionCard, Badge, EmptyState, Loader, PageHeader } from "./UI";
-import { X, Pill, Search, Calendar, User, Clock, FileText, Edit2, Trash2, Plus, CheckCircle, AlertCircle } from "lucide-react";
+import { X, Pill, Search, Calendar, User, Clock, FileText, Edit2, Trash2, Plus, CheckCircle, AlertCircle, ChevronRight, Bell, ClipboardList } from "lucide-react";
 
 function PatientSearch({ patients, value, onChange }) {
   const [q, setQ] = useState("");
@@ -64,13 +64,14 @@ const inputCls = { width: "100%", padding: "12px 16px", fontSize: 14, fontFamily
 const onFocus = e => { e.target.style.background = "#fff"; e.target.style.borderColor = "#10b981"; e.target.style.boxShadow = "0 0 0 4px rgba(16, 185, 129, 0.1)"; };
 const onBlur = e => { e.target.style.background = "#f8fafc"; e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; };
 
-export default function Prescriptions({ doctorPatients }) {
+export default function Prescriptions({ doctorPatients, onRefresh }) {
   const { user } = useAuth();
   const [prescriptions, setPrescriptions] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [viewing, setViewing] = useState(null);
   const [filter, setFilter] = useState("all");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -108,9 +109,15 @@ export default function Prescriptions({ doctorPatients }) {
       } catch(e) { setError("Failed to load prescriptions."); }
       finally { setLoading(false); }
     })();
-    const onCreated = d => { const p = d?.prescription || (d?._id ? d : null); if (p) setPrescriptions(prev => prev.some(x => x._id === p._id) ? prev : [p, ...prev]); };
-    const onUpdated = d => { const p = d?.prescription || (d?._id ? d : null); if (p) setPrescriptions(prev => prev.map(x => x._id === p._id ? p : x)); };
-    const onDeleted = d => { const id = d?.prescriptionId || d?._id; if (id) setPrescriptions(prev => prev.filter(x => x._id !== id)); };
+    const onCreated = data => { const p = data?.prescription || (data?._id ? data : null); if (p) setPrescriptions(prev => prev.some(x => x._id === p._id) ? prev : [p, ...prev]); };
+    const onUpdated = data => { 
+      const p = data?.prescription || (data?._id ? data : null); 
+      if (p) {
+        setPrescriptions(prev => prev.map(x => (x._id === p._id ? p : x)));
+        setViewing(prev => (prev?._id === p._id ? p : prev));
+      }
+    };
+    const onDeleted = data => { const id = data?.prescriptionId || data?._id; if (id) { setPrescriptions(prev => prev.filter(x => x._id !== id)); setViewing(prev => (prev?._id === id ? null : prev)); } };
     websocketService.onPrescriptionCreated(onCreated); websocketService.onPrescriptionUpdated(onUpdated); websocketService.onPrescriptionDeleted(onDeleted);
     return () => { websocketService.offPrescriptionCreated(onCreated); websocketService.offPrescriptionUpdated(onUpdated); websocketService.offPrescriptionDeleted(onDeleted); };
   }, [user?.role, doctorPatients]);
@@ -129,13 +136,20 @@ export default function Prescriptions({ doctorPatients }) {
         setPrescriptions(prev => [res.data, ...prev]);
         setSuccess("Prescription created.");
       }
-      setShowModal(false); setTimeout(() => setSuccess(""), 3000);
+      setShowModal(false); 
+      if (onRefresh) onRefresh();
+      setTimeout(() => setSuccess(""), 3000);
     } catch(err) { setError(err.response?.data?.error || "Operation failed."); }
   };
 
   const handleDelete = async id => {
     if (!window.confirm("Delete this prescription? This cannot be undone.")) return;
-    try { await apiClient.delete(`/prescriptions/${id}`); setPrescriptions(prev => prev.filter(p => p._id !== id)); setSuccess("Deleted."); setTimeout(() => setSuccess(""), 3000); }
+    try { 
+      await apiClient.delete(`/prescriptions/${id}`); 
+      setPrescriptions(prev => prev.filter(p => p._id !== id)); 
+      if (onRefresh) onRefresh();
+      setSuccess("Deleted."); setTimeout(() => setSuccess(""), 3000); 
+    }
     catch(err) { setError(err.response?.data?.error || "Delete failed."); }
   };
 
@@ -144,6 +158,21 @@ export default function Prescriptions({ doctorPatients }) {
     try { await apiClient.post(`/prescriptions/${id}/refill`); setSuccess("Refill request sent."); setTimeout(() => setSuccess(""), 3000); }
     catch(err) { setError(err.response?.data?.error || "Failed to request refill."); }
     finally { setRefillLoading(p => ({ ...p, [id]: false })); }
+  };
+
+  const openDetail = async (rx) => {
+    setViewing(rx);
+    if (user?.role === "patient" && !rx.readByPatient) {
+      try {
+        // Update locally immediately for better UX
+        setPrescriptions(prev => prev.map(p => p._id === rx._id ? { ...p, readByPatient: true } : p));
+        setViewing(prev => ({ ...prev, readByPatient: true }));
+        
+        await apiClient.patch(`/prescriptions/${rx._id}/read`);
+        // Increased delay to ensure DB aggregation (stats) is fully synchronized
+        setTimeout(() => { if (onRefresh) onRefresh(); }, 800);
+      } catch (err) { console.error("Failed to mark as read"); }
+    }
   };
 
   const filtered = filter === "all" ? prescriptions : prescriptions.filter(p => p.status === filter);
@@ -195,101 +224,132 @@ export default function Prescriptions({ doctorPatients }) {
       {loading ? <Loader message="Loading prescriptions..." /> : filtered.length === 0 ? (
         <SectionCard><EmptyState icon={<Pill size={32} color="#94a3b8" />} title="No prescriptions found" subtitle={user?.role === "doctor" ? "Create a new prescription for a patient." : "Your doctor will add prescriptions here."} /></SectionCard>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 20 }}>
-          {filtered.map(rx => {
+        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(15,23,42,0.03)" }}>
+          {filtered.map((rx, idx) => {
             const st = statusStyle[rx.status] || statusStyle.expired;
+            const isNew = user?.role === "patient" && !rx.readByPatient;
+            
             return (
-              <div key={rx._id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 4px 12px rgba(15,23,42,0.03)", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 8px 24px rgba(15,23,42,0.08)";}} onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 4px 12px rgba(15,23,42,0.03)";}}>
-                
-                {/* Card Header */}
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, background: "#fafafa" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <FileText size={16} color="#10b981" />
-                      <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {rx.diagnosis || "General Prescription"}
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
-                      <User size={14} />
-                      {user?.role === "doctor" ? `Patient: ${rx.patientId?.name || "Unknown"}` : `Dr. ${rx.doctorId?.name || rx.doctorName || "Unknown"}`}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: st.bg, color: st.color, border: `1px solid ${st.bg}` }}>
-                      {st.icon}
-                      {rx.status.charAt(0).toUpperCase() + rx.status.slice(1)}
-                    </span>
-                    
-                    {user?.role === "doctor" && (
-                      <div style={{ display: "flex", gap: 4, marginLeft: 4 }}>
-                        <button onClick={() => { setEditing(rx); setForm({ patientId: rx.patientId?._id || rx.patientId, diagnosis: rx.diagnosis || "", medicines: rx.medicines || [{ name: "", dosage: "", frequency: "", duration: "" }], advice: rx.advice || "", validUntil: rx.validUntil ? new Date(rx.validUntil).toISOString().split("T")[0] : "" }); setShowModal(true); }}
-                          style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#eff6ff";e.currentTarget.style.borderColor="#bfdbfe";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.borderColor="#e2e8f0";}}>
-                          <Edit2 size={14} />
-                        </button>
-                        <button onClick={() => handleDelete(rx._id)} 
-                          style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#fef2f2";e.currentTarget.style.borderColor="#fecaca";}} onMouseLeave={e=>{e.currentTarget.style.background="#fff";e.currentTarget.style.borderColor="#e2e8f0";}}>
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+              <div 
+                key={rx._id} 
+                onClick={() => openDetail(rx)}
+                style={{ 
+                  padding: "16px 20px", display: "flex", alignItems: "center", gap: 20, cursor: "pointer", 
+                  borderBottom: idx === filtered.length - 1 ? "none" : "1px solid #f1f5f9",
+                  transition: "background 0.2s", background: isNew ? "#f0fdf4" : "transparent"
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = isNew ? "#dcfce7" : "#f8fafc"}
+                onMouseLeave={e => e.currentTarget.style.background = isNew ? "#f0fdf4" : "transparent"}
+              >
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Pill size={20} color="#10b981" />
                 </div>
                 
-                {/* Card Body */}
-                <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 32, height: 32, background: "#f8fafc", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><Calendar size={14} color="#64748b" /></div>
-                      <div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" }}>Issued</div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: "#1e293b" }}>{rx.createdAt ? new Date(rx.createdAt).toLocaleDateString() : "—"}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 32, height: 32, background: "#f8fafc", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><Clock size={14} color="#64748b" /></div>
-                      <div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" }}>Valid Until</div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: "#1e293b" }}>{rx.validUntil ? new Date(rx.validUntil).toLocaleDateString() : "Not set"}</div>
-                      </div>
-                    </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rx.diagnosis || "General Prescription"}</div>
+                    {isNew && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#10b981", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, textTransform: "uppercase" }}><Bell size={10} fill="currentColor" /> New</span>}
                   </div>
-
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>Medicines ({rx.medicines?.length || 0})</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {rx.medicines?.slice(0, 3).map((m, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "#f8fafc", border: "1px solid #f1f5f9", borderRadius: 12 }}>
-                          <div style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <Pill size={16} color="#10b981" />
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
-                            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{[m.dosage, m.frequency, m.duration].filter(Boolean).join(" • ")}</div>
-                          </div>
-                        </div>
-                      ))}
-                      {rx.medicines?.length > 3 && <div style={{ fontSize: 12, fontWeight: 500, color: "#94a3b8", textAlign: "center", padding: "6px", background: "#f8fafc", borderRadius: 8 }}>+{rx.medicines.length - 3} more medicines</div>}
-                    </div>
+                  <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>{user?.role === "doctor" ? `Patient: ${rx.patientId?.name || "Unknown"}` : `Dr. ${rx.doctorId?.name || rx.doctorName || "Unknown"}`}</span>
+                    <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#cbd5e1" }}></span>
+                    <span>{new Date(rx.prescribedDate || rx.createdAt).toLocaleDateString()}</span>
                   </div>
+                </div>
 
-                  {rx.advice && (
-                    <div style={{ marginTop: 16, padding: "12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, fontSize: 13, color: "#92400e", display: "flex", gap: 8, alignItems: "flex-start" }}>
-                      <AlertCircle size={16} color="#d97706" style={{ flexShrink: 0, marginTop: 2 }} />
-                      <div style={{ lineHeight: 1.5 }}><strong>Advice:</strong> {rx.advice}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: st.bg, color: st.color, border: `1px solid ${st.bg}` }}>{rx.status}</span>
+                  
+                  {user?.role === "doctor" && (
+                    <div style={{ display: "flex", gap: 4 }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => { setEditing(rx); setForm({ patientId: rx.patientId?._id || rx.patientId, diagnosis: rx.diagnosis || "", medicines: rx.medicines || [{ name: "", dosage: "", frequency: "", duration: "" }], advice: rx.advice || "", validUntil: rx.validUntil ? new Date(rx.validUntil).toISOString().split("T")[0] : "" }); setShowModal(true); }}
+                        style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><Edit2 size={14} /></button>
+                      <button onClick={() => handleDelete(rx._id)} 
+                        style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={14} /></button>
                     </div>
                   )}
-
-                  {user?.role === "patient" && rx.status === "active" && (
-                    <button onClick={() => handleRefill(rx._id)} disabled={refillLoading[rx._id]} style={{ marginTop: 20, width: "100%", padding: "12px", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, fontSize: 14, fontWeight: 600, color: "#166534", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s" }}
-                      onMouseEnter={e=>{e.currentTarget.style.background="#dcfce7";e.currentTarget.style.borderColor="#4ade80";}} onMouseLeave={e=>{e.currentTarget.style.background="#f0fdf4";e.currentTarget.style.borderColor="#86efac";}}>
-                      {refillLoading[rx._id] ? "Requesting…" : <><Clock size={16} /> Request refill</>}
-                    </button>
-                  )}
+                  
+                  <ChevronRight size={18} color="#cbd5e1" />
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {viewing && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)", zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 24, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(15,23,42,0.2)" }}>
+            <div style={{ padding: "24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981" }}>
+                  <Pill size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>Prescription Details</div>
+                  <div style={{ fontSize: 13, color: "#64748b" }}>{viewing.diagnosis || "General Consultation"}</div>
+                </div>
+              </div>
+              <button onClick={() => setViewing(null)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, cursor: "pointer", color: "#64748b" }}><X size={18} /></button>
+            </div>
+            
+            <div style={{ padding: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+                <div style={{ padding: 12, background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 }}>Prescribed Date</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "#1e293b" }}>{new Date(viewing.prescribedDate || viewing.createdAt).toLocaleDateString("en-US", { dateStyle: "long" })}</div>
+                </div>
+                <div style={{ padding: 12, background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 }}>Status</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: statusStyle[viewing.status]?.color || "#1e293b" }}>{(viewing.status || "active").toUpperCase()}</div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 12 }}>Medications</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {viewing.medicines?.map((m, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "#f8fafc", border: "1px solid #f1f5f9", borderRadius: 16 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fff", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Pill size={18} color="#10b981" />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{m.name}</div>
+                        <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{[m.dosage, m.frequency, m.duration].filter(Boolean).join(" • ")}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {viewing.advice && (
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 8 }}>Doctor's Advice</label>
+                  <div style={{ background: "#fffbeb", padding: 16, borderRadius: 16, border: "1px solid #fde68a", display: "flex", gap: 12 }}>
+                    <AlertCircle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ fontSize: 14, color: "#92400e", lineHeight: 1.6 }}>{viewing.advice}</div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ padding: 16, background: "#f8fafc", borderRadius: 16, border: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
+                <User size={18} color="#64748b" />
+                <div style={{ fontSize: 14, color: "#475569" }}>
+                  Prescribed by <strong style={{ color: "#0f172a" }}>{viewing.doctorName || viewing.doctorId?.name || "Dr. Unknown"}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              {user?.role === "patient" && viewing.status === "active" ? (
+                <button onClick={() => handleRefill(viewing._id)} disabled={refillLoading[viewing._id]} style={{ padding: "10px 20px", background: "#f0fdf4", color: "#166534", border: "1px solid #86efac", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                  {refillLoading[viewing._id] ? "Requesting…" : <><Clock size={16} /> Request Refill</>}
+                </button>
+              ) : <div></div>}
+              <button onClick={() => setViewing(null)} style={{ padding: "10px 24px", background: "#0f172a", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Close</button>
+            </div>
+          </div>
         </div>
       )}
 

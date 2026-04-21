@@ -9,16 +9,17 @@ import PneumoniaPrediction from "../components/PneumoniaPrediction";
 import AppointmentBooking from "../components/AppointmentBooking";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
+import BrainTumorPrediction from "../components/BrainTumorPrediction";
 import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader } from "../components/UI";
 import { 
   Home, Brain, HeartPulse, Stethoscope, CalendarPlus, Calendar, 
   ClipboardList, Pill, Smile, Phone, CheckCircle, XCircle, Info, X, Check, Clock,
-  Droplet, Footprints, Moon, Salad
+  Droplet, Footprints, Moon, Salad, MessageSquare
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
-function getNavItems(apptCount) {
+function getNavItems(apptCount, healthUnread, prescUnread) {
   return [
     { section: "Overview" },
     { id: "overview",  label: "Dashboard",        icon: <Home size={18} /> },
@@ -26,12 +27,13 @@ function getNavItems(apptCount) {
     { id: "diabetes",  label: "Diabetes Check",   icon: <Brain size={18} />,  tag: "AI" },
     { id: "heart",     label: "Heart Check",      icon: <HeartPulse size={18} />, tag: "AI" },
     { id: "pneumonia", label: "Pneumonia Check",  icon: <Stethoscope size={18} />, tag: "AI" },
+    { id: "tumor",     label: "Brain Tumor",      icon: <Brain size={18} />,      tag: "AI" },
     { section: "Appointments" },
     { id: "book",      label: "Book Appointment", icon: <CalendarPlus size={18} /> },
     { id: "history",   label: "My Appointments",  icon: <Calendar size={18} />, badge: apptCount },
     { section: "Medical" },
-    { id: "health",    label: "Health Records",   icon: <ClipboardList size={18} /> },
-    { id: "prescriptions", label: "Prescriptions", icon: <Pill size={18} /> },
+    { id: "health",    label: "Health Records",   icon: <ClipboardList size={18} />, badge: healthUnread },
+    { id: "prescriptions", label: "Prescriptions", icon: <Pill size={18} />, badge: prescUnread },
   ];
 }
 
@@ -109,10 +111,11 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
           Refresh
         </button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
         <StatCard label="Total appointments" value={stats?.totalAppointments || 0} sub="All time" icon={<Calendar size={18} color="#1db585" />} />
         <StatCard label="Upcoming" value={stats?.upcomingAppointments || 0} sub="Scheduled" color="#3b82f6" icon={<CalendarPlus size={18} color="#3b82f6" />} />
         <StatCard label="Health checks" value={stats?.totalPredictions || 0} sub="AI screenings" color="#8b5cf6" icon={<Brain size={18} color="#8b5cf6" />} />
+        <StatCard label="New Medical Data" value={(stats?.unreadHealthRecords || 0) + (stats?.unreadPrescriptions || 0)} sub="Unread items" color="#10b981" icon={<MessageSquare size={18} color="#10b981" />} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {/* Upcoming appointments */}
@@ -249,7 +252,7 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
 export default function PatientDashboard() {
   const { user, logout, wsConnected } = useAuth();
   const [tab, setTab] = useState("overview");
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({ unreadHealthRecords: 0, unreadPrescriptions: 0, totalAppointments: 0, upcomingAppointments: 0, totalPredictions: 0 });
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
@@ -274,7 +277,10 @@ export default function PatientDashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [s, a] = await Promise.all([apiClient.get("/stats"), apiClient.get("/appointments")]);
+      const [s, a] = await Promise.all([
+        apiClient.get(`/stats?t=${Date.now()}`),
+        apiClient.get("/appointments")
+      ]);
       setStats(s.data); setAppointments(a.data);
     } catch(e) { addToast({ type: "error", title: "Failed to load data", autoClose: true }); }
     finally { setLoading(false); }
@@ -282,6 +288,7 @@ export default function PatientDashboard() {
 
   useEffect(() => {
     fetchData();
+    if (user?.id) websocketService.notifyOnline(user.id);
     const onApptUpdate = d => { 
       fetchData(); 
       if (d?.initiatorId === user?.id) return;
@@ -297,26 +304,32 @@ export default function PatientDashboard() {
       addToast({ type: "call", title: "Incoming call", message: `${d.callerName} is calling`, autoClose: false, actions: [{ label: "Accept", type: "accept", primary: true, data: { appointment: apt, callData: d } }, { label: "Decline", type: "decline", data: { callData: d } }] });
     };
     const onRxCreated = d => { 
+      fetchData();
       if (d?.initiatorId === user?.id) return;
       if (d.prescription && d.type === "created") addToast({ type: "prescription", title: "New prescription", message: `Dr. ${d.prescription.doctorId?.name || "Doctor"} added a prescription`, autoClose: true, actions: [{ label: "View", type: "view-prescriptions", primary: true }] }); 
     };
     const onRxUpdated = d => { 
+      fetchData();
       if (d?.initiatorId === user?.id) return;
       if (d.prescription && d.type === "updated") addToast({ type: "prescription", title: "Prescription updated", autoClose: true }); 
     };
     const onRxDeleted = d => {
+      fetchData();
       if (d?.initiatorId === user?.id) return;
       addToast({ type: "prescription", title: "Prescription removed", autoClose: true });
     };
     const onRecCreated = d => { 
+      fetchData();
       if (d?.initiatorId === user?.id) return;
       if (d.record && d.type === "created") addToast({ type: "record", title: "New health record", message: `"${d.record.title}" added by your doctor`, autoClose: true, actions: [{ label: "View", type: "view-health", primary: true }] }); 
     };
     const onRecUpdated = d => { 
+      fetchData();
       if (d?.initiatorId === user?.id) return;
       if (d.record && d.type === "updated") addToast({ type: "record", title: "Health record updated", autoClose: true }); 
     };
     const onRecDeleted = d => {
+      fetchData();
       if (d?.initiatorId === user?.id) return;
       addToast({ type: "record", title: "Health record removed", autoClose: true });
     };
@@ -348,11 +361,12 @@ export default function PatientDashboard() {
       case "diabetes":    return <DiabetesPrediction />;
       case "heart":       return <HeartDiseasePrediction />;
       case "pneumonia":   return <PneumoniaPrediction />;
+      case "tumor":       return <BrainTumorPrediction />;
 
       case "book":        return <AppointmentBooking onBookingComplete={() => { fetchData(); addToast({ type: "success", title: "Appointment booked", message: "Doctor will confirm within 24 hours.", autoClose: true }); }} />;
       case "history":     return <AppointmentHistory appointments={appointments} onStartCall={startCall} onCancelAppt={cancelAppt} onRefresh={() => fetchData()} />;
-      case "health":      return <HealthRecords />;
-      case "prescriptions": return <Prescriptions />;
+      case "health":      return <HealthRecords onRefresh={fetchData} />;
+      case "prescriptions": return <Prescriptions onRefresh={fetchData} />;
 
       default: return null;
     }
@@ -362,7 +376,11 @@ export default function PatientDashboard() {
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
       {activeCall && <VideoCall {...activeCall} onCallEnd={() => { setActiveCall(null); fetchData(); addToast({ type: "info", title: "Call ended", autoClose: true }); }} />}
       <ToastStack toasts={toasts} onDismiss={dismissToast} onAction={handleToastAction} />
-      <Sidebar user={user} navItems={getNavItems(appointments.filter(a => a.status === "confirmed" || a.status === "pending").length)} activeTab={tab} onTabChange={setTab} onLogout={logout} wsConnected={wsConnected} />
+      <Sidebar user={user} navItems={getNavItems(
+        appointments.filter(a => a.status === "confirmed" || a.status === "pending").length,
+        stats?.unreadHealthRecords || 0,
+        stats?.unreadPrescriptions || 0
+      )} activeTab={tab} onTabChange={setTab} onLogout={logout} wsConnected={wsConnected} />
       <div style={{ flex: 1, overflowY: "auto", background: "#f8fafc" }}>
         <div style={{ padding: 40, maxWidth: 1400 }}>
           {loading ? <Loader message="Loading your dashboard…" /> : renderTab()}

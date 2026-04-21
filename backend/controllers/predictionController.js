@@ -3,12 +3,14 @@ const path                   = require('path');
 const DiabetesPrediction     = require('../models/DiabetesPrediction');
 const HeartDiseasePrediction = require('../models/HeartDiseasePrediction');
 const PneumoniaPrediction    = require('../models/PneumoniaPrediction');
+const BrainTumorPrediction   = require('../models/BrainTumorPrediction');
 
 // Absolute paths — work regardless of where Node is started from
 const ML_DIR          = path.join(__dirname, '..', 'ml_model');
 const DIABETES_SCRIPT = path.join(ML_DIR, 'predict.py');
 const HEART_SCRIPT    = path.join(ML_DIR, 'heart_predict.py');
 const PNEUMONIA_SCRIPT = path.join(ML_DIR, 'pneumonia_predict.py');
+const BRAIN_TUMOR_SCRIPT = path.join(ML_DIR, 'brain_tumor_predict.py');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -201,7 +203,72 @@ const getPneumoniaPredictions = async (req, res) => {
   }
 };
 
+// ─── Brain Tumor ──────────────────────────────────────────────────────────────
 
+const BRAIN_TUMOR_ALLOWED_MIMETYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const BRAIN_TUMOR_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const predictBrainTumor = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No MRI image uploaded' });
+    if (!BRAIN_TUMOR_ALLOWED_MIMETYPES.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: 'Invalid file type. Allowed: PNG, JPEG, WEBP' });
+    }
+    if (req.file.size > BRAIN_TUMOR_MAX_SIZE) {
+      return res.status(400).json({ error: 'File too large. Max 10MB' });
+    }
+
+    const imageBase64 = req.file.buffer.toString('base64');
+    const inputData = { image: imageBase64 };
+
+    const prediction = await runPythonScript(BRAIN_TUMOR_SCRIPT, inputData);
+
+    await new BrainTumorPrediction({
+      userId: req.userId,
+      filename: req.file.originalname,
+      filesize: req.file.size,
+      mimetype: req.file.mimetype,
+      prediction: prediction.prediction,
+      probability: prediction.probability,
+      risk: prediction.risk,
+      modelSource: prediction.model_source,
+      warning: prediction.warning || null
+    }).save();
+
+    res.json(prediction);
+  } catch (error) {
+    console.error('[predictBrainTumor]', error.message);
+    res.status(500).json({ error: 'Prediction failed', details: error.message });
+  }
+};
+
+const getBrainTumorPredictions = async (req, res) => {
+  try {
+    const predictions = await BrainTumorPrediction.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(10);
+    res.json(predictions);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch predictions' });
+  }
+};
+
+const clearPredictionHistory = async (req, res) => {
+  try {
+    const { type } = req.body;
+    let model;
+    switch (type) {
+      case 'diabetes': model = DiabetesPrediction; break;
+      case 'heart':    model = HeartDiseasePrediction; break;
+      case 'pneumonia': model = PneumoniaPrediction; break;
+      case 'tumor':     model = BrainTumorPrediction; break;
+      default: return res.status(400).json({ error: 'Invalid prediction type' });
+    }
+
+    await model.deleteMany({ userId: req.userId });
+    res.json({ message: `${type} history cleared successfully` });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to clear history' });
+  }
+};
 
 module.exports = { 
   predictDiabetes, 
@@ -209,5 +276,8 @@ module.exports = {
   predictHeartDisease, 
   getHeartPredictions, 
   predictPneumonia, 
-  getPneumoniaPredictions
+  getPneumoniaPredictions,
+  predictBrainTumor,
+  getBrainTumorPredictions,
+  clearPredictionHistory
 };

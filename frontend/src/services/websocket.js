@@ -162,6 +162,19 @@ class WebSocketService {
   onHealthRecordCreated(cb) { return this.on('health-record:created', cb); }
   onHealthRecordUpdated(cb) { return this.on('health-record:updated', cb); }
   onHealthRecordDeleted(cb) { return this.on('health-record:deleted', cb); }
+
+  offAppointmentUpdated(cb) { this.off('appointment:updated', cb); }
+  offCallIncoming(cb)       { this.off('call:incoming', cb); }
+  offCallAnswered(cb)       { this.off('call:answered', cb); }
+  offICECandidate(cb)       { this.off('call:ice-candidate', cb); }
+  offCallRejected(cb)       { this.off('call:rejected', cb); }
+  offCallEnded(cb)          { this.off('call:ended', cb); }
+  offPrescriptionCreated(cb) { this.off('prescription:created', cb); }
+  offPrescriptionUpdated(cb) { this.off('prescription:updated', cb); }
+  offPrescriptionDeleted(cb) { this.off('prescription:deleted', cb); }
+  offHealthRecordCreated(cb) { this.off('health-record:created', cb); }
+  offHealthRecordUpdated(cb) { this.off('health-record:updated', cb); }
+  offHealthRecordDeleted(cb) { this.off('health-record:deleted', cb); }
 }
 
 export default new WebSocketService();

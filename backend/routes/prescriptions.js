@@ -9,6 +9,7 @@ const {
   deletePrescription,
   requestRefill,
   getPatientPrescriptions,
+  markAsRead
 } = require('../controllers/prescriptionController');
 
 // ─── Prescription Routes ──────────────────────────────────────────────────────
@@ -27,6 +28,9 @@ router.post('/', authMiddleware, createPrescription);
 
 // Update a prescription (doctor only)
 router.patch('/:id', authMiddleware, updatePrescription);
+
+// Mark prescription as read
+router.patch('/:id/read', authMiddleware, markAsRead);
 
 // Delete a prescription (doctor only)
 router.delete('/:id', authMiddleware, deletePrescription);

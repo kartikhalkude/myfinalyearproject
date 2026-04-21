@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
 import apiClient from '../services/apiClient';
 import { SectionCard, PageHeader, Loader } from './UI';
-import { CheckCircle, AlertTriangle, Info, HeartPulse } from "lucide-react";
+import { CheckCircle, AlertTriangle, Info, HeartPulse, Download, Trash2 } from "lucide-react";
 
 export default function HeartDiseasePrediction() {
   const [formData, setFormData] = useState({
@@ -25,6 +26,14 @@ export default function HeartDiseasePrediction() {
     }
   };
 
+  const handleClearHistory = async () => {
+    if (!window.confirm("Are you sure you want to clear your entire heart disease screening history?")) return;
+    try {
+      await apiClient.delete("/clear", { data: { type: 'heart' } });
+      setHistory([]);
+    } catch (err) { setError("Failed to clear history."); }
+  };
+
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
@@ -42,6 +51,82 @@ export default function HeartDiseasePrediction() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const downloadReport = () => {
+    if (!prediction) return;
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(15, 23, 42);
+    doc.text("MEDICAL SCREENING REPORT", 105, 20, { align: "center" });
+    
+    doc.setFontSize(16);
+    doc.setTextColor(220, 38, 38); // Red-600
+    doc.text("Heart Disease Risk Assessment", 105, 30, { align: "center" });
+    
+    doc.setDrawColor(226, 232, 240);
+    doc.line(20, 35, 190, 35);
+    
+    // Info
+    doc.setFontSize(11);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 20, 45);
+    doc.text(`Report ID: HD-${new Date().getTime().toString().slice(-6)}`, 140, 45);
+    
+    // Metrics Section
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text("INPUT METRICS", 20, 60);
+    
+    doc.setFontSize(11);
+    const metrics = [
+      ["Age", `${formData.age} years`],
+      ["Sex", formData.sex === '1' ? 'Male' : 'Female'],
+      ["Resting BP", `${formData.restingBP} mm Hg`],
+      ["Cholesterol", `${formData.cholesterol} mg/dl`],
+      ["Max Heart Rate", `${formData.maxHeartRate} bpm`],
+      ["ST Depression", formData.oldpeak]
+    ];
+    
+    let y = 70;
+    metrics.forEach(([label, val]) => {
+      doc.text(label + ":", 30, y);
+      doc.text(val, 100, y);
+      y += 8;
+    });
+    
+    // Result
+    y += 10;
+    doc.setFontSize(14);
+    doc.text("ASSESSMENT SUMMARY", 20, y);
+    y += 10;
+    doc.setFontSize(12);
+    doc.text(`Primary Result:`, 20, y);
+    doc.setFont("helvetica", "bold");
+    doc.text(prediction.prediction_label, 60, y);
+    doc.setFont("helvetica", "normal");
+    y += 10;
+    doc.text(`Risk Level:`, 20, y);
+    doc.text(`${prediction.risk_level} Risk`, 60, y);
+    y += 10;
+    doc.text(`Probability:`, 20, y);
+    doc.text(`${(prediction.probability_disease * 100).toFixed(1)}%`, 60, y);
+    
+    // Disclaimer
+    doc.setDrawColor(254, 243, 199);
+    doc.setFillColor(255, 251, 235);
+    doc.rect(20, y + 20, 170, 30, "FD");
+    
+    doc.setFontSize(10);
+    doc.setTextColor(146, 64, 14);
+    doc.text("IMPORTANT DISCLAIMER:", 25, y + 30);
+    doc.setFontSize(9);
+    doc.text("This AI-generated report is for preliminary screening only. It does not replace a clinical diagnosis", 25, y + 35);
+    doc.text("by a medical professional. Please consult a Cardiologist for definitive assessment.", 25, y + 40);
+    
+    doc.save(`Heart_Disease_Report_${new Date().getTime()}.pdf`);
   };
 
   const resetForm = () => {
@@ -160,6 +245,14 @@ export default function HeartDiseasePrediction() {
                   <span style={{ fontSize: 13, color: "#64748b" }}>No Disease Probability</span>
                   <span style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{(prediction.probability_no_disease * 100).toFixed(1)}%</span>
                 </div>
+
+                <button 
+                  onClick={downloadReport}
+                  style={{ width: "100%", marginTop: 16, padding: "10px", background: "#0f172a", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                >
+                  <Download size={16} />
+                  Download Medical Report
+                </button>
               </div>
             </SectionCard>
           ) : (
@@ -189,9 +282,15 @@ export default function HeartDiseasePrediction() {
       {/* History */}
       {history.length > 0 && (
         <SectionCard style={{ marginTop: 24 }}>
-          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Prediction history</div>
-            <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>Last {history.length} assessments</div>
+          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Prediction history</div>
+              <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>Last {history.length} assessments</div>
+            </div>
+            <button onClick={handleClearHistory} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#991b1b", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#fee2e2"}} onMouseLeave={e=>{e.currentTarget.style.background="#fef2f2"}}>
+              <Trash2 size={14} />
+              Clear History
+            </button>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>

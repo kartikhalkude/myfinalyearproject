@@ -11,7 +11,8 @@ const {
   getRecordsByType,
   getPatientRecords,
   addVitalSign,
-  getHealthRecordFile
+  getHealthRecordFile,
+  markAsRead
 } = require('../controllers/healthRecordController');
 
 // ─── Health Record Routes ─────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ router.get('/type/:type', authMiddleware, getRecordsByType);
 router.get('/patient/:patientId', authMiddleware, getPatientRecords);
 
 // Get a specific health record's attached file
+router.patch('/:id/read', authMiddleware, markAsRead);
 router.get('/:id/file', authMiddleware, getHealthRecordFile);
 
 // Get a specific health record

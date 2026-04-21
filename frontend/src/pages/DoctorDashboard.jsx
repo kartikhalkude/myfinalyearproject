@@ -8,12 +8,12 @@ import HealthRecords from "../components/HealthRecords";
 import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader } from "../components/UI";
 import { 
   Home, Calendar, CalendarClock, Users, FileText, Pill, ClipboardList, 
-  Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays
+  Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, MessageSquare
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
-function getNavItems(apptCount) {
+function getNavItems(apptCount, feedbackCount) {
   return [
     { section: "Main" },
     { id: "overview",  label: "Overview",        icon: <Home size={18} /> },
@@ -24,7 +24,7 @@ function getNavItems(apptCount) {
     { id: "reports",   label: "Reports",         icon: <FileText size={18} /> },
     { section: "Medical" },
     { id: "prescriptions", label: "Prescriptions", icon: <Pill size={18} /> },
-    { id: "health-records", label: "Health Records", icon: <ClipboardList size={18} /> },
+    { id: "health-records", label: "Health Records", icon: <ClipboardList size={18} />, badge: feedbackCount },
   ];
 }
 
@@ -101,11 +101,12 @@ function Overview({ stats, appointments, onStartCall, onUpdateStatus, onRefresh 
           <RefreshCw size={14} /> Refresh
         </Btn>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 24 }}>
         <StatCard label="Today's Appointments" value={stats?.todayAppointments || 0} icon={<CalendarDays size={18} color="#1db585" />} color="#1db585" />
         <StatCard label="Total Patients" value={stats?.totalPatients || 0} icon={<Users size={18} color="#3b82f6" />} color="#3b82f6" />
         <StatCard label="Pending Approvals" value={pendingAppointments.length} icon={<CalendarClock size={18} color="#eab308" />} color="#eab308" />
         <StatCard label="Total Appointments" value={stats?.totalAppointments || 0} icon={<Calendar size={18} color="#8b5cf6" />} color="#8b5cf6" />
+        <StatCard label="Feedback Given" value={stats?.feedbackProvided || 0} icon={<MessageSquare size={18} color="#10b981" />} color="#10b981" />
       </div>
       
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -385,7 +386,7 @@ function Reports({ stats, appointments }) {
 export default function DoctorDashboard() {
   const { user, logout, wsConnected } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({ todayAppointments: 0, totalPatients: 0, totalAppointments: 0, feedbackProvided: 0, pendingFeedback: 0 });
   const [appointments, setAppointments] = useState([]);
   const [doctorPatients, setDoctorPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -457,6 +458,7 @@ export default function DoctorDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+    if (user?.id) websocketService.notifyOnline(user.id);
 
     const handleAppointmentUpdate = (data) => {
       fetchDashboardData();
@@ -579,8 +581,8 @@ export default function DoctorDashboard() {
       case "patients": return <PatientList appointments={appointments} doctorPatients={doctorPatients} />;
       case "schedule": return <ScheduleView appointments={appointments} />;
       case "reports": return <Reports stats={stats} appointments={appointments} />;
-      case "prescriptions": return <Prescriptions doctorPatients={doctorPatients} />;
-      case "health-records": return <HealthRecords doctorPatients={doctorPatients} />;
+      case "prescriptions": return <Prescriptions doctorPatients={doctorPatients} onRefresh={() => fetchDashboardData()} />;
+      case "health-records": return <HealthRecords doctorPatients={doctorPatients} onRefresh={() => fetchDashboardData()} />;
 
       default: return null;
     }
@@ -622,7 +624,10 @@ export default function DoctorDashboard() {
 
       <Sidebar 
         user={user} 
-        navItems={getNavItems(appointments.filter((a) => a.status === "pending").length)} 
+        navItems={getNavItems(
+          appointments.filter((a) => a.status === "pending").length,
+          stats?.pendingFeedback || 0
+        )} 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         onLogout={logout} 

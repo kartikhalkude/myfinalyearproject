@@ -128,6 +128,8 @@ const updatePrescription = async (req, res) => {
       prescription.status = status;
     }
 
+    // Reset read status so patient sees it as "New" again
+    prescription.readByPatient = false;
     await prescription.save();
 
     const populated = await Prescription.findById(id)
@@ -236,6 +238,37 @@ const getPatientPrescriptions = async (req, res) => {
   }
 };
 
+// ─── Mark as Read ─────────────────────────────────────────────────────────────
+const markAsRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const prescription = await Prescription.findById(id);
+    if (!prescription) return res.status(404).json({ error: 'Prescription not found' });
+    
+    if (String(prescription.patientId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    prescription.readByPatient = true;
+    await prescription.save();
+
+    const populated = await Prescription.findById(id)
+      .populate('patientId', 'name email phone')
+      .populate('doctorId', 'name specialization email');
+
+    // Notify all patient's tabs
+    getIo().to(`user:${req.userId}`).emit('prescription:updated', {
+      type: 'updated',
+      prescription: populated,
+      initiatorId: req.userId
+    });
+
+    res.json({ success: true, prescription: populated });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to mark as read' });
+  }
+};
+
 module.exports = {
   getPrescriptions,
   getPrescriptionById,
@@ -244,4 +277,5 @@ module.exports = {
   deletePrescription,
   requestRefill,
   getPatientPrescriptions,
+  markAsRead
 };

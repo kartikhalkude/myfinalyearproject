@@ -8,7 +8,8 @@ import HealthRecords from "../components/HealthRecords";
 import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader } from "../components/UI";
 import { 
   Home, Calendar, CalendarClock, Users, FileText, Pill, ClipboardList, 
-  Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, MessageSquare
+  Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, MessageSquare,
+  ClipboardCheck
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────

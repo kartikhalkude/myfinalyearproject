@@ -453,6 +453,13 @@ function HealthRecords({ doctorPatients }) {
     filterType === "all"
       ? records
       : records.filter((r) => r.type === filterType);
+  const criticalCount = records.filter((r) => r.severity === "critical" || r.severity === "severe").length;
+  const diagnosisCount = records.filter((r) => (r.type || r.recordType) === "diagnosis").length;
+  const recentCount = records.filter((r) => {
+    if (!r.date) return false;
+    const diff = Date.now() - new Date(r.date).getTime();
+    return diff <= 1000 * 60 * 60 * 24 * 30;
+  }).length;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -505,6 +512,30 @@ function HealthRecords({ doctorPatients }) {
         </div>
       )}
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Records</p>
+          <p className="text-2xl font-bold text-gray-800 mt-2">{records.length}</p>
+          <p className="text-sm text-gray-500 mt-1">All record types</p>
+        </div>
+        <div className="bg-white rounded-xl border border-cyan-200 p-4">
+          <p className="text-xs font-semibold text-cyan-600 uppercase tracking-wide">Recent 30 Days</p>
+          <p className="text-2xl font-bold text-cyan-700 mt-2">{recentCount}</p>
+          <p className="text-sm text-gray-500 mt-1">Recently updated or created</p>
+        </div>
+        <div className="bg-white rounded-xl border border-red-200 p-4">
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">
+            {user?.role === "doctor" ? "High Severity" : "Diagnoses"}
+          </p>
+          <p className="text-2xl font-bold text-red-700 mt-2">
+            {user?.role === "doctor" ? criticalCount : diagnosisCount}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            {user?.role === "doctor" ? "Severe or critical records" : "Diagnosis-type records"}
+          </p>
+        </div>
+      </div>
+
       {/* Type filters */}
       <div className="flex flex-wrap gap-2">
         {[{ value: "all", label: "All" }, ...RECORD_TYPES].map((t) => (
@@ -538,7 +569,7 @@ function HealthRecords({ doctorPatients }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {filtered.map((record) => (
             <RecordCard
               key={record._id}
@@ -577,6 +608,14 @@ function RecordCard({ record, userRole, onEdit, onDelete }) {
   const content =
     record.content || record.description || "No content available";
   const recordType = record.type || record.recordType || "diagnosis";
+  const recordDate = record.date
+    ? new Date(record.date).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "N/A";
+  const shortContent = content.length > 280 ? `${content.slice(0, 280)}...` : content;
 
   return (
     <div
@@ -628,29 +667,21 @@ function RecordCard({ record, userRole, onEdit, onDelete }) {
         </div>
 
         {/* Metadata row */}
-        <div className="mt-3 flex flex-wrap gap-4 text-sm">
-          <div>
-            <p className="text-xs font-semibold text-gray-600 uppercase">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <div className="bg-white/60 rounded-lg border border-white/80 p-3">
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
               Date
             </p>
-            <p className="text-gray-700 font-medium">
-              {record.date
-                ? new Date(record.date).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : "N/A"}
-            </p>
+            <p className="text-gray-700 font-medium mt-1">{recordDate}</p>
           </div>
 
           {/* Doctor sees patient; patient sees doctor */}
           {userRole === "doctor" && record.patientId && (
-            <div>
-              <p className="text-xs font-semibold text-gray-600 uppercase">
+            <div className="bg-white/60 rounded-lg border border-white/80 p-3">
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
                 Patient
               </p>
-              <div className="text-gray-700 font-medium">
+              <div className="text-gray-700 font-medium mt-1">
                 {typeof record.patientId === "object"
                   ? record.patientId.name
                   : record.patientId || "Unknown"}
@@ -665,15 +696,22 @@ function RecordCard({ record, userRole, onEdit, onDelete }) {
           )}
 
           {userRole === "patient" && (
-            <div>
-              <p className="text-xs font-semibold text-gray-600 uppercase">
+            <div className="bg-white/60 rounded-lg border border-white/80 p-3">
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
                 Doctor
               </p>
-              <p className="text-gray-700 font-medium">
+              <p className="text-gray-700 font-medium mt-1">
                 {record.doctorId?.name || "Your Doctor"}
               </p>
             </div>
           )}
+
+          <div className="bg-white/60 rounded-lg border border-white/80 p-3">
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+              Record Type
+            </p>
+            <p className="text-gray-700 font-medium mt-1">{typeLabel(recordType)}</p>
+          </div>
         </div>
 
         {/* Content section */}
@@ -682,7 +720,7 @@ function RecordCard({ record, userRole, onEdit, onDelete }) {
             Findings / Content
           </p>
           <div className="text-sm text-gray-700 bg-white/50 p-3 rounded-lg border border-white/80 leading-relaxed whitespace-pre-wrap">
-            {content}
+            {shortContent}
           </div>
         </div>
 

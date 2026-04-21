@@ -20,8 +20,17 @@ const broadcastAppointmentUpdate = async (appointment, eventType) => {
     const updateData   = { type: eventType, appointment: populatedApt };
     const socketEvent  = eventType === 'created' ? 'appointment:created' : 'appointment:updated';
 
-    if (patientSocketId) io.to(patientSocketId).emit(socketEvent, updateData);
-    if (doctorSocketId)  io.to(doctorSocketId).emit(socketEvent, updateData);
+    try {
+      if (patientSocketId) io.to(patientSocketId).emit(socketEvent, updateData);
+    } catch (error) {
+      console.error('Error emitting to patient socket:', error.message);
+    }
+
+    try {
+      if (doctorSocketId) io.to(doctorSocketId).emit(socketEvent, updateData);
+    } catch (error) {
+      console.error('Error emitting to doctor socket:', error.message);
+    }
 
     console.log(`✓ Appointment update broadcasted: ${socketEvent}`);
   } catch (error) {
@@ -41,13 +50,52 @@ const initSocket = (server, allowedOrigins) => {
     }
   });
 
+  // Handle Socket.IO engine errors
+  io.engine.on('connection_error', (error) => {
+    console.error('Socket.IO connection error:', error);
+  });
+
+  // Handle socket errors globally
+  io.on('error', (error) => {
+    console.error('Socket.IO error:', error.message);
+  });
+
+  io.on('connect_error', (error) => {
+    console.error('Socket.IO connect error:', error);
+  });
+
   io.on('connection', (socket) => {
     console.log('✓ Client connected:', socket.id);
+
+    // Error handler for socket to prevent unhandled errors
+    socket.on('error', (error) => {
+      console.error('❌ Socket error:', error.message);
+    });
+
+    // Handle errors on the underlying connection
+    if (socket.conn) {
+      socket.conn.on('error', (error) => {
+        console.error('❌ Socket connection error:', error.message);
+      });
+      
+      // Handle errors on the raw transport socket
+      if (socket.conn.transport && socket.conn.transport.socket) {
+        socket.conn.transport.socket.on('error', (error) => {
+          console.error('❌ Transport socket error:', error.message);
+        });
+      }
+    }
 
     socket.on('user:online', (userId) => {
       if (userId) {
         userSockets.set(userId.toString(), socket.id);
-        io.emit('user:status', { userId, status: 'online' });
+        if (socket.connected) {
+          try {
+            io.emit('user:status', { userId, status: 'online' });
+          } catch (error) {
+            console.error('Error emitting user:status:', error.message);
+          }
+        }
         console.log('✓ user:online received. userId:', userId, '| type:', typeof userId);
       }
     });
@@ -58,21 +106,33 @@ const initSocket = (server, allowedOrigins) => {
 
       if (receiverSocketId) {
         activeCalls.set(appointmentId, { callerId, receiverId, startTime: new Date(), status: 'ringing' });
-        io.to(receiverSocketId).emit('call:incoming', { appointmentId, callerId, callerName, offer });
+        try {
+          io.to(receiverSocketId).emit('call:incoming', { appointmentId, callerId, callerName, offer });
+        } catch (error) {
+          console.error('Error emitting call:incoming:', error.message);
+        }
       } else {
-        io.to(socket.id).emit('call:rejected', { appointmentId, reason: 'User is offline' });
+        try {
+          io.to(socket.id).emit('call:rejected', { appointmentId, reason: 'User is offline' });
+        } catch (error) {
+          console.error('Error emitting call:rejected:', error.message);
+        }
       }
     });
 
     socket.on('call:answer', (data) => {
-      const { appointmentId, answer } = data;
-      const callData = activeCalls.get(appointmentId);
-      if (callData) {
-        callData.status = 'active';
-        const callerSocketId = userSockets.get(callData.callerId.toString());
-        if (callerSocketId) {
-          io.to(callerSocketId).emit('call:answered', { appointmentId, answer });
+      try {
+        const { appointmentId, answer } = data;
+        const callData = activeCalls.get(appointmentId);
+        if (callData) {
+          callData.status = 'active';
+          const callerSocketId = userSockets.get(callData.callerId.toString());
+          if (callerSocketId) {
+            io.to(callerSocketId).emit('call:answered', { appointmentId, answer });
+          }
         }
+      } catch (error) {
+        console.error('Error in call:answer:', error.message);
       }
     });
 
@@ -103,31 +163,39 @@ const initSocket = (server, allowedOrigins) => {
     });
 
     socket.on('call:reject', (data) => {
-      const { appointmentId, userId } = data;
-      const callData = activeCalls.get(appointmentId);
-      if (callData) {
-        const otherUserId  = userId.toString() === callData.callerId.toString()
-          ? callData.receiverId : callData.callerId;
-        const otherSocketId = userSockets.get(otherUserId.toString());
-        if (otherSocketId) io.to(otherSocketId).emit('call:rejected', { appointmentId });
-        activeCalls.delete(appointmentId);
+      try {
+        const { appointmentId, userId } = data;
+        const callData = activeCalls.get(appointmentId);
+        if (callData) {
+          const otherUserId  = userId.toString() === callData.callerId.toString()
+            ? callData.receiverId : callData.callerId;
+          const otherSocketId = userSockets.get(otherUserId.toString());
+          if (otherSocketId) io.to(otherSocketId).emit('call:rejected', { appointmentId });
+          activeCalls.delete(appointmentId);
+        }
+      } catch (error) {
+        console.error('Error in call:reject:', error.message);
       }
     });
 
     socket.on('call:end', (data) => {
-      const { appointmentId, userId } = data;
-      const callData = activeCalls.get(appointmentId);
-      if (callData) {
-        const otherUserId   = userId.toString() === callData.callerId.toString()
-          ? callData.receiverId : callData.callerId;
-        const otherSocketId = userSockets.get(otherUserId.toString());
-        if (otherSocketId) io.to(otherSocketId).emit('call:ended', { appointmentId });
+      try {
+        const { appointmentId, userId } = data;
+        const callData = activeCalls.get(appointmentId);
+        if (callData) {
+          const otherUserId   = userId.toString() === callData.callerId.toString()
+            ? callData.receiverId : callData.callerId;
+          const otherSocketId = userSockets.get(otherUserId.toString());
+          if (otherSocketId) io.to(otherSocketId).emit('call:ended', { appointmentId });
 
-        const callerSocketId = userSockets.get(callData.callerId.toString());
-        if (callerSocketId && callerSocketId !== otherSocketId) {
-          io.to(callerSocketId).emit('call:ended', { appointmentId });
+          const callerSocketId = userSockets.get(callData.callerId.toString());
+          if (callerSocketId && callerSocketId !== otherSocketId) {
+            io.to(callerSocketId).emit('call:ended', { appointmentId });
+          }
+          activeCalls.delete(appointmentId);
         }
-        activeCalls.delete(appointmentId);
+      } catch (error) {
+        console.error('Error in call:end:', error.message);
       }
     });
 

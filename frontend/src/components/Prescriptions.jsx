@@ -405,6 +405,9 @@ function Prescriptions({ doctorPatients }) {
   const filteredPrescriptions = filterStatus === 'all'
     ? prescriptions
     : prescriptions.filter((p) => p.status === filterStatus);
+  const activeCount = prescriptions.filter((p) => p.status === 'active').length;
+  const expiredCount = prescriptions.filter((p) => p.status === 'expired').length;
+  const refillableCount = prescriptions.filter((p) => p.status === 'active' && (p.medicines?.length || 0) > 0).length;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -451,6 +454,30 @@ function Prescriptions({ doctorPatients }) {
         </div>
       )}
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Prescriptions</p>
+          <p className="text-2xl font-bold text-gray-800 mt-2">{prescriptions.length}</p>
+          <p className="text-sm text-gray-500 mt-1">Visible across all statuses</p>
+        </div>
+        <div className="bg-white rounded-xl border border-green-200 p-4">
+          <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Active</p>
+          <p className="text-2xl font-bold text-green-700 mt-2">{activeCount}</p>
+          <p className="text-sm text-gray-500 mt-1">Currently valid prescriptions</p>
+        </div>
+        <div className="bg-white rounded-xl border border-cyan-200 p-4">
+          <p className="text-xs font-semibold text-cyan-600 uppercase tracking-wide">
+            {user?.role === 'patient' ? 'Can Request Refill' : 'Expired'}
+          </p>
+          <p className="text-2xl font-bold text-cyan-700 mt-2">
+            {user?.role === 'patient' ? refillableCount : expiredCount}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            {user?.role === 'patient' ? 'Active prescriptions with medicines' : 'Need review or renewal'}
+          </p>
+        </div>
+      </div>
+
       {/* Filter by status */}
       <div className="flex flex-wrap gap-2">
         {['all', 'active', 'expired', 'cancelled'].map((status) => (
@@ -484,7 +511,7 @@ function Prescriptions({ doctorPatients }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {filteredPrescriptions.map((prescription) => (
             <PrescriptionCard
               key={prescription._id}
@@ -532,6 +559,13 @@ function PrescriptionCard({ prescription, userRole, refillLoading, onEdit, onDel
     expired:   'bg-gray-100 text-gray-700',
     cancelled: 'bg-red-100 text-red-700',
   };
+  const medicineCount = prescription.medicines?.length || 0;
+  const validUntilLabel = prescription.validUntil
+    ? new Date(prescription.validUntil).toLocaleDateString()
+    : 'Not set';
+  const createdAtLabel = prescription.createdAt
+    ? new Date(prescription.createdAt).toLocaleDateString()
+    : 'Unknown';
 
   return (
     <div
@@ -596,19 +630,52 @@ function PrescriptionCard({ prescription, userRole, refillLoading, onEdit, onDel
       </div>
 
       {/* Body */}
-      <div className="p-6 space-y-4">
+      <div className="p-6 space-y-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white rounded-lg border border-current border-opacity-20 p-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicines</p>
+            <p className="text-lg font-bold text-gray-800 mt-1">{medicineCount}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-current border-opacity-20 p-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Issued</p>
+            <p className="text-sm font-semibold text-gray-800 mt-1">{createdAtLabel}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-current border-opacity-20 p-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Valid Until</p>
+            <p className="text-sm font-semibold text-gray-800 mt-1">{validUntilLabel}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-current border-opacity-20 p-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</p>
+            <p className="text-sm font-semibold text-gray-800 mt-1 capitalize">{prescription.status}</p>
+          </div>
+        </div>
+
         <div>
           <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center">
             <Pill className="w-4 h-4 mr-2" /> Medicines
           </h4>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {prescription.medicines?.map((medicine, i) => (
-              <div key={i} className="p-3 bg-white rounded-lg border border-current border-opacity-20">
-                <p className="font-semibold text-gray-800">{medicine.name}</p>
-                <div className="grid grid-cols-3 gap-2 mt-2 text-sm text-gray-600">
-                  {medicine.dosage    && <div><span className="text-xs font-semibold">Dosage:</span> {medicine.dosage}</div>}
-                  {medicine.frequency && <div><span className="text-xs font-semibold">Frequency:</span> {medicine.frequency}</div>}
-                  {medicine.duration  && <div><span className="text-xs font-semibold">Duration:</span> {medicine.duration}</div>}
+              <div key={i} className="p-4 bg-white rounded-lg border border-current border-opacity-20">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-800">{medicine.name}</p>
+                    <p className="text-xs text-gray-500 mt-1">Medicine {i + 1}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+                  <div className="rounded-md bg-gray-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Dosage</p>
+                    <p className="text-sm font-medium text-gray-800 mt-1">{medicine.dosage || 'Not specified'}</p>
+                  </div>
+                  <div className="rounded-md bg-gray-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Frequency</p>
+                    <p className="text-sm font-medium text-gray-800 mt-1">{medicine.frequency || 'Not specified'}</p>
+                  </div>
+                  <div className="rounded-md bg-gray-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Duration</p>
+                    <p className="text-sm font-medium text-gray-800 mt-1">{medicine.duration || 'Not specified'}</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -618,7 +685,9 @@ function PrescriptionCard({ prescription, userRole, refillLoading, onEdit, onDel
         {prescription.advice && (
           <div>
             <p className="text-xs font-bold text-gray-700 uppercase mb-2">Additional Advice</p>
-            <p className="text-sm text-gray-700 italic">{prescription.advice}</p>
+            <div className="text-sm text-gray-700 italic bg-white rounded-lg border border-current border-opacity-20 p-3">
+              {prescription.advice}
+            </div>
           </div>
         )}
 

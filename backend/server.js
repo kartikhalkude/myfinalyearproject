@@ -66,3 +66,29 @@ server.listen(PORT, () => {
   console.log(`📡 WebSocket server ready`);
   console.log(`🔗 MongoDB: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/telemedicine'}`);
 });
+
+// ─── Unhandled error handlers ─────────────────────────────────────────────────
+process.on('uncaughtException', (err) => {
+  // Don't exit on write EOF or socket errors - just log them
+  if (err.code === 'EOF' || err.syscall === 'write') {
+    console.warn('⚠️ Socket write error (client disconnected):', err.code);
+  } else {
+    console.error('❌ Uncaught Exception:', err);
+    // Only exit for critical errors, not socket-related ones
+    if (!err.message.includes('ECONNRESET') && !err.message.includes('EOF')) {
+      process.exit(1);
+    }
+  }
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+  } else {
+    console.error('Server error:', err);
+  }
+});

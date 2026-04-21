@@ -14,7 +14,7 @@ const PNEUMONIA_SCRIPT = path.join(ML_DIR, 'pneumonia_predict.py');
 
 const runPythonScript = (scriptPath, inputData) =>
   new Promise((resolve, reject) => {
-    const pythonCmd = process.env.PYTHON_CMD || 'python';
+    const pythonCmd = process.env.PYTHON_CMD || 'python3';
     // NOTE: no cwd override — scripts resolve paths via __file__ internally
     const python = spawn(pythonCmd, [scriptPath]);
 
@@ -35,7 +35,7 @@ const runPythonScript = (scriptPath, inputData) =>
       if (stderr.trim()) {
         // Only log real errors, not sklearn UserWarnings
         const isOnlyWarnings = stderr.trim().split('\n')
-          .every((l) => l.includes('UserWarning') || l.includes('warnings.warn') || !l.trim());
+          .every((l) => l.includes('UserWarning') || l.includes('warnings.warn') || l.includes('[pneumonia]') || !l.trim());
         if (!isOnlyWarnings) console.error('[ML stderr]', stderr.trim());
       }
 
@@ -129,35 +129,83 @@ const getHeartPredictions = async (req, res) => {
 
 // ─── Pneumonia ───────────────────────────────────────────────────────────────
 
+const PNEUMONIA_ALLOWED_MIMETYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const PNEUMONIA_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+
 const predictPneumonia = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No image file uploaded' });
+    // Validate file upload
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+
+    // Validate MIME type
+    if (!PNEUMONIA_ALLOWED_MIMETYPES.includes(req.file.mimetype)) {
+      return res.status(400).json({ 
+        error: `Invalid file type. Allowed: PNG, JPEG, WEBP. Got: ${req.file.mimetype}` 
+      });
+    }
+
+    // Validate file size
+    if (req.file.size > PNEUMONIA_MAX_SIZE) {
+      return res.status(400).json({ 
+        error: `File too large. Maximum size: 10 MB. Got: ${(req.file.size / 1024 / 1024).toFixed(2)} MB` 
+      });
+    }
 
     // Convert image buffer to base64
     const imageBase64 = req.file.buffer.toString('base64');
     const inputData = { image: imageBase64 };
 
     const prediction = await runPythonScript(PNEUMONIA_SCRIPT, inputData);
+
+    // Validate Python output
+    if (!prediction.prediction || prediction.probability === undefined) {
+      throw new Error('Invalid prediction output from model');
+    }
+
+    // Save to database
     await new PneumoniaPrediction({
       userId: req.userId,
+      filename: req.file.originalname,
+      filesize: req.file.size,
+      mimetype: req.file.mimetype,
       prediction: prediction.prediction,
       probability: prediction.probability,
-      risk: prediction.risk
+      risk: prediction.risk,
+      modelSource: prediction.model_source,
+      warning: prediction.warning || null
     }).save();
 
     res.json(prediction);
   } catch (error) {
     console.error('[predictPneumonia]', error.message);
-    res.status(500).json({ error: 'Prediction failed', details: error.message });
+    res.status(500).json({ 
+      error: 'Prediction failed', 
+      details: error.message 
+    });
   }
 };
 
 const getPneumoniaPredictions = async (req, res) => {
   try {
-    res.json(await PneumoniaPrediction.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(10));
-  } catch {
+    const predictions = await PneumoniaPrediction
+      .find({ userId: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(10);
+    
+    res.json(predictions);
+  } catch (error) {
+    console.error('[getPneumoniaPredictions]', error.message);
     res.status(500).json({ error: 'Failed to fetch predictions' });
   }
 };
 
-module.exports = { predictDiabetes, getDiabetesPredictions, predictHeartDisease, getHeartPredictions, predictPneumonia, getPneumoniaPredictions };
+module.exports = { 
+  predictDiabetes, 
+  getDiabetesPredictions, 
+  predictHeartDisease, 
+  getHeartPredictions, 
+  predictPneumonia, 
+  getPneumoniaPredictions 
+};

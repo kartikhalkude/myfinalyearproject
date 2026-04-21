@@ -112,6 +112,7 @@ const createHealthRecord = async (req, res) => {
       fileContentType: req.file ? req.file.mimetype : undefined,
       fileName:   req.file ? req.file.originalname : undefined,
       date:       date ? new Date(date) : new Date(),
+      readByPatient: isDoctor ? false : true, // If patient creates it, they've already read it
     }).save();
 
     const populated = await HealthRecord.findById(record._id)

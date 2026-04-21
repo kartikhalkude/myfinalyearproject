@@ -85,7 +85,7 @@ function Toast({ toast, onDismiss, onAction }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
-function Overview({ stats, appointments, onStartCall, onUpdateStatus, onRefresh }) {
+function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdateStatus, onRefresh, onViewHealth }) {
   const todayAppointments = appointments.filter(apt => new Date(apt.date).toDateString() === new Date().toDateString());
   const pendingAppointments = appointments.filter(apt => apt.status === "pending").slice(0, 5);
   const statusBadge = { confirmed: ["#dcfce7","#166534"], pending: ["#fef9c3","#854d0e"], completed: ["#dbeafe","#1e40af"], cancelled: ["#fee2e2","#991b1b"] };
@@ -104,7 +104,7 @@ function Overview({ stats, appointments, onStartCall, onUpdateStatus, onRefresh 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 24 }}>
         <StatCard label="Today's Appointments" value={stats?.todayAppointments || 0} icon={<CalendarDays size={18} color="#1db585" />} color="#1db585" />
         <StatCard label="Total Patients" value={stats?.totalPatients || 0} icon={<Users size={18} color="#3b82f6" />} color="#3b82f6" />
-        <StatCard label="Pending Approvals" value={pendingAppointments.length} icon={<CalendarClock size={18} color="#eab308" />} color="#eab308" />
+        <StatCard label="Pending Feedback" value={stats?.pendingFeedback || 0} icon={<ClipboardList size={18} color="#eab308" />} color="#eab308" />
         <StatCard label="Total Appointments" value={stats?.totalAppointments || 0} icon={<Calendar size={18} color="#8b5cf6" />} color="#8b5cf6" />
         <StatCard label="Feedback Given" value={stats?.feedbackProvided || 0} icon={<MessageSquare size={18} color="#10b981" />} color="#10b981" />
       </div>
@@ -143,24 +143,23 @@ function Overview({ stats, appointments, onStartCall, onUpdateStatus, onRefresh 
           </div>
         </SectionCard>
 
-        {/* Pending Approvals */}
+        {/* Pending Feedbacks */}
         <SectionCard>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc" }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Pending Approvals</div>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Pending Feedbacks</div>
+            <button onClick={onViewHealth} style={{ fontSize: 12, color: "#1db585", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>View All</button>
           </div>
           <div style={{ padding: 16 }}>
-            {pendingAppointments.length === 0 ? <EmptyState icon={<CheckCircle size={24} color="#94a3b8" />} title="No pending appointments" subtitle="You're all caught up." /> : (
+            {pendingFeedbacks.length === 0 ? <EmptyState icon={<ClipboardCheck size={24} color="#94a3b8" />} title="All feedback completed" subtitle="Great job! You're all caught up." /> : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {pendingAppointments.map(apt => (
-                  <div key={apt._id} style={{ padding: "12px 14px", border: "1px solid #fef08a", borderRadius: 12, background: "#fefce8" }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{apt.patientName}</div>
-                    <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>{new Date(apt.date).toLocaleDateString()} at {apt.time}</div>
-                    {apt.reason && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{apt.reason}</div>}
-                    
-                    <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
-                      <Btn onClick={() => onUpdateStatus(apt._id, "confirmed")} variant="success" style={{ flex: 1 }} size="sm"><Check size={14} /> Confirm</Btn>
-                      <Btn onClick={() => onUpdateStatus(apt._id, "cancelled")} variant="danger" style={{ flex: 1 }} size="sm"><X size={14} /> Decline</Btn>
+                {pendingFeedbacks.map(rec => (
+                  <div key={rec._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{rec.title}</div>
+                      <span style={{ fontSize: 11, padding: "2px 8px", background: "#fef9c3", color: "#854d0e", borderRadius: 999, fontWeight: 600 }}>Needs Review</span>
                     </div>
+                    <div style={{ fontSize: 12.5, color: "#64748b" }}>Patient: {rec.patientId?.name || "Patient"}</div>
+                    <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 2 }}>{new Date(rec.createdAt).toLocaleDateString()}</div>
                   </div>
                 ))}
               </div>
@@ -388,6 +387,7 @@ export default function DoctorDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState({ todayAppointments: 0, totalPatients: 0, totalAppointments: 0, feedbackProvided: 0, pendingFeedback: 0 });
   const [appointments, setAppointments] = useState([]);
+  const [healthRecords, setHealthRecords] = useState([]);
   const [doctorPatients, setDoctorPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
@@ -434,6 +434,8 @@ export default function DoctorDashboard() {
       setStats(statsRes.data);
       const appts = appointmentsRes.data;
       setAppointments(appts);
+      const records = recordsRes.data?.records || [];
+      setHealthRecords(records);
 
       const patientMap = new Map();
       const addPatient = (obj) => {
@@ -489,8 +491,9 @@ export default function DoctorDashboard() {
     };
 
     const handlePrescriptionCreated = (data) => {
+      fetchDashboardData();
       if (data?.initiatorId === user?.id) return;
-      addToast({ type: "success", title: "Prescription Created", message: `Prescription for ${data.prescription?.patientId?.name || "patient"} has been created`, autoClose: true });
+      addToast({ type: "prescription", title: "New Prescription", message: `Prescription for ${data.prescription?.patientId?.name || "patient"} added`, autoClose: true });
     };
 
     const handlePrescriptionUpdated = (data) => {
@@ -499,13 +502,15 @@ export default function DoctorDashboard() {
     };
 
     const handleHealthRecordCreated = (data) => {
+      fetchDashboardData();
       if (data?.initiatorId === user?.id) return;
-      addToast({ type: "success", title: "Health Record Created", message: `Health record "${data.record?.title}" has been created`, autoClose: true });
+      addToast({ type: "record", title: "New Health Record", message: `A new record "${data.record?.title}" requires your feedback`, autoClose: true });
     };
 
     const handleHealthRecordUpdated = (data) => {
+      fetchDashboardData();
       if (data?.initiatorId === user?.id) return;
-      addToast({ type: "success", title: "Health Record Updated", message: `Health record updated successfully`, autoClose: true });
+      addToast({ type: "record", title: "Record Updated", message: `Health record updated by patient`, autoClose: true });
     };
 
     websocketService.onAppointmentUpdated(handleAppointmentUpdate);
@@ -576,7 +581,17 @@ export default function DoctorDashboard() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "overview": return <Overview stats={stats} appointments={appointments} onStartCall={startVideoCall} onUpdateStatus={updateStatus} onRefresh={() => fetchDashboardData()} />;
+      case "overview": return (
+        <Overview 
+          stats={stats} 
+          appointments={appointments} 
+          pendingFeedbacks={healthRecords.filter(r => !r.notes || r.notes.trim() === "").slice(0, 5)}
+          onStartCall={startVideoCall} 
+          onUpdateStatus={updateStatus} 
+          onRefresh={() => fetchDashboardData()} 
+          onViewHealth={() => setActiveTab("health-records")}
+        />
+      );
       case "appointments": return <AppointmentManagement appointments={appointments} onStartCall={startVideoCall} onUpdateStatus={updateStatus} />;
       case "patients": return <PatientList appointments={appointments} doctorPatients={doctorPatients} />;
       case "schedule": return <ScheduleView appointments={appointments} />;

@@ -1,8 +1,9 @@
-// frontend/src/components/HeartDiseasePrediction.jsx
 import React, { useState, useEffect } from 'react';
-import apiClient from '../services/apiClient'; // FIX: was raw axios + API_URL
+import apiClient from '../services/apiClient';
+import { SectionCard, PageHeader, Loader } from './UI';
+import { CheckCircle, AlertTriangle, Info, HeartPulse } from "lucide-react";
 
-function HeartDiseasePrediction() {
+export default function HeartDiseasePrediction() {
   const [formData, setFormData] = useState({
     age: '', sex: '1', chestPainType: '0', restingBP: '', cholesterol: '',
     fastingBS: '0', restingECG: '0', maxHeartRate: '', exerciseAngina: '0',
@@ -57,186 +58,167 @@ function HeartDiseasePrediction() {
 
   const fillTestData = (t) => { setFormData(testSamples[t]); setPrediction(null); setError(''); };
 
+  const inputStyle = { width: "100%", padding: "9px 11px", fontSize: 13.5, fontFamily: "inherit", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 9, outline: "none", boxSizing: "border-box", transition: "border-color 0.15s" };
+  const onFocus = e => { e.target.style.borderColor = "#1db585"; e.target.style.boxShadow = "0 0 0 3px rgba(29,181,133,0.08)"; };
+  const onBlur = e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; };
+
+  const riskColor = prediction ? (prediction.prediction === 1 ? "red" : prediction.probability_disease > 0.35 ? "yellow" : "green") : "slate";
+  const riskBg = { red: "#fff1f2", yellow: "#fffbeb", green: "#f0fdf4", slate: "#f8fafc" };
+  const riskBorder = { red: "#fda4af", yellow: "#fde68a", green: "#86efac", slate: "#e2e8f0" };
+  const riskText = { red: "#9f1239", yellow: "#78350f", green: "#14532d", slate: "#475569" };
+
   return (
-    <div>
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">Heart Disease Risk Prediction</h2>
-
-      <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg">
-        <div className="flex items-start">
-          <svg className="w-6 h-6 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-          <div className="text-sm">
-            <p className="font-semibold text-yellow-800 mb-1">For educational/demonstration purposes only.</p>
-            <p className="text-yellow-700">Do NOT use for actual medical decisions. Always consult qualified healthcare professionals.</p>
-          </div>
-        </div>
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Heart Disease Risk Prediction</h1>
+        <p style={{ fontSize: 13.5, color: "#64748b" }}>Enter health metrics to get an AI-powered risk assessment. For educational use only.</p>
       </div>
 
-      {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">{error}</div>}
+      <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style={{ color: "#92400e" }}><strong>For educational/demonstration purposes only.</strong> Do NOT use for actual medical decisions. Always consult qualified healthcare professionals.</span>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-gray-800">Enter Health Metrics</h3>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => fillTestData('lowRisk')}  className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition">Low Risk</button>
-                <button type="button" onClick={() => fillTestData('moderate')} className="px-3 py-1.5 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition">Moderate</button>
-                <button type="button" onClick={() => fillTestData('highRisk')} className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">High Risk</button>
-              </div>
+      {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "11px 14px", marginBottom: 16, fontSize: 13.5, color: "#dc2626" }}>{error}</div>}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "flex-start" }}>
+        <SectionCard>
+          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Health metrics</div>
+              <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>All fields are required</div>
             </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Age (years)</label>
-                  <input type="number" name="age" value={formData.age} onChange={handleChange} placeholder="e.g., 55" required min="1" max="120"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Sex</label>
-                  <select name="sex" value={formData.sex} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="1">Male</option><option value="0">Female</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Chest Pain Type</label>
-                  <select name="chestPainType" value={formData.chestPainType} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="0">Typical Angina</option><option value="1">Atypical Angina</option>
-                    <option value="2">Non-Anginal Pain</option><option value="3">Asymptomatic</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Resting Blood Pressure (mm Hg)</label>
-                  <input type="number" name="restingBP" value={formData.restingBP} onChange={handleChange} placeholder="e.g., 130" required min="80" max="200"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Cholesterol (mg/dl)</label>
-                  <input type="number" name="cholesterol" value={formData.cholesterol} onChange={handleChange} placeholder="e.g., 250" required min="100" max="600"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Fasting Blood Sugar &gt; 120 mg/dl</label>
-                  <select name="fastingBS" value={formData.fastingBS} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="0">No</option><option value="1">Yes</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Resting ECG Results</label>
-                  <select name="restingECG" value={formData.restingECG} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="0">Normal</option><option value="1">ST-T Wave Abnormality</option><option value="2">Left Ventricular Hypertrophy</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Heart Rate Achieved</label>
-                  <input type="number" name="maxHeartRate" value={formData.maxHeartRate} onChange={handleChange} placeholder="e.g., 150" required min="60" max="220"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Exercise Induced Angina</label>
-                  <select name="exerciseAngina" value={formData.exerciseAngina} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="0">No</option><option value="1">Yes</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">ST Depression (Oldpeak)</label>
-                  <input type="number" name="oldpeak" value={formData.oldpeak} onChange={handleChange} placeholder="e.g., 1.0" required min="0" max="10" step="0.1"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">ST Slope</label>
-                  <select name="stSlope" value={formData.stSlope} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="0">Downsloping</option><option value="1">Flat</option><option value="2">Upsloping</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of Major Vessels (0-3)</label>
-                  <select name="ca" value={formData.ca} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Thalassemia</label>
-                  <select name="thal" value={formData.thal} onChange={handleChange} required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option value="0">Unknown</option><option value="1">Normal</option>
-                    <option value="2">Fixed Defect</option><option value="3">Reversible Defect</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex space-x-4 pt-6">
-                <button type="submit" disabled={loading}
-                  className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-blue-400 disabled:cursor-not-allowed">
-                  {loading ? 'Analyzing...' : 'Predict Risk'}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {[["Low risk", "lowRisk", "#dcfce7", "#166534"], ["Moderate", "moderate", "#fef9c3", "#854d0e"], ["High risk", "highRisk", "#fee2e2", "#991b1b"]].map(([label, key, bg, color]) => (
+                <button key={key} type="button" onClick={() => fillTestData(key)}
+                  style={{ padding: "6px 12px", fontSize: 12, fontWeight: 500, background: bg, color, border: "none", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "transform 0.1s" }}
+                  onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                >
+                  {label}
                 </button>
-                <button type="button" onClick={resetForm}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition">
-                  Reset
-                </button>
-              </div>
-            </form>
+              ))}
+            </div>
           </div>
-        </div>
+          <form onSubmit={handleSubmit} style={{ padding: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+              {[
+                { label: "Age (years)", name: "age", type: "number", min: "1", max: "120", placeholder: "e.g., 55" },
+                { label: "Sex", name: "sex", type: "select", options: [{ v: "1", l: "Male" }, { v: "0", l: "Female" }] },
+                { label: "Chest Pain Type", name: "chestPainType", type: "select", options: [{ v: "0", l: "Typical Angina" }, { v: "1", l: "Atypical Angina" }, { v: "2", l: "Non-Anginal Pain" }, { v: "3", l: "Asymptomatic" }] },
+                { label: "Resting BP (mm Hg)", name: "restingBP", type: "number", min: "80", max: "200", placeholder: "e.g., 130" },
+                { label: "Cholesterol (mg/dl)", name: "cholesterol", type: "number", min: "100", max: "600", placeholder: "e.g., 250" },
+                { label: "Fasting Blood Sugar > 120", name: "fastingBS", type: "select", options: [{ v: "0", l: "No" }, { v: "1", l: "Yes" }] },
+                { label: "Resting ECG Results", name: "restingECG", type: "select", options: [{ v: "0", l: "Normal" }, { v: "1", l: "ST-T Wave Abnormality" }, { v: "2", l: "LV Hypertrophy" }] },
+                { label: "Max Heart Rate", name: "maxHeartRate", type: "number", min: "60", max: "220", placeholder: "e.g., 150" },
+                { label: "Exercise Induced Angina", name: "exerciseAngina", type: "select", options: [{ v: "0", l: "No" }, { v: "1", l: "Yes" }] },
+                { label: "ST Depression (Oldpeak)", name: "oldpeak", type: "number", min: "0", max: "10", step: "0.1", placeholder: "e.g., 1.0" },
+                { label: "ST Slope", name: "stSlope", type: "select", options: [{ v: "0", l: "Downsloping" }, { v: "1", l: "Flat" }, { v: "2", l: "Upsloping" }] },
+                { label: "Major Vessels (0-3)", name: "ca", type: "select", options: [{ v: "0", l: "0" }, { v: "1", l: "1" }, { v: "2", l: "2" }, { v: "3", l: "3" }] },
+                { label: "Thalassemia", name: "thal", type: "select", options: [{ v: "0", l: "Unknown" }, { v: "1", l: "Normal" }, { v: "2", l: "Fixed Defect" }, { v: "3", l: "Reversible Defect" }] }
+              ].map(f => (
+                <div key={f.name}>
+                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 500, color: "#475569", marginBottom: 4 }}>{f.label}</label>
+                  {f.type === "select" ? (
+                    <select name={f.name} value={formData[f.name]} onChange={handleChange} required style={{ ...inputStyle, appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 11px center", paddingRight: 32 }} onFocus={onFocus} onBlur={onBlur}>
+                      {f.options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+                    </select>
+                  ) : (
+                    <input type="number" name={f.name} value={formData[f.name]} onChange={handleChange} placeholder={f.placeholder} step={f.step} min={f.min} max={f.max} required style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+              <button type="submit" disabled={loading} style={{ flex: 1, padding: "11px", background: loading ? "#94a3b8" : "#1db585", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                {loading ? <><div style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }}></div>Analyzing...</> : "Run prediction"}
+              </button>
+              <button type="button" onClick={resetForm} style={{ padding: "11px 20px", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#64748b", cursor: "pointer", fontFamily: "inherit" }}>Reset</button>
+            </div>
+          </form>
+        </SectionCard>
 
-        <div>
+        {/* Results */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {prediction ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Prediction Result</h3>
-              <div className={`p-6 rounded-lg mb-4 ${prediction.prediction === 1 ? 'bg-red-50 border-2 border-red-200' : 'bg-green-50 border-2 border-green-200'}`}>
-                <div className="text-center">
-                  <h4 className={`text-2xl font-bold mb-2 ${prediction.prediction === 1 ? 'text-red-700' : 'text-green-700'}`}>{prediction.prediction_label}</h4>
-                  <p className={`text-lg font-semibold mb-1 ${prediction.prediction === 1 ? 'text-red-600' : 'text-green-600'}`}>{prediction.risk_level} Risk</p>
-                  <p className={`text-sm ${prediction.prediction === 1 ? 'text-red-600' : 'text-green-600'}`}>{prediction.message}</p>
+            <SectionCard style={{ animation: "fadeIn 0.25s ease" }}>
+              <div style={{ padding: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 16 }}>Result</div>
+                <div style={{ background: riskBg[riskColor], border: `1.5px solid ${riskBorder[riskColor]}`, borderRadius: 14, padding: "24px 16px", textAlign: "center", marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                    {riskColor === "green" ? <CheckCircle size={36} color="#166534" /> : riskColor === "red" ? <AlertTriangle size={36} color="#991b1b" /> : <Info size={36} color="#854d0e" />}
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 600, color: riskText[riskColor], letterSpacing: "-0.01em" }}>{prediction.prediction_label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: riskText[riskColor], marginTop: 2 }}>{prediction.risk_level} Risk</div>
+                  <div style={{ fontSize: 13, color: riskText[riskColor], opacity: 0.8, marginTop: 6, lineHeight: 1.5 }}>{prediction.message}</div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f8fafc", borderRadius: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: "#64748b" }}>Disease Probability</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{(prediction.probability_disease * 100).toFixed(1)}%</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f8fafc", borderRadius: 10 }}>
+                  <span style={{ fontSize: 13, color: "#64748b" }}>No Disease Probability</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{(prediction.probability_no_disease * 100).toFixed(1)}%</span>
                 </div>
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium text-gray-700">Disease Probability</span>
-                  <span className="text-sm font-bold text-gray-900">{(prediction.probability_disease * 100).toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm font-medium text-gray-700">No Disease Probability</span>
-                  <span className="text-sm font-bold text-gray-900">{(prediction.probability_no_disease * 100).toFixed(1)}%</span>
-                </div>
-              </div>
-              <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
-                <p className="text-xs text-red-800"><strong>NOT FOR MEDICAL USE.</strong> For educational purposes only.</p>
-              </div>
-            </div>
+            </SectionCard>
           ) : (
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 text-center py-16">
-              <p className="text-gray-500 text-sm">Fill in the form to see the model's prediction</p>
-            </div>
+            <SectionCard>
+              <div style={{ padding: 32, textAlign: "center" }}>
+                <HeartPulse size={48} color="#cbd5e1" style={{ display: "block", margin: "0 auto 12px" }} />
+                <div style={{ fontSize: 14, fontWeight: 500, color: "#475569", marginBottom: 4 }}>Ready to analyze</div>
+                <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>Fill in the health metrics and click "Run prediction"</div>
+              </div>
+            </SectionCard>
           )}
+
+          {/* Quick reference */}
+          <SectionCard>
+            <div style={{ padding: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", marginBottom: 12 }}>Reference ranges</div>
+              {[["Resting BP", "120/80 mm Hg (normal)"], ["Cholesterol", "< 200 mg/dl (desirable)"], ["Fasting BS", "< 100 mg/dl (normal)"], ["Max Heart Rate", "220 - age (estimated max)"]].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#64748b", paddingBottom: 7, marginBottom: 7, borderBottom: "1px solid #f8fafc" }}>
+                  <span style={{ fontWeight: 500, color: "#475569" }}>{k}</span><span>{v}</span>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
         </div>
       </div>
 
+      {/* History */}
       {history.length > 0 && (
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Recent Predictions</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>{['Date','Result','Probability','Age','BP','Cholesterol'].map((h) => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>)}</tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {history.map((item, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.prediction === 1 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>{item.prediction === 1 ? 'Disease' : 'No Disease'}</span></td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{(item.probability * 100).toFixed(1)}%</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.age}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.restingBP}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.cholesterol}</td>
+        <SectionCard style={{ marginTop: 24 }}>
+          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Prediction history</div>
+            <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>Last {history.length} assessments</div>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead><tr style={{ background: "#f8fafc" }}>
+                {["Date", "Result", "Probability", "Age", "BP", "Cholesterol"].map(h => (
+                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9" }}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {history.map((r, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f8fafc" }}>
+                    <td style={{ padding: "11px 16px", color: "#475569" }}>{new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td style={{ padding: "11px 16px" }}>
+                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: r.prediction === 1 ? "#fee2e2" : "#dcfce7", color: r.prediction === 1 ? "#991b1b" : "#166534" }}>{r.prediction === 1 ? "Disease" : "No Disease"}</span>
+                    </td>
+                    <td style={{ padding: "11px 16px", color: "#1e293b", fontWeight: 500 }}>{(r.probability * 100).toFixed(1)}%</td>
+                    <td style={{ padding: "11px 16px", color: "#64748b" }}>{r.age}</td>
+                    <td style={{ padding: "11px 16px", color: "#64748b" }}>{r.restingBP}</td>
+                    <td style={{ padding: "11px 16px", color: "#64748b" }}>{r.cholesterol}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </SectionCard>
       )}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>
   );
 }
-
-export default HeartDiseasePrediction;

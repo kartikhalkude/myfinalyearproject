@@ -1,367 +1,261 @@
-// frontend/src/pages/Landing.jsx (Improved and Consistent)
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Video, Brain, Calendar, Pill, Folder, Bell, ArrowRight, ShieldCheck, Activity, Users, Star, CheckCircle } from "lucide-react";
 
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const features = [
+    { icon: <Video size={24} color="#1db585" />, tag: "Real-time", title: "Video Consultations", desc: "HD video calls with board-certified doctors from anywhere — no commute required." },
+    { icon: <Brain size={24} color="#1db585" />, tag: "ML-powered", title: "AI Health Screening", desc: "Evidence-based risk assessment for diabetes, heart disease, and pneumonia in seconds." },
+    { icon: <Calendar size={24} color="#1db585" />, tag: "Instant", title: "Smart Scheduling", desc: "Book, reschedule, or cancel appointments with real-time slot availability." },
+    { icon: <Pill size={24} color="#1db585" />, tag: "Digital", title: "E-Prescriptions", desc: "Receive and manage digital prescriptions with refill requests built in." },
+    { icon: <Folder size={24} color="#1db585" />, tag: "Secure", title: "Health Records", desc: "All your medical history in one encrypted, HIPAA-compliant place." },
+    { icon: <Bell size={24} color="#1db585" />, tag: "Proactive", title: "Medicine Reminders", desc: "Custom schedules and dose logs so you never miss a medication." },
+  ];
+
+  const stats = [
+    { icon: <Users size={20} color="#64748b" />, value: "50K+", label: "Patients served" },
+    { icon: <ShieldCheck size={20} color="#64748b" />, value: "200+", label: "Expert doctors" },
+    { icon: <Activity size={20} color="#64748b" />, value: "98%", label: "Satisfaction rate" },
+    { icon: <Star size={20} color="#64748b" />, value: "4.9", label: "Average rating" },
+  ];
+
+  const steps = [
+    { n: "01", title: "Create your account", desc: "Sign up in under 60 seconds as a patient or doctor." },
+    { n: "02", title: "Choose a specialist", desc: "Browse profiles and book a slot that fits your schedule." },
+    { n: "03", title: "Start your consultation", desc: "Connect via HD video and get care without leaving home." },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-100">
-      {/* Navigation */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'py-2' : 'py-4'}`}>
-        <div className="mx-auto max-w-7xl px-6">
-          <div className={`flex items-center justify-between rounded-2xl px-6 py-4 transition-all duration-300 ${
-            scrolled 
-              ? 'bg-white/95 backdrop-blur-lg shadow-xl ring-1 ring-gray-200' 
-              : 'bg-white/80 backdrop-blur-md shadow-lg'
-          }`}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">Dr.AssistAI</span>
-            </div>
+    <div style={{ fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", color: "#0f172a", minHeight: "100vh", overflowX: "hidden" }}>
+      {/* Background ambient glow */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "800px", background: "radial-gradient(circle at 50% -20%, rgba(29, 181, 133, 0.15) 0%, rgba(248, 250, 252, 0) 70%)", zIndex: 0, pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: "200px", right: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle at center, rgba(56, 189, 248, 0.1) 0%, rgba(248, 250, 252, 0) 60%)", zIndex: 0, pointerEvents: "none" }} />
 
-            <div className="hidden md:flex items-center gap-8 text-gray-700 text-sm font-medium">
-              <a href="#features" className="hover:text-cyan-600 transition-colors">Features</a>
-              <a href="#doctors" className="hover:text-cyan-600 transition-colors">Doctors</a>
-              <a href="#how-it-works" className="hover:text-cyan-600 transition-colors">How It Works</a>
-              <a href="#contact" className="hover:text-cyan-600 transition-colors">Contact</a>
+      {/* Nav */}
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        padding: scrolled ? "12px 0" : "24px 0",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        background: scrolled ? "rgba(255, 255, 255, 0.85)" : "transparent",
+        backdropFilter: scrolled ? "blur(12px)" : "none",
+        borderBottom: scrolled ? "1px solid rgba(226, 232, 240, 0.8)" : "1px solid transparent"
+      }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 38, height: 38, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
+            <span style={{ fontWeight: 700, fontSize: 18, color: "#0f172a", letterSpacing: "-0.02em" }}>Dr.AssistAI</span>
+          </div>
 
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => navigate('/login')}
-                className="px-5 py-2.5 text-sm font-semibold text-gray-700 hover:text-cyan-600 transition-colors"
-              >
-                Sign In
-              </button>
-              <button 
-                onClick={() => navigate('/register')}
-                className="px-5 py-2.5 text-sm font-bold bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-              >
-                Get Started
-              </button>
-            </div>
+          <div style={{ display: "none", "@media (minWidth: 768px)": { display: "flex" }, gap: 32, fontSize: 14, fontWeight: 500, color: "#64748b" }}>
+            {["Features", "How it works", "Doctors", "Contact"].map(l => (
+              <a key={l} href={`#${l.toLowerCase().replace(" ", "-")}`} style={{ textDecoration: "none", color: "inherit", transition: "color 0.2s" }}
+                onMouseEnter={e => e.target.style.color = "#0f172a"}
+                onMouseLeave={e => e.target.style.color = "#64748b"}
+              >{l}</a>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={() => navigate("/login")} style={{ padding: "10px 20px", background: "transparent", border: "1px solid rgba(226, 232, 240, 0.8)", borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#334155", transition: "all 0.2s", fontFamily: "inherit" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#94a3b8"; e.currentTarget.style.color = "#0f172a"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(226, 232, 240, 0.8)"; e.currentTarget.style.color = "#334155"; }}
+            >Sign in</button>
+            <button onClick={() => navigate("/register")} style={{ padding: "10px 24px", background: "#0f172a", border: "1px solid #0f172a", borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#fff", transition: "all 0.2s", fontFamily: "inherit", boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#1e293b"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(15, 23, 42, 0.2)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#0f172a"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(15, 23, 42, 0.15)"; }}
+            >Get started</button>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative mx-auto max-w-7xl px-6 pt-32 pb-20">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 h-72 w-72 rounded-full bg-cyan-200/30 blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        </div>
-
-        <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-100 to-blue-100 px-4 py-2 text-sm font-semibold text-cyan-700 shadow-md">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-600"></span>
+      {/* Hero */}
+      <section style={{ position: "relative", maxWidth: 1200, margin: "0 auto", padding: "160px 24px 100px", zIndex: 10 }}>
+        {/* Abstract Background Elements inside Hero */}
+        <div style={{ position: "absolute", top: -100, right: -100, width: 600, height: 600, background: "radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none", zIndex: -1 }}></div>
+        <div style={{ position: "absolute", bottom: -50, left: -100, width: 500, height: 500, background: "radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none", zIndex: -1 }}></div>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 64, alignItems: "center" }}>
+          <div style={{ position: "relative", zIndex: 2 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(29, 181, 133, 0.1)", border: "1px solid rgba(29, 181, 133, 0.2)", borderRadius: 999, padding: "6px 16px", fontSize: 13, fontWeight: 600, color: "#059669", marginBottom: 32 }}>
+              <span style={{ position: "relative", display: "flex", width: 8, height: 8 }}>
+                <span style={{ animation: "ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite", position: "absolute", width: "100%", height: "100%", borderRadius: "50%", background: "#10b981", opacity: 0.75 }}></span>
+                <span style={{ position: "relative", width: 8, height: 8, background: "#10b981", borderRadius: "50%" }}></span>
               </span>
-              AI-Powered Healthcare Platform
+              Next-Gen AI Healthcare
             </div>
-
-            <h1 className="text-5xl md:text-6xl font-extrabold leading-tight">
-              <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
-                Your Health,
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-                Our Priority
-              </span>
+            
+            <h1 style={{ fontSize: "4.5rem", fontWeight: 700, lineHeight: 1.05, letterSpacing: "-0.04em", color: "#0f172a", marginBottom: 24 }}>
+              Your health,<br />
+              <span style={{ background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>intelligently managed</span>
             </h1>
-
-            <p className="text-xl text-gray-600 max-w-xl leading-relaxed">
-              Experience world-class healthcare with AI-powered diagnosis, video consultations, and 24/7 access to expert doctors from the comfort of your home.
+            
+            <p style={{ fontSize: "1.125rem", color: "#475569", lineHeight: 1.6, marginBottom: 40, maxWidth: 480, fontWeight: 400 }}>
+              Connect with board-certified doctors via HD video, get AI-powered health risk assessments, and manage your medical records—all in one secure, unified platform.
             </p>
-
-            <div className="flex flex-wrap gap-4">
-              <button 
-                onClick={() => navigate('/register')}
-                className="group px-8 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 flex items-center"
+            
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 56 }}>
+              <button onClick={() => navigate("/register")} style={{ padding: "14px 32px", background: "#10b981", border: "none", borderRadius: 999, fontSize: 15, fontWeight: 600, cursor: "pointer", color: "#fff", fontFamily: "inherit", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 20px rgba(16, 185, 129, 0.25)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#059669"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(16, 185, 129, 0.3)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(16, 185, 129, 0.25)"; }}
               >
-                <span>Book Appointment</span>
-                <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
+                Book appointment
+                <ArrowRight size={18} />
               </button>
-              <button
-                onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}
-                className="px-8 py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:border-cyan-600 hover:text-cyan-600 hover:shadow-lg transition-all duration-300"
-              >
-                Learn More
-              </button>
+              <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} style={{ padding: "14px 32px", background: "rgba(255, 255, 255, 0.8)", border: "1px solid rgba(226, 232, 240, 0.8)", borderRadius: 999, fontSize: 15, fontWeight: 600, cursor: "pointer", color: "#334155", fontFamily: "inherit", transition: "all 0.2s", backdropFilter: "blur(8px)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#cbd5e1"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(15, 23, 42, 0.05)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.8)"; e.currentTarget.style.borderColor = "rgba(226, 232, 240, 0.8)"; e.currentTarget.style.boxShadow = "none"; }}
+              >Explore platform</button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-6 pt-8">
-              <div className="text-center">
-                <div className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">50K+</div>
-                <div className="text-sm text-gray-600 mt-1">Happy Patients</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">200+</div>
-                <div className="text-sm text-gray-600 mt-1">Expert Doctors</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">4.9★</div>
-                <div className="text-sm text-gray-600 mt-1">Rating</div>
-              </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, padding: "24px 0", borderTop: "1px solid rgba(226, 232, 240, 0.6)" }}>
+              {stats.map(s => (
+                <div key={s.label}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                    {s.icon}
+                    <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em" }}>{s.value}</div>
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>{s.label}</div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Right - Hero Image */}
-          <div className="relative flex justify-center lg:justify-end">
-            <div className="relative">
-              <div className="absolute -top-4 -left-4 h-24 w-24 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 opacity-20 blur-2xl animate-pulse" />
-              <div className="absolute -bottom-4 -right-4 h-32 w-32 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 opacity-20 blur-2xl animate-pulse" style={{ animationDelay: '0.5s' }} />
-              
-              <div className="relative h-[450px] w-[450px] rounded-full bg-gradient-to-br from-cyan-100 to-blue-100 shadow-2xl flex items-center justify-center ring-4 ring-white">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-600/10 to-blue-600/10 animate-pulse" />
-                <img
-                  src="/assets/doctorimage2.jpeg"
-                  alt="Healthcare Professional"
-                  className="w-full h-full object-cover rounded-full"
-                  draggable={false}
-                />
-              </div>
+          {/* Hero Visual */}
+          <div style={{ position: "relative", display: "flex", justifyContent: "center", zIndex: 2 }}>
+            <div style={{ position: "absolute", top: "10%", left: "-10%", width: "120%", height: "80%", background: "radial-gradient(ellipse at center, rgba(16, 185, 129, 0.15) 0%, rgba(248, 250, 252, 0) 70%)", zIndex: -1, filter: "blur(40px)" }} />
+            
+            <div style={{ background: "#fff", borderRadius: "50%", padding: 12, boxShadow: "0 24px 50px -12px rgba(15, 23, 42, 0.15)", border: "1px solid rgba(226, 232, 240, 0.8)", position: "relative", transform: "perspective(1000px) rotateY(-5deg) rotateX(2deg)", transformStyle: "preserve-3d", aspectRatio: "1/1", width: "100%", maxWidth: 460, margin: "0 auto" }}>
+              <img src="/assets/doctorimage2.jpeg" alt="Doctor" style={{ width: "100%", height: "100%", borderRadius: "50%", display: "block", objectFit: "cover", filter: "brightness(1.05) contrast(1.02)" }} />
+            </div>
 
-              {/* Floating Feature Cards */}
-              <div className="absolute -left-8 top-1/4 rounded-2xl bg-white p-4 shadow-2xl animate-float border border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-green-100 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 font-medium">Success Rate</div>
-                    <div className="text-lg font-bold text-gray-900">98%</div>
-                  </div>
-                </div>
+            {/* Floating element 1 */}
+            <div style={{ position: "absolute", top: "15%", right: "-5%", background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(16px)", border: "1px solid rgba(255, 255, 255, 0.8)", borderRadius: 20, padding: "16px", boxShadow: "0 16px 32px -8px rgba(15, 23, 42, 0.15)", display: "flex", alignItems: "center", gap: 14, animation: "float 6s ease-in-out infinite", zIndex: 10 }}>
+              <div style={{ width: 44, height: 44, background: "#dcfce7", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ShieldCheck size={24} color="#16a34a" />
               </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Verified Doctors</div>
+                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>Top 1% Specialists</div>
+              </div>
+            </div>
 
-              <div className="absolute -right-8 bottom-1/4 rounded-2xl bg-white p-4 shadow-2xl animate-float border border-gray-100" style={{ animationDelay: '1s' }}>
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 font-medium">Online Now</div>
-                    <div className="text-lg font-bold text-gray-900">120+</div>
-                  </div>
-                </div>
+            {/* Floating element 2 */}
+            <div style={{ position: "absolute", bottom: "15%", left: "-10%", background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(16px)", border: "1px solid rgba(255, 255, 255, 0.8)", borderRadius: 20, padding: "16px", boxShadow: "0 16px 32px -8px rgba(15, 23, 42, 0.15)", display: "flex", alignItems: "center", gap: 14, animation: "float 8s ease-in-out infinite reverse", zIndex: 10 }}>
+              <div style={{ width: 44, height: 44, background: "#f0f9ff", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <CheckCircle size={24} color="#0284c7" />
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>AI Diagnosed</div>
+                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>High accuracy ML</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="mx-auto max-w-7xl px-6 py-20">
-        <div className="text-center mb-12">
-          <p className="text-sm font-bold uppercase tracking-widest text-cyan-600 mb-3">Our Features</p>
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Everything You Need for Better Health</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Advanced healthcare solutions powered by AI and delivered by expert doctors
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            { 
-              icon: "🎥", 
-              title: "Video Consultations", 
-              desc: "HD video calls with doctors from anywhere, anytime",
-              color: "from-blue-500 to-cyan-500"
-            },
-            { 
-              icon: "🤖", 
-              title: "AI Health Check", 
-              desc: "Advanced ML algorithms for diabetes risk assessment",
-              color: "from-purple-500 to-pink-500"
-            },
-            { 
-              icon: "📅", 
-              title: "Easy Scheduling", 
-              desc: "Book appointments instantly with real-time availability",
-              color: "from-green-500 to-emerald-500"
-            },
-            { 
-              icon: "💊", 
-              title: "E-Prescriptions", 
-              desc: "Digital prescriptions delivered instantly to your device",
-              color: "from-orange-500 to-red-500"
-            },
-            { 
-              icon: "📊", 
-              title: "Health Records", 
-              desc: "Secure cloud storage for all your medical records",
-              color: "from-indigo-500 to-purple-500"
-            },
-            { 
-              icon: "🔔", 
-              title: "Smart Reminders", 
-              desc: "Never miss medications or appointments with alerts",
-              color: "from-pink-500 to-rose-500"
-            }
-          ].map((feature, idx) => (
-            <div key={idx} className="group p-6 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:-translate-y-2">
-              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
-                {feature.icon}
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{feature.title}</h3>
-              <p className="text-gray-600">{feature.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="bg-white py-20">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="text-center mb-12">
-            <p className="text-sm font-bold uppercase tracking-widest text-cyan-600 mb-3">How It Works</p>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Get Started in 3 Simple Steps</h2>
+      {/* Features section */}
+      <section id="features" style={{ background: "#fff", borderTop: "1px solid rgba(226, 232, 240, 0.6)", borderBottom: "1px solid rgba(226, 232, 240, 0.6)", padding: "100px 24px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 64 }}>
+            <div style={{ display: "inline-block", fontSize: 12, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, background: "rgba(16, 185, 129, 0.1)", padding: "6px 16px", borderRadius: 999 }}>Features</div>
+            <h2 style={{ fontSize: "2.75rem", fontWeight: 700, letterSpacing: "-0.03em", color: "#0f172a", marginBottom: 16 }}>Everything you need for better health</h2>
+            <p style={{ fontSize: "1.125rem", color: "#64748b", maxWidth: 540, margin: "0 auto", lineHeight: 1.6 }}>Our platform provides an integrated suite of advanced healthcare tools designed seamlessly for patients and providers.</p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { step: "1", title: "Create Account", desc: "Sign up in seconds with your email" },
-              { step: "2", title: "Choose Doctor", desc: "Browse and select from 200+ specialists" },
-              { step: "3", title: "Start Consultation", desc: "Connect via video call or book visit" }
-            ].map((item, idx) => (
-              <div key={idx} className="relative text-center">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 text-white text-3xl font-bold mb-6 shadow-xl">
-                  {item.step}
+          
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
+            {features.map((f, i) => (
+              <div key={i} style={{ background: "#f8fafc", border: "1px solid rgba(226, 232, 240, 0.6)", borderRadius: 24, padding: "32px", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", cursor: "default", position: "relative", overflow: "hidden" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.boxShadow = "0 20px 40px -10px rgba(15,23,42,0.08)"; e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.borderColor = "rgba(29, 181, 133, 0.3)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = "rgba(226, 232, 240, 0.6)"; }}
+              >
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid rgba(29, 181, 133, 0.2)", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 700, color: "#059669", marginBottom: 24, boxShadow: "0 2px 8px rgba(16, 185, 129, 0.05)" }}>{f.tag}</div>
+                <div style={{ width: 56, height: 56, background: "#fff", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24, boxShadow: "0 4px 12px rgba(15, 23, 42, 0.05)", border: "1px solid rgba(226, 232, 240, 0.6)" }}>
+                  {f.icon}
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-gray-600">{item.desc}</p>
-                {idx < 2 && (
-                  <div className="hidden md:block absolute top-10 left-3/4 w-1/2 border-t-2 border-dashed border-cyan-300"></div>
-                )}
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#0f172a", marginBottom: 12, letterSpacing: "-0.01em" }}>{f.title}</h3>
+                <p style={{ fontSize: "0.95rem", color: "#475569", lineHeight: 1.6 }}>{f.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="mx-auto max-w-7xl px-6 py-20">
-        <div className="relative rounded-3xl bg-gradient-to-r from-cyan-600 to-blue-600 p-12 md:p-16 overflow-hidden shadow-2xl">
-          <div className="absolute inset-0 bg-grid-white/10" />
-          <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+      {/* How it works */}
+      <section id="how-it-works" style={{ background: "#f8fafc", padding: "100px 24px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 64 }}>
+            <div style={{ display: "inline-block", fontSize: 12, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, background: "rgba(16, 185, 129, 0.1)", padding: "6px 16px", borderRadius: 999 }}>Workflow</div>
+            <h2 style={{ fontSize: "2.75rem", fontWeight: 700, letterSpacing: "-0.03em", color: "#0f172a" }}>Up and running in minutes</h2>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 40, position: "relative" }}>
+            {/* Connecting line */}
+            <div style={{ position: "absolute", top: 32, left: "15%", right: "15%", height: 2, background: "linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.5) 50%, rgba(16, 185, 129, 0.1) 100%)", zIndex: 0 }} />
+            
+            {steps.map((s, i) => (
+              <div key={i} style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
+                <div style={{ width: 64, height: 64, background: "#fff", border: "2px solid #10b981", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", fontSize: "1.25rem", fontWeight: 700, color: "#10b981", boxShadow: "0 8px 16px rgba(16, 185, 129, 0.15)" }}>{s.n}</div>
+                <h3 style={{ fontSize: "1.125rem", fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>{s.title}</h3>
+                <p style={{ fontSize: "0.95rem", color: "#64748b", lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 100px" }}>
+        <div style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: 32, padding: "80px 48px", textAlign: "center", position: "relative", overflow: "hidden", boxShadow: "0 24px 50px -12px rgba(15, 23, 42, 0.25)" }}>
+          <div style={{ position: "absolute", top: -100, right: -100, width: 300, height: 300, background: "radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%)", borderRadius: "50%" }}></div>
+          <div style={{ position: "absolute", bottom: -100, left: -100, width: 300, height: 300, background: "radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%)", borderRadius: "50%" }}></div>
           
-          <div className="relative text-center text-white">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Ready to Take Control of Your Health?
-            </h2>
-            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Join thousands of satisfied patients who trust us with their healthcare needs
-            </p>
-            <div className="flex flex-wrap gap-4 justify-center">
-              <button 
-                onClick={() => navigate('/register')}
-                className="px-8 py-4 bg-white text-cyan-600 font-bold rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
-              >
-                Get Started Free
-              </button>
-              <button 
-                onClick={() => navigate('/login')}
-                className="px-8 py-4 border-2 border-white text-white font-bold rounded-xl hover:bg-white hover:text-cyan-600 transition-all duration-300"
-              >
-                Sign In
-              </button>
+          <div style={{ position: "relative", zIndex: 10 }}>
+            <h2 style={{ fontSize: "3rem", fontWeight: 700, color: "#fff", letterSpacing: "-0.03em", marginBottom: 20 }}>Ready to take control of your health?</h2>
+            <p style={{ fontSize: "1.125rem", color: "#94a3b8", marginBottom: 40, maxWidth: 500, margin: "0 auto 40px", lineHeight: 1.6 }}>Join thousands of patients and providers who trust Dr.AssistAI for their modern healthcare needs.</p>
+            <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+              <button onClick={() => navigate("/register")} style={{ padding: "16px 40px", background: "#10b981", border: "none", borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer", color: "#fff", fontFamily: "inherit", transition: "all 0.2s", boxShadow: "0 8px 20px rgba(16, 185, 129, 0.3)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#059669"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 24px rgba(16, 185, 129, 0.4)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(16, 185, 129, 0.3)"; }}
+              >Get started for free</button>
+              <button onClick={() => navigate("/login")} style={{ padding: "16px 40px", background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.2)", borderRadius: 999, fontSize: 16, fontWeight: 600, cursor: "pointer", color: "#fff", fontFamily: "inherit", transition: "all 0.2s", backdropFilter: "blur(8px)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)"; e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.3)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"; e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.2)"; }}
+              >Sign in</button>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer id="contact" className="bg-gray-900 text-white py-12">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="grid gap-8 md:grid-cols-4 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <span className="text-xl font-bold">Dr.AssistAI</span>
-              </div>
-              <p className="text-sm text-gray-400">
-                Your trusted healthcare partner providing world-class medical services.
-              </p>
+      <footer style={{ background: "#fff", borderTop: "1px solid rgba(226, 232, 240, 0.8)", padding: "48px 24px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 32, height: 32, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-
-            <div>
-              <h4 className="font-semibold mb-3">Services</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition">Video Consultation</a></li>
-                <li><a href="#" className="hover:text-white transition">AI Health Check</a></li>
-                <li><a href="#" className="hover:text-white transition">E-Prescriptions</a></li>
-                <li><a href="#" className="hover:text-white transition">Health Records</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-3">Contact</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>📧 support@drassistai.com</li>
-                <li>📞 +1 (555) 123-4567</li>
-                <li>📍 123 Health Street</li>
-                <li>Mumbai, India</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-3">Legal</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition">HIPAA Compliance</a></li>
-                <li><a href="#" className="hover:text-white transition">Cookie Policy</a></li>
-              </ul>
-            </div>
+            <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>Dr.AssistAI</span>
           </div>
-
-          <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-            <p>© {new Date().getFullYear()} Dr.AssistAI. All rights reserved. Built with ❤️ for better healthcare.</p>
+          <p style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>© {new Date().getFullYear()} Dr.AssistAI. All rights reserved.</p>
+          <div style={{ display: "flex", gap: 24, fontSize: 14, fontWeight: 500, color: "#64748b" }}>
+            {["Privacy Policy", "Terms of Service", "HIPAA Compliance"].map(l => <a key={l} href="#" style={{ color: "inherit", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={e=>e.target.style.color="#0f172a"} onMouseLeave={e=>e.target.style.color="#64748b"}>{l}</a>)}
           </div>
         </div>
       </footer>
-
       <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-        .bg-grid-white\\/10 {
-          background-image: 
-            linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-          background-size: 30px 30px;
-        }
+        @keyframes float { 0% { transform: translateY(0) translateZ(30px); } 50% { transform: translateY(-10px) translateZ(30px); } 100% { transform: translateY(0) translateZ(30px); } }
+        @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
       `}</style>
     </div>
   );

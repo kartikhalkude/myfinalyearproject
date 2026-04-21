@@ -1,39 +1,54 @@
 // frontend/src/components/status/StatusIndicator.jsx
 import React from 'react';
+import { EmptyState as UIEmptyState, Loader as UILoader, Badge as UIBadge } from '../UI';
 
 export const OnlineIndicator = ({ isOnline, size = 'md' }) => {
   const sizes = {
-    sm: 'w-2 h-2',
-    md: 'w-3 h-3',
-    lg: 'w-4 h-4',
+    sm: 8,
+    md: 12,
+    lg: 16,
   };
 
+  const dim = sizes[size] || sizes.md;
+
   return (
-    <div className="flex items-center gap-1">
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <div
-        className={`${sizes[size]} rounded-full transition-all ${
-          isOnline
-            ? 'bg-green-500 animate-pulse'
-            : 'bg-gray-400'
-        }`}
+        style={{
+          width: dim,
+          height: dim,
+          borderRadius: "50%",
+          transition: "all 0.3s",
+          background: isOnline ? "#22c55e" : "#94a3b8",
+          animation: isOnline ? "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" : "none"
+        }}
       />
-      <span className="text-xs text-gray-600">
+      <span style={{ fontSize: 12, color: "#475569" }}>
         {isOnline ? 'Online' : 'Offline'}
       </span>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: .5; }
+        }
+      `}</style>
     </div>
   );
 };
 
 export const ConnectionStatus = ({ connected }) => {
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
-      connected
-        ? 'bg-green-50 text-green-700 border border-green-200'
-        : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-    }`}>
-      <div className={`w-2 h-2 rounded-full ${
-        connected ? 'bg-green-500 animate-pulse' : 'bg-yellow-500 animate-pulse'
-      }`} />
+    <div style={{
+      display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
+      ...(connected
+        ? { background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0" }
+        : { background: "#fefce8", color: "#a16207", border: "1px solid #fef08a" })
+    }}>
+      <div style={{
+        width: 8, height: 8, borderRadius: "50%",
+        background: connected ? "#22c55e" : "#eab308",
+        animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite"
+      }} />
       {connected ? 'Connected' : 'Reconnecting...'}
     </div>
   );
@@ -41,27 +56,28 @@ export const ConnectionStatus = ({ connected }) => {
 
 export const LoadingState = ({ message = 'Loading...' }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-8">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600 mb-4" />
-      <p className="text-gray-600 text-sm">{message}</p>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <UILoader />
+      <p style={{ color: "#475569", fontSize: 14, marginTop: 16 }}>{message}</p>
     </div>
   );
 };
 
 export const ErrorState = ({ message = 'Something went wrong', onRetry }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-8">
-      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+      <div style={{ width: 64, height: 64, background: "#fef2f2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+        <svg style={{ width: 32, height: 32, color: "#dc2626" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <p className="text-gray-900 font-medium text-center mb-4">{message}</p>
+      <p style={{ color: "#0f172a", fontWeight: 500, textAlign: "center", marginBottom: 16 }}>{message}</p>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+          style={{ padding: "8px 16px", background: "#2563eb", color: "#fff", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 500, border: "none", transition: "background 0.2s" }}
+          onMouseOver={e => e.currentTarget.style.background = "#1d4ed8"}
+          onMouseOut={e => e.currentTarget.style.background = "#2563eb"}
         >
           Try Again
         </button>
@@ -72,50 +88,39 @@ export const ErrorState = ({ message = 'Something went wrong', onRetry }) => {
 
 export const EmptyState = ({ title, message, icon, action }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-12">
-      {icon && (
-        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          {icon}
-        </div>
-      )}
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600 text-center text-sm mb-6">{message}</p>
-      {action && (
-        <button
-          onClick={action.onClick}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
-        >
-          {action.label}
-        </button>
-      )}
-    </div>
+    <UIEmptyState
+      title={title}
+      message={message}
+      icon={icon}
+      action={action}
+    />
   );
 };
 
 export const AppointmentStatusBadge = ({ status }) => {
-  const styles = {
-    pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    confirmed: 'bg-green-100 text-green-800 border-green-200',
-    completed: 'bg-blue-100 text-blue-800 border-blue-200',
-    cancelled: 'bg-red-100 text-red-800 border-red-200',
-    'no-show': 'bg-gray-100 text-gray-800 border-gray-200',
+  const getBadgeColor = (status) => {
+    switch (status) {
+      case 'pending': return 'yellow';
+      case 'confirmed': return 'green';
+      case 'completed': return 'blue';
+      case 'cancelled': return 'red';
+      case 'no-show': return 'slate';
+      default: return 'slate';
+    }
   };
 
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${
-      styles[status] || styles.pending
-    }`}>
+    <UIBadge color={getBadgeColor(status)}>
       {status.charAt(0).toUpperCase() + status.slice(1)}
-    </span>
+    </UIBadge>
   );
 };
 
-// Status badge for user online/offline
 export const UserStatusBadge = ({ isOnline, name }) => {
   return (
-    <div className="flex items-center gap-2">
-      <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
-      <span className="text-sm text-gray-700">{name}</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ width: 8, height: 8, borderRadius: "50%", background: isOnline ? "#22c55e" : "#94a3b8" }} />
+      <span style={{ fontSize: 14, color: "#334155" }}>{name}</span>
     </div>
   );
 };

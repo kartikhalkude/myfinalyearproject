@@ -1,7 +1,7 @@
-// frontend/src/pages/Login.jsx (Unified Login)
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { Stethoscope, User, Activity, ShieldCheck, HeartPulse, ArrowRight } from "lucide-react";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -10,177 +10,178 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError("");
-  };
+  const handleChange = e => { setFormData(p => ({ ...p, [e.target.name]: e.target.value })); setError(""); };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    setError("");
+    if (!formData.email || !formData.password) { setError("Please fill in all fields."); return; }
     setLoading(true);
-
-    if (!formData.email || !formData.password) {
-      setError("Please fill in all fields");
-      setLoading(false);
-      return;
-    }
-
     try {
       const result = await login(formData.email, formData.password);
-      if (result?.success) {
-        // Navigate based on user role
-        const dashboard = result.user.role === "doctor" ? "/doctor-dashboard" : "/patient-dashboard";
-        navigate(dashboard);
-      }
+      if (result?.success) navigate(result.user.role === "doctor" ? "/doctor-dashboard" : "/patient-dashboard");
     } catch (err) {
-      setError(err?.response?.data?.error || "Login failed. Please check your credentials.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      setError(err?.response?.data?.error || "Invalid email or password.");
+    } finally { setLoading(false); }
+  };
+
+  const fillDemo = (type) => {
+    if (type === "doctor") setFormData({ email: "doctor@test.com", password: "doctor123" });
+    else setFormData({ email: "patient@test.com", password: "patient123" });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-100 p-6">
-      <div className="w-full max-w-md">
-        {/* Login Card */}
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-cyan-600 to-blue-600 p-8 text-center">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <svg className="w-10 h-10 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Dr.AssistAI</h1>
-            <p className="text-blue-100">Welcome back! Please login to continue</p>
+    <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc" }}>
+      {/* Left panel - Decorative Branding */}
+      <div style={{ flex: 1, position: "relative", background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "48px 56px", minHeight: "100vh", overflow: "hidden" }}>
+        {/* Abstract Background Elements */}
+        <div style={{ position: "absolute", top: -100, right: -100, width: 400, height: 400, background: "radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }}></div>
+        <div style={{ position: "absolute", bottom: -50, left: -50, width: 300, height: 300, background: "radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }}></div>
+
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 10 }}>
+          <div style={{ width: 40, height: 40, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </div>
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 18, letterSpacing: "-0.01em" }}>Dr.AssistAI</span>
+        </div>
 
-          {/* Form */}
-          <div className="p-8">
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 text-red-700 rounded-xl flex items-start">
-                <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                    placeholder="you@example.com"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                    placeholder="••••••••"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center">
-                  <input type="checkbox" className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500" />
-                  <span className="ml-2 text-gray-600">Remember me</span>
-                </label>
-                <Link to="/forgot-password" className="text-cyan-600 hover:text-cyan-700 font-semibold">
-                  Forgot password?
-                </Link>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-3 rounded-xl font-bold text-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
-              </button>
-            </form>
-
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Don't have an account?</span>
-              </div>
+        {/* Main Value Prop */}
+        <div style={{ position: "relative", zIndex: 10, flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: 480 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 600, color: "#34d399", marginBottom: 24, width: "fit-content" }}>
+            <HeartPulse size={14} />
+            AI-Powered Healthcare
+          </div>
+          <h1 style={{ fontSize: "2.75rem", fontWeight: 700, color: "#fff", lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: 24 }}>
+            Experience the future of medical care today.
+          </h1>
+          <p style={{ fontSize: "1.1rem", color: "#94a3b8", lineHeight: 1.6, marginBottom: 40, fontWeight: 400 }}>
+            Connect instantly with top specialists, manage your health records securely, and receive AI-assisted diagnoses in minutes.
+          </p>
+          
+          {/* Testimonial Card */}
+          <div style={{ background: "rgba(255, 255, 255, 0.03)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 20, padding: 24 }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <svg key={star} width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              ))}
             </div>
-
-            {/* Register Link */}
-            <Link
-              to="/register"
-              className="block w-full text-center py-3 border-2 border-cyan-600 text-cyan-600 rounded-xl font-semibold hover:bg-cyan-50 transition-all"
-            >
-              Create New Account
-            </Link>
-
-            {/* Quick Login Info */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <p className="text-xs text-blue-800 font-semibold mb-2">Test Accounts:</p>
-              <div className="space-y-1 text-xs text-blue-700">
-                <p>👨‍⚕️ Doctor: doctor@test.com / doctor123</p>
-                <p>👤 Patient: patient@test.com / patient123</p>
+            <blockquote style={{ fontSize: "1.05rem", color: "#e2e8f0", lineHeight: 1.6, marginBottom: 20, fontWeight: 400 }}>
+              "The AI health screening caught early signs I would have missed for months. Dr.AssistAI changed the way I approach my proactive health."
+            </blockquote>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 40, height: 40, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14 }}>JS</div>
+              <div>
+                <div style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>James S.</div>
+                <div style={{ color: "#94a3b8", fontSize: 12 }}>Patient since 2023</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-gray-600 mt-6">
-          By signing in, you agree to our{' '}
-          <Link to="/terms" className="text-cyan-600 hover:underline">Terms</Link>
-          {' '}and{' '}
-          <Link to="/privacy" className="text-cyan-600 hover:underline">Privacy Policy</Link>
-        </p>
+        {/* Footer Links/Stats */}
+        <div style={{ display: "flex", gap: 40, position: "relative", zIndex: 10 }}>
+          {[
+            { v: "50K+", l: "Patients", i: <User size={16} color="#10b981" /> },
+            { v: "200+", l: "Doctors", i: <Stethoscope size={16} color="#10b981" /> },
+            { v: "98%", l: "Satisfaction", i: <ShieldCheck size={16} color="#10b981" /> }
+          ].map((stat) => (
+            <div key={stat.l} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 36, background: "rgba(16, 185, 129, 0.1)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {stat.i}
+              </div>
+              <div>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#fff", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{stat.v}</div>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2, fontWeight: 500 }}>{stat.l}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Right panel — Form */}
+      <div style={{ width: "45%", minWidth: 480, background: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", padding: "64px", position: "relative" }}>
+        
+        {/* Mobile Logo Header */}
+        <div style={{ display: "none", alignItems: "center", gap: 10, marginBottom: 40, "@media (maxWidth: 900px)": { display: "flex" } }}>
+          <div style={{ width: 32, height: 32, background: "#10b981", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </div>
+          <span style={{ color: "#0f172a", fontWeight: 700, fontSize: 16 }}>Dr.AssistAI</span>
+        </div>
+
+        <div style={{ maxWidth: 400, margin: "0 auto", width: "100%" }}>
+          <div style={{ marginBottom: 40 }}>
+            <h2 style={{ fontSize: "2rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.03em", marginBottom: 8 }}>Welcome back</h2>
+            <p style={{ fontSize: "1rem", color: "#64748b" }}>Please enter your details to sign in.</p>
+          </div>
+
+          {error && (
+            <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 16px", fontSize: 14, color: "#dc2626", marginBottom: 24, display: "flex", gap: 10, alignItems: "center", boxShadow: "0 2px 8px rgba(220, 38, 38, 0.05)" }}>
+              <div style={{ background: "#fee2e2", borderRadius: "50%", padding: 4, display: "flex" }}>
+                <Activity size={16} color="#dc2626" />
+              </div>
+              <span style={{ fontWeight: 500 }}>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Email</label>
+              <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Enter your email" required disabled={loading}
+                style={{ width: "100%", padding: "12px 16px", fontSize: 15, fontFamily: "inherit", color: "#0f172a", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, outline: "none", transition: "all 0.2s", boxSizing: "border-box" }}
+                onFocus={e => { e.target.style.background = "#fff"; e.target.style.borderColor = "#10b981"; e.target.style.boxShadow = "0 0 0 4px rgba(16, 185, 129, 0.1)"; }}
+                onBlur={e => { e.target.style.background = "#f8fafc"; e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
+              />
+            </div>
+            
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Password</label>
+                <a href="#" style={{ fontSize: 13, fontWeight: 500, color: "#10b981", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={e=>e.target.style.color="#059669"} onMouseLeave={e=>e.target.style.color="#10b981"}>Forgot password?</a>
+              </div>
+              <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" required disabled={loading}
+                style={{ width: "100%", padding: "12px 16px", fontSize: 15, fontFamily: "inherit", color: "#0f172a", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, outline: "none", transition: "all 0.2s", boxSizing: "border-box" }}
+                onFocus={e => { e.target.style.background = "#fff"; e.target.style.borderColor = "#10b981"; e.target.style.boxShadow = "0 0 0 4px rgba(16, 185, 129, 0.1)"; }}
+                onBlur={e => { e.target.style.background = "#f8fafc"; e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
+              />
+            </div>
+
+            <button type="submit" disabled={loading} style={{ width: "100%", padding: "14px", background: loading ? "#94a3b8" : "#10b981", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s", boxShadow: loading ? "none" : "0 4px 12px rgba(16, 185, 129, 0.25)" }}
+              onMouseEnter={e => { if(!loading){ e.currentTarget.style.background = "#059669"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(16, 185, 129, 0.3)"; } }}
+              onMouseLeave={e => { if(!loading){ e.currentTarget.style.background = "#10b981"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.25)"; } }}
+            >
+              {loading ? (
+                <><div style={{ width: 18, height: 18, border: "2.5px solid rgba(255,255,255,0.3)", borderTop: "2.5px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}></div>Signing in...</>
+              ) : "Sign in"}
+            </button>
+          </form>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16, margin: "32px 0" }}>
+            <div style={{ flex: 1, height: 1, background: "#e2e8f0" }}></div>
+            <span style={{ fontSize: 12, fontWeight: 500, color: "#94a3b8", flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>Or try a demo</span>
+            <div style={{ flex: 1, height: 1, background: "#e2e8f0" }}></div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {[["Doctor", "doctor", <Stethoscope size={16} />], ["Patient", "patient", <User size={16} />]].map(([label, type, icon]) => (
+              <button key={type} onClick={() => fillDemo(type)} style={{ padding: "12px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 14, fontWeight: 600, color: "#475569", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#10b981"; e.currentTarget.style.color = "#059669"; e.currentTarget.style.background = "#f0fdf4"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(16, 185, 129, 0.05)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.color = "#475569"; e.currentTarget.style.background = "#fff"; e.currentTarget.style.boxShadow = "none"; }}
+              >
+                {icon}
+                Demo {label}
+              </button>
+            ))}
+          </div>
+
+          <p style={{ fontSize: 14, color: "#64748b", textAlign: "center", marginTop: 40 }}>
+            Don't have an account?{" "}
+            <Link to="/register" style={{ color: "#10b981", fontWeight: 600, textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={e=>e.target.style.color="#059669"} onMouseLeave={e=>e.target.style.color="#10b981"}>Create one</Link>
+          </p>
+        </div>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

@@ -1,9 +1,7 @@
 // frontend/src/components/dashboard/DashboardCard.jsx
 import React from "react";
-// FIX: DashboardOverview previously used require() inside a React component body,
-// which is invalid in ES-module / Vite environments and throws at runtime.
-// Icons are now imported at the top level.
 import { HomeIcon, CalendarIcon, UsersIcon, RefreshIcon } from "../icons/Icons";
+import { SectionCard, StatCard as UIStatCard, Btn, Badge, EmptyState, Loader } from "../UI";
 
 export const DashboardCard = ({
   title,
@@ -18,45 +16,45 @@ export const DashboardCard = ({
   emptyMessage = "No data available",
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
-      <div className="p-6 border-b border-gray-100">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
+    <SectionCard>
+      <div style={{ padding: "24px", borderBottom: footer ? "1px solid #f8fafc" : "none" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: (loading || error || isEmpty || React.Children.count(children)) ? 20 : 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
             {icon && (
-              <div className="p-2 bg-blue-50 rounded-lg text-blue-600 flex-shrink-0">
+              <div style={{ padding: 8, background: "#f0f9ff", color: "#0284c7", borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {icon}
               </div>
             )}
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{title}</h3>
               {subtitle && (
-                <p className="text-sm text-gray-600 mt-1">{subtitle}</p>
+                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{subtitle}</p>
               )}
             </div>
           </div>
           {action && (
             <button
               onClick={action.onClick}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              style={{ padding: "8px 16px", fontSize: 13, fontWeight: 500, color: "#475569", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", cursor: "pointer", transition: "background 0.2s" }}
+              onMouseOver={e => e.currentTarget.style.background = "#f1f5f9"}
+              onMouseOut={e => e.currentTarget.style.background = "#f8fafc"}
             >
               {action.label}
             </button>
           )}
         </div>
-      </div>
 
-      <div className="p-6">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600" />
+          <div style={{ display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", padding: "32px 0" }}>
+            <Loader />
           </div>
         ) : error ? (
-          <div className="text-center py-8">
-            <p className="text-red-600 text-sm font-medium">{error}</p>
+          <div style={{ textAlign: "center", padding: "32px 0" }}>
+            <p style={{ color: "#ef4444", fontSize: 14, fontWeight: 500 }}>{error}</p>
           </div>
         ) : isEmpty ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500 text-sm">{emptyMessage}</p>
+          <div style={{ textAlign: "center", padding: "32px 0" }}>
+            <p style={{ color: "#64748b", fontSize: 14 }}>{emptyMessage}</p>
           </div>
         ) : (
           children
@@ -64,49 +62,18 @@ export const DashboardCard = ({
       </div>
 
       {footer && (
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 text-sm text-gray-600">
+        <div style={{ padding: "16px 24px", background: "#f8fafc", borderTop: "1px solid #e2e8f0", fontSize: 13, color: "#64748b" }}>
           {footer}
         </div>
       )}
-    </div>
+    </SectionCard>
   );
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const StatCard = ({ label, value, icon, trend, color = "blue" }) => {
-  const colorClasses = {
-    blue: "bg-blue-50 text-blue-600 border-blue-200",
-    green: "bg-green-50 text-green-600 border-green-200",
-    purple: "bg-purple-50 text-purple-600 border-purple-200",
-    red: "bg-red-50 text-red-600 border-red-200",
-  };
-
-  return (
-    <div className={`p-6 rounded-lg border ${colorClasses[color]}`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium opacity-75">{label}</p>
-          <div className="flex items-baseline gap-2 mt-2">
-            <p className="text-3xl font-bold">{value}</p>
-            {trend && (
-              <span
-                className={`text-sm font-semibold ${trend.positive ? "text-green-600" : "text-red-600"}`}
-              >
-                {trend.positive ? "+" : "-"}
-                {trend.value}
-              </span>
-            )}
-          </div>
-        </div>
-        {icon && (
-          <div className="w-12 h-12 rounded-lg bg-current opacity-10 flex items-center justify-center flex-shrink-0">
-            {icon}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <UIStatCard label={label} value={value} trend={trend} color={color} />;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,53 +85,49 @@ export const AppointmentListItem = ({
 }) => {
   const getStatusColor = (status) => {
     switch (status) {
-      case "confirmed":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "completed":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "cancelled":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+      case "confirmed": return "green";
+      case "pending": return "yellow";
+      case "completed": return "blue";
+      case "cancelled": return "red";
+      default: return "slate";
     }
   };
 
   return (
-    <div className="p-4 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-200">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <p className="font-semibold text-gray-900">
+    <div style={{ padding: 16, borderRadius: 12, border: "1px solid #e2e8f0", background: "#fff", transition: "box-shadow 0.2s" }}
+         onMouseOver={e => e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0,0,0,0.05)"}
+         onMouseOut={e => e.currentTarget.style.boxShadow = "none"}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: actions.length > 0 ? 12 : 0 }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontWeight: 600, color: "#0f172a", fontSize: 14 }}>
             {appointment.doctorName || appointment.patientName}
           </p>
-          <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 4, fontSize: 13, color: "#64748b" }}>
             <span>{new Date(appointment.date).toLocaleDateString()}</span>
             <span>{appointment.time}</span>
           </div>
           {appointment.reason && (
-            <p className="text-xs text-gray-500 mt-2">{appointment.reason}</p>
+            <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>{appointment.reason}</p>
           )}
         </div>
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(appointment.status)}`}
-        >
-          {appointment.status.charAt(0).toUpperCase() +
-            appointment.status.slice(1)}
-        </span>
+        <Badge color={getStatusColor(appointment.status)}>
+          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+        </Badge>
       </div>
 
       {actions.length > 0 && (
-        <div className="flex gap-2 pt-3 border-t border-gray-100">
+        <div style={{ display: "flex", gap: 8, paddingTop: 12, borderTop: "1px solid #f8fafc" }}>
           {actions.map((action) => (
             <button
               key={action.id}
               onClick={() => onAction(action.id, appointment._id)}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                action.primary
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              style={{
+                flex: 1, padding: "8px 12px", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "background 0.2s", fontFamily: "inherit", border: "none",
+                ...(action.primary
+                  ? { background: "#1db585", color: "#fff" }
+                  : { background: "#f1f5f9", color: "#475569" })
+              }}
             >
               {action.label}
             </button>
@@ -177,56 +140,55 @@ export const AppointmentListItem = ({
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-// FIX: icons are now top-level imports, not require() inside the component body
 export const DashboardOverview = ({ stats, appointments, onRefresh }) => {
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 style={{ fontSize: "1.875rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em" }}>Dashboard</h1>
+          <p style={{ color: "#64748b", marginTop: 4 }}>
             Welcome back! Here's your overview
           </p>
         </div>
-        <button
+        <Btn
           onClick={onRefresh}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", color: "#475569", border: "1px solid #e2e8f0" }}
         >
-          <RefreshIcon />
+          <RefreshIcon style={{ width: 16, height: 16 }} />
           <span>Refresh</span>
-        </button>
+        </Btn>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 24, marginBottom: 32 }}>
         <StatCard
           label="Total Appointments"
           value={stats?.totalAppointments || 0}
-          icon={<CalendarIcon />}
+          icon={<CalendarIcon style={{ width: 24, height: 24, color: "#3b82f6" }} />}
           color="blue"
         />
         <StatCard
           label="Upcoming"
           value={stats?.upcomingAppointments || 0}
-          icon={<HomeIcon />}
+          icon={<HomeIcon style={{ width: 24, height: 24, color: "#10b981" }} />}
           color="green"
         />
         <StatCard
           label="Patients"
           value={stats?.totalPatients || 0}
-          icon={<UsersIcon />}
-          color="purple"
+          icon={<UsersIcon style={{ width: 24, height: 24, color: "#8b5cf6" }} />}
+          color="slate"
         />
       </div>
 
       <DashboardCard
         title="Upcoming Appointments"
         subtitle="Next scheduled consultations"
-        icon={<CalendarIcon />}
+        icon={<CalendarIcon style={{ width: 20, height: 20 }} />}
         isEmpty={!appointments || appointments.length === 0}
         emptyMessage="No upcoming appointments scheduled"
         action={{ label: "Book New", onClick: () => {} }}
       >
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {(appointments || []).slice(0, 5).map((appointment) => (
             <AppointmentListItem
               key={appointment._id}

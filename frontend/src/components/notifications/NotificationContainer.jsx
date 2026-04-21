@@ -74,7 +74,7 @@ export const NotificationProvider = ({ children }) => {
 
 const NotificationContainer = ({ notifications }) => {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-3 max-w-md pointer-events-none">
+    <div style={{ position: "fixed", top: 16, right: 16, zIndex: 50, display: "flex", flexDirection: "column", gap: 12, maxWidth: 400, width: "100%", pointerEvents: "none", fontFamily: "'DM Sans', sans-serif" }}>
       {notifications.map(notification => (
         <NotificationItem key={notification.id} notification={notification} />
       ))}
@@ -91,69 +91,81 @@ const NotificationItem = ({ notification }) => {
     setTimeout(() => removeNotification(notification.id), 300);
   };
 
-  const getStyles = () => {
-    const baseStyles = 'rounded-lg shadow-lg border-l-4 p-4 backdrop-blur-sm transition-all duration-300 pointer-events-auto';
-    const exitStyles = isExiting ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0';
-
+  const getStyleParams = () => {
     switch (notification.type) {
       case 'success':
-        return `${baseStyles} ${exitStyles} bg-green-50 border-green-400 text-green-900`;
+        return { bg: "#f0fdf4", border: "#4ade80", text: "#14532d", btn: "#16a34a" };
       case 'error':
-        return `${baseStyles} ${exitStyles} bg-red-50 border-red-400 text-red-900`;
+        return { bg: "#fef2f2", border: "#f87171", text: "#7f1d1d", btn: "#dc2626" };
       case 'warning':
-        return `${baseStyles} ${exitStyles} bg-yellow-50 border-yellow-400 text-yellow-900`;
+        return { bg: "#fffbeb", border: "#fbbf24", text: "#78350f", btn: "#d97706" };
       case 'call':
-        return `${baseStyles} ${exitStyles} bg-blue-50 border-blue-400 text-blue-900`;
+        return { bg: "#eff6ff", border: "#60a5fa", text: "#1e3a8a", btn: "#2563eb" };
       default:
-        return `${baseStyles} ${exitStyles} bg-gray-50 border-gray-400 text-gray-900`;
+        return { bg: "#f8fafc", border: "#94a3b8", text: "#0f172a", btn: "#475569" };
     }
   };
 
+  const params = getStyleParams();
+
+  const containerStyle = {
+    background: params.bg,
+    borderLeft: `4px solid ${params.border}`,
+    color: params.text,
+    padding: 16,
+    borderRadius: 12,
+    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
+    pointerEvents: "auto",
+    transition: "all 0.3s ease",
+    opacity: isExiting ? 0 : 1,
+    transform: isExiting ? "translateX(100%)" : "translateX(0)",
+    backdropFilter: "blur(4px)"
+  };
+
   const getIcon = () => {
+    const style = { width: 20, height: 20, color: params.border };
     switch (notification.type) {
-      case 'success':
-        return <CheckIcon />;
-      case 'error':
-        return <AlertIcon />;
-      case 'warning':
-        return <AlertIcon />;
-      case 'call':
-        return <PhoneIcon />;
-      default:
-        return <InfoIcon />;
+      case 'success': return <div style={style}><CheckIcon /></div>;
+      case 'error': return <div style={style}><AlertIcon /></div>;
+      case 'warning': return <div style={style}><AlertIcon /></div>;
+      case 'call': return <div style={style}><PhoneIcon /></div>;
+      default: return <div style={style}><InfoIcon /></div>;
     }
   };
 
   return (
-    <div className={getStyles()}>
-      <div className="flex items-start space-x-3">
-        <div className="flex-shrink-0 mt-0.5">
+    <div style={containerStyle}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ flexShrink: 0, marginTop: 2 }}>
           {getIcon()}
         </div>
 
-        <div className="flex-1">
+        <div style={{ flex: 1 }}>
           {notification.title && (
-            <p className="font-semibold text-sm">
+            <p style={{ fontWeight: 600, fontSize: 14 }}>
               {notification.title}
             </p>
           )}
           {notification.message && (
-            <p className="text-sm mt-1 opacity-90">
+            <p style={{ fontSize: 13, marginTop: 4, opacity: 0.9 }}>
               {notification.message}
             </p>
           )}
 
           {notification.actions && notification.actions.length > 0 && (
-            <div className="flex gap-2 mt-3">
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
               {notification.actions.map((action, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleAction(notification.id, action.type, action.data)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded transition-all ${
-                    action.primary
-                      ? 'bg-current text-white opacity-100 hover:opacity-90'
-                      : 'bg-white opacity-70 hover:opacity-100'
-                  }`}
+                  style={{
+                    fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, cursor: "pointer", transition: "all 0.2s", border: "none", fontFamily: "inherit",
+                    ...(action.primary
+                      ? { background: params.btn, color: "#fff" }
+                      : { background: "rgba(255,255,255,0.7)", color: params.text })
+                  }}
+                  onMouseOver={e => { if(action.primary) e.currentTarget.style.opacity = 0.9; else e.currentTarget.style.background = "#fff"; }}
+                  onMouseOut={e => { if(action.primary) e.currentTarget.style.opacity = 1; else e.currentTarget.style.background = "rgba(255,255,255,0.7)"; }}
                 >
                   {action.label}
                 </button>
@@ -164,17 +176,21 @@ const NotificationItem = ({ notification }) => {
 
         <button
           onClick={handleClose}
-          className="flex-shrink-0 opacity-50 hover:opacity-100 transition-opacity"
+          style={{ flexShrink: 0, opacity: 0.5, background: "none", border: "none", cursor: "pointer", padding: 0, color: "inherit", transition: "opacity 0.2s" }}
+          onMouseOver={e => e.currentTarget.style.opacity = 1}
+          onMouseOut={e => e.currentTarget.style.opacity = 0.5}
         >
-          <CloseIcon />
+          <div style={{ width: 16, height: 16 }}>
+            <CloseIcon />
+          </div>
         </button>
       </div>
 
       {notification.autoClose && (
-        <div className="mt-2 h-1 bg-current bg-opacity-10 rounded-full overflow-hidden">
+        <div style={{ marginTop: 12, height: 4, background: "rgba(0,0,0,0.05)", borderRadius: 2, overflow: "hidden" }}>
           <div
-            className="h-full bg-current opacity-30 rounded-full"
             style={{
+              height: "100%", background: params.border, borderRadius: 2, opacity: 0.6,
               animation: `shrink ${notification.duration || 5000}ms linear forwards`
             }}
           />

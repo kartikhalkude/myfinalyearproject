@@ -17,6 +17,11 @@ import {
   Heart,
   ClipboardList,
 } from "lucide-react";
+import { SectionCard, Badge, Btn, Loader, EmptyState, PageHeader, StatCard } from "./UI";
+
+const inputStyle = { width: "100%", padding: "10px 14px", fontSize: 13.5, fontFamily: "inherit", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, outline: "none", boxSizing: "border-box", transition: "border-color 0.15s, box-shadow 0.15s" };
+const onFocus = e => { e.target.style.borderColor = "#1db585"; e.target.style.boxShadow = "0 0 0 3px rgba(29,181,133,0.08)"; };
+const onBlur = e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; };
 
 // ─── Reusable email-based patient selector ────────────────────────────────────
 
@@ -60,22 +65,27 @@ function PatientEmailSelector({ patients, value, onChange, required }) {
   };
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div ref={wrapRef} style={{ position: "relative" }}>
       <div
-        className={`w-full flex items-center px-4 py-3 border rounded-xl cursor-text transition bg-white
-          ${open || focused ? "ring-2 ring-cyan-500 border-transparent" : "border-gray-300"}`}
+        style={{
+          display: "flex", alignItems: "center", padding: "10px 14px", border: "1.5px solid",
+          borderColor: open || focused ? "#1db585" : "#e2e8f0",
+          borderRadius: 10, cursor: "text", background: "#fff",
+          boxShadow: open || focused ? "0 0 0 3px rgba(29,181,133,0.08)" : "none",
+          transition: "all 0.15s"
+        }}
         onClick={() => setOpen(true)}
       >
-        <Search className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+        <Search style={{ width: 16, height: 16, color: "#94a3b8", marginRight: 8, flexShrink: 0 }} />
         {selected && !open ? (
-          <span className="flex-1 text-sm text-gray-800 truncate">
-            <span className="font-medium">{selected.name}</span>
-            <span className="text-gray-500 ml-2">({selected.email})</span>
+          <span style={{ flex: 1, fontSize: 13.5, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ fontWeight: 500 }}>{selected.name}</span>
+            <span style={{ color: "#64748b", marginLeft: 8 }}>({selected.email})</span>
           </span>
         ) : (
           <input
             type="text"
-            className="flex-1 outline-none text-sm bg-transparent placeholder-gray-400"
+            style={{ flex: 1, outline: "none", fontSize: 13.5, background: "transparent", border: "none", color: "#1e293b", padding: 0 }}
             placeholder={
               selected
                 ? `${selected.name} (${selected.email})`
@@ -101,17 +111,17 @@ function PatientEmailSelector({ patients, value, onChange, required }) {
               e.stopPropagation();
               handleClear();
             }}
-            className="ml-2 text-gray-400 hover:text-red-500 transition flex-shrink-0"
+            style={{ marginLeft: 8, color: "#94a3b8", background: "none", border: "none", cursor: "pointer", display: "flex" }}
           >
-            <X className="w-4 h-4" />
+            <X style={{ width: 16, height: 16 }} />
           </button>
         )}
       </div>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-56 overflow-y-auto">
+        <div style={{ position: "absolute", zIndex: 50, marginTop: 4, width: "100%", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)", maxHeight: 224, overflowY: "auto" }}>
           {filtered.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+            <div style={{ padding: "12px 16px", fontSize: 13, color: "#64748b", textAlign: "center" }}>
               No patients found
             </div>
           ) : (
@@ -119,18 +129,20 @@ function PatientEmailSelector({ patients, value, onChange, required }) {
               <button
                 key={p._id}
                 type="button"
-                className="w-full text-left px-4 py-3 hover:bg-cyan-50 transition flex items-center space-x-3 border-b border-gray-100 last:border-0"
+                style={{ width: "100%", textAlign: "left", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, background: "none", border: "none", borderBottom: "1px solid #f1f5f9", cursor: "pointer", transition: "background 0.15s" }}
+                onMouseOver={(e) => e.currentTarget.style.background = "#f8fafc"}
+                onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(p)}
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1db585", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                   {p.name?.charAt(0)?.toUpperCase() || "?"}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 13.5, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {p.name || "Unknown"}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{p.email}</p>
+                  <p style={{ fontSize: 12, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.email}</p>
                 </div>
               </button>
             ))
@@ -140,7 +152,7 @@ function PatientEmailSelector({ patients, value, onChange, required }) {
 
       {required && (
         <select
-          className="sr-only"
+          style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", borderWidth: 0 }}
           value={value || ""}
           onChange={() => {}}
           required={required}
@@ -165,60 +177,37 @@ const RECORD_TYPES = [
   {
     value: "lab_result",
     label: "Lab Result",
-    icon: <Activity className="w-4 h-4" />,
+    icon: <Activity style={{ width: 16, height: 16 }} />,
   },
   {
     value: "diagnosis",
     label: "Diagnosis",
-    icon: <ClipboardList className="w-4 h-4" />,
+    icon: <ClipboardList style={{ width: 16, height: 16 }} />,
   },
   {
     value: "vital_signs",
     label: "Vital Signs",
-    icon: <Thermometer className="w-4 h-4" />,
+    icon: <Thermometer style={{ width: 16, height: 16 }} />,
   },
   {
     value: "imaging",
     label: "Imaging",
-    icon: <FileText className="w-4 h-4" />,
+    icon: <FileText style={{ width: 16, height: 16 }} />,
   },
   {
     value: "consultation",
     label: "Consultation",
-    icon: <Heart className="w-4 h-4" />,
+    icon: <Heart style={{ width: 16, height: 16 }} />,
   },
-  { value: "other", label: "Other", icon: <FileText className="w-4 h-4" /> },
+  { value: "other", label: "Other", icon: <FileText style={{ width: 16, height: 16 }} /> },
 ];
 
 const typeLabel = (val) =>
   RECORD_TYPES.find((t) => t.value === val)?.label || val;
 const typeIcon = (val) =>
   RECORD_TYPES.find((t) => t.value === val)?.icon || (
-    <FileText className="w-4 h-4" />
+    <FileText style={{ width: 16, height: 16 }} />
   );
-
-const SEVERITY_STYLES = {
-  normal: {
-    badge: "bg-green-100 text-green-700",
-    card: "border-green-200 from-green-50 to-emerald-50",
-  },
-  mild: {
-    badge: "bg-yellow-100 text-yellow-700",
-    card: "border-yellow-200 from-yellow-50 to-amber-50",
-  },
-  moderate: {
-    badge: "bg-orange-100 text-orange-700",
-    card: "border-orange-200 from-orange-50 to-red-50",
-  },
-  severe: {
-    badge: "bg-red-100 text-red-700",
-    card: "border-red-200 from-red-50 to-pink-50",
-  },
-  critical: {
-    badge: "bg-purple-100 text-purple-700",
-    card: "border-purple-200 from-purple-50 to-violet-50",
-  },
-};
 
 const EMPTY_FORM = {
   patientId: "",
@@ -245,21 +234,15 @@ function HealthRecords({ doctorPatients }) {
   const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState(EMPTY_FORM);
 
-  // ─── Sync parent-supplied patient list ───────────────────────────────────
-
   useEffect(() => {
     if (doctorPatients && doctorPatients.length > 0) {
       setPatients(doctorPatients);
     }
   }, [doctorPatients]);
 
-  // ─── Initial fetch ────────────────────────────────────────────────────────
-
   useEffect(() => {
     fetchRecords();
   }, []);
-
-  // ─── WebSocket listeners ──────────────────────────────────────────────────
 
   useEffect(() => {
     const onCreated = (data) => {
@@ -297,9 +280,6 @@ function HealthRecords({ doctorPatients }) {
     };
   }, []);
 
-  // ─── Fetch data ───────────────────────────────────────────────────────────
-
-  // Helper: extract an array from various API response shapes
   const extractArray = (data, keys = []) => {
     if (Array.isArray(data)) return data;
     for (const key of keys) {
@@ -314,7 +294,6 @@ function HealthRecords({ doctorPatients }) {
       setError("");
 
       if (user?.role === "patient") {
-        // Patients only need health records — skip the doctor-only cross-fetches
         const recordsRes = await apiClient
           .get("/health-records")
           .catch(() => ({ data: [] }));
@@ -323,7 +302,6 @@ function HealthRecords({ doctorPatients }) {
         return;
       }
 
-      // Doctor path: fetch all three sources to build the patient list
       const [recordsRes, appointRes, prescRes] = await Promise.all([
         apiClient.get("/health-records").catch(() => ({ data: [] })),
         apiClient.get("/appointments").catch(() => ({ data: [] })),
@@ -336,7 +314,6 @@ function HealthRecords({ doctorPatients }) {
 
       setRecords(recordsData);
 
-      // Build scoped patient list (only if parent hasn't provided one)
       if (!(doctorPatients && doctorPatients.length > 0)) {
         const patientMap = new Map();
         const addPatient = (obj) => {
@@ -366,8 +343,6 @@ function HealthRecords({ doctorPatients }) {
       setLoading(false);
     }
   };
-
-  // ─── CRUD helpers ─────────────────────────────────────────────────────────
 
   const openCreate = () => {
     setEditingRecord(null);
@@ -447,8 +422,6 @@ function HealthRecords({ doctorPatients }) {
     }
   };
 
-  // ─── Filtered list ────────────────────────────────────────────────────────
-
   const filtered =
     filterType === "all"
       ? records
@@ -461,115 +434,81 @@ function HealthRecords({ doctorPatients }) {
     return diff <= 1000 * 60 * 60 * 24 * 30;
   }).length;
 
-  // ─── Render ───────────────────────────────────────────────────────────────
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-800">Health Records</h2>
-          <p className="text-gray-600 text-sm mt-1">
-            {user?.role === "doctor"
-              ? "Manage and review patient health records"
-              : "Your health records added by your doctor"}
-          </p>
-        </div>
-        {user?.role === "doctor" && (
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transition"
-          >
-            <Plus className="w-5 h-5" />
-            Add Record
-          </button>
-        )}
-      </div>
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <PageHeader
+        title="Health Records"
+        subtitle={user?.role === "doctor" ? "Manage and review patient health records" : "Your health records added by your doctor"}
+        action={
+          user?.role === "doctor" && (
+            <Btn onClick={openCreate} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Plus style={{ width: 18, height: 18 }} />
+              Add Record
+            </Btn>
+          )
+        }
+      />
 
-      {/* Messages */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
-          <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-          <span className="flex-1">{error}</span>
-          <button
-            onClick={() => setError("")}
-            className="text-red-400 hover:text-red-600"
-          >
-            <X className="w-5 h-5" />
+        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fca5a5", color: "#b91c1c", borderRadius: 12, display: "flex", alignItems: "flex-start", marginBottom: 20 }}>
+          <AlertCircle style={{ width: 20, height: 20, marginRight: 12, flexShrink: 0, marginTop: 2 }} />
+          <span style={{ fontSize: 14, flex: 1 }}>{error}</span>
+          <button onClick={() => setError("")} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", padding: 0 }}>
+            <X style={{ width: 20, height: 20 }} />
           </button>
         </div>
       )}
       {success && (
-        <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-start">
-          <CheckCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-          <span className="flex-1">{success}</span>
-          <button
-            onClick={() => setSuccess("")}
-            className="text-green-400 hover:text-green-600"
-          >
-            <X className="w-5 h-5" />
+        <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "1px solid #86efac", color: "#15803d", borderRadius: 12, display: "flex", alignItems: "flex-start", marginBottom: 20 }}>
+          <CheckCircle style={{ width: 20, height: 20, marginRight: 12, flexShrink: 0, marginTop: 2 }} />
+          <span style={{ fontSize: 14, flex: 1 }}>{success}</span>
+          <button onClick={() => setSuccess("")} style={{ background: "none", border: "none", color: "#4ade80", cursor: "pointer", padding: 0 }}>
+            <X style={{ width: 20, height: 20 }} />
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Records</p>
-          <p className="text-2xl font-bold text-gray-800 mt-2">{records.length}</p>
-          <p className="text-sm text-gray-500 mt-1">All record types</p>
-        </div>
-        <div className="bg-white rounded-xl border border-cyan-200 p-4">
-          <p className="text-xs font-semibold text-cyan-600 uppercase tracking-wide">Recent 30 Days</p>
-          <p className="text-2xl font-bold text-cyan-700 mt-2">{recentCount}</p>
-          <p className="text-sm text-gray-500 mt-1">Recently updated or created</p>
-        </div>
-        <div className="bg-white rounded-xl border border-red-200 p-4">
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">
-            {user?.role === "doctor" ? "High Severity" : "Diagnoses"}
-          </p>
-          <p className="text-2xl font-bold text-red-700 mt-2">
-            {user?.role === "doctor" ? criticalCount : diagnosisCount}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            {user?.role === "doctor" ? "Severe or critical records" : "Diagnosis-type records"}
-          </p>
-        </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginBottom: 24 }}>
+        <StatCard label="Total Records" value={records.length} />
+        <StatCard label="Recent 30 Days" value={recentCount} />
+        <StatCard label={user?.role === "doctor" ? "High Severity" : "Diagnoses"} value={user?.role === "doctor" ? criticalCount : diagnosisCount} />
       </div>
 
-      {/* Type filters */}
-      <div className="flex flex-wrap gap-2">
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
         {[{ value: "all", label: "All" }, ...RECORD_TYPES].map((t) => (
           <button
             key={t.value}
             onClick={() => setFilterType(t.value)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
-              filterType === t.value
-                ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white"
-                : "bg-white text-gray-700 border border-gray-300 hover:border-cyan-400"
-            }`}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 10,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "all 0.2s",
+              fontFamily: "inherit",
+              ...(filterType === t.value
+                ? { background: "#1db585", color: "#fff", border: "1px solid #1db585" }
+                : { background: "#fff", color: "#475569", border: "1px solid #e2e8f0" })
+            }}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      {/* Records list */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-cyan-600" />
+        <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
+          <Loader />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
-          <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg">No health records found</p>
-          <p className="text-gray-400 text-sm mt-1">
-            {user?.role === "doctor"
-              ? "Add a new health record for your patients"
-              : "Your doctor will add health records here after your visits"}
-          </p>
-        </div>
+        <EmptyState
+          icon={<FileText style={{ width: 32, height: 32, color: "#94a3b8" }} />}
+          title="No health records found"
+          message={user?.role === "doctor" ? "Add a new health record for your patients" : "Your doctor will add health records here after your visits"}
+        />
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: 16 }}>
           {filtered.map((record) => (
             <RecordCard
               key={record._id}
@@ -582,7 +521,6 @@ function HealthRecords({ doctorPatients }) {
         </div>
       )}
 
-      {/* Create / Edit Modal */}
       {showModal && (
         <RecordModal
           record={editingRecord}
@@ -599,330 +537,261 @@ function HealthRecords({ doctorPatients }) {
   );
 }
 
-// ─── Record card ──────────────────────────────────────────────────────────────
-
 function RecordCard({ record, userRole, onEdit, onDelete }) {
-  const sev = SEVERITY_STYLES[record.severity] || SEVERITY_STYLES.normal;
-
-  // Handle both new and legacy field names
-  const content =
-    record.content || record.description || "No content available";
+  const content = record.content || record.description || "No content available";
   const recordType = record.type || record.recordType || "diagnosis";
   const recordDate = record.date
-    ? new Date(record.date).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
+    ? new Date(record.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
     : "N/A";
   const shortContent = content.length > 280 ? `${content.slice(0, 280)}...` : content;
 
+  // Map severity to standard Badge colors
+  const severityColorMap = {
+    normal: "green",
+    mild: "slate",
+    moderate: "yellow",
+    severe: "orange",
+    critical: "red",
+  };
+  const badgeColor = severityColorMap[record.severity] || "slate";
+
   return (
-    <div
-      className={`rounded-2xl shadow-sm border overflow-hidden transition-all hover:shadow-md bg-gradient-to-r ${sev.card}`}
-    >
-      {/* Header */}
-      <div className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start space-x-3 flex-1 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shadow-sm flex-shrink-0 text-cyan-700">
+    <SectionCard>
+      <div style={{ padding: 24 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flex: 1, minWidth: 0 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", color: "#1db585", flexShrink: 0 }}>
               {typeIcon(recordType)}
             </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-lg font-bold text-gray-800">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", marginBottom: 6 }}>
                 {record.title}
               </h3>
-              <div className="flex items-center gap-2 flex-wrap mt-1">
-                <span className="text-xs font-semibold text-gray-500 bg-white/70 px-2 py-0.5 rounded-full">
-                  {typeLabel(recordType)}
-                </span>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold ${sev.badge}`}
-                >
-                  {record.severity?.charAt(0).toUpperCase() +
-                    record.severity?.slice(1) || "Normal"}
-                </span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <Badge color="slate">{typeLabel(recordType)}</Badge>
+                <Badge color={badgeColor}>{record.severity?.charAt(0).toUpperCase() + record.severity?.slice(1) || "Normal"}</Badge>
               </div>
             </div>
           </div>
 
           {userRole === "doctor" && (
-            <div className="flex gap-1 flex-shrink-0">
+            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               <button
                 onClick={() => onEdit(record)}
-                className="p-2 hover:bg-blue-200 rounded-lg transition text-blue-600"
+                style={{ padding: 6, borderRadius: 8, background: "none", border: "none", color: "#3b82f6", cursor: "pointer" }}
                 title="Edit"
+                onMouseOver={(e) => e.currentTarget.style.background = "#eff6ff"}
+                onMouseOut={(e) => e.currentTarget.style.background = "none"}
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit2 style={{ width: 16, height: 16 }} />
               </button>
               <button
                 onClick={() => onDelete(record._id)}
-                className="p-2 hover:bg-red-200 rounded-lg transition text-red-600"
+                style={{ padding: 6, borderRadius: 8, background: "none", border: "none", color: "#ef4444", cursor: "pointer" }}
                 title="Delete"
+                onMouseOver={(e) => e.currentTarget.style.background = "#fef2f2"}
+                onMouseOut={(e) => e.currentTarget.style.background = "none"}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 style={{ width: 16, height: 16 }} />
               </button>
             </div>
           )}
         </div>
 
-        {/* Metadata row */}
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          <div className="bg-white/60 rounded-lg border border-white/80 p-3">
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-              Date
-            </p>
-            <p className="text-gray-700 font-medium mt-1">{recordDate}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+          <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px" }}>
+            <p style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Date</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: "#334155" }}>{recordDate}</p>
           </div>
 
-          {/* Doctor sees patient; patient sees doctor */}
           {userRole === "doctor" && record.patientId && (
-            <div className="bg-white/60 rounded-lg border border-white/80 p-3">
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                Patient
+            <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px", gridColumn: "span 2" }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Patient</p>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {typeof record.patientId === "object" ? record.patientId.name : record.patientId || "Unknown"}
               </p>
-              <div className="text-gray-700 font-medium mt-1">
-                {typeof record.patientId === "object"
-                  ? record.patientId.name
-                  : record.patientId || "Unknown"}
-                {typeof record.patientId === "object" &&
-                  record.patientId.email && (
-                    <p className="text-gray-500 text-xs font-normal">
-                      {record.patientId.email}
-                    </p>
-                  )}
-              </div>
             </div>
           )}
 
           {userRole === "patient" && (
-            <div className="bg-white/60 rounded-lg border border-white/80 p-3">
-              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                Doctor
-              </p>
-              <p className="text-gray-700 font-medium mt-1">
+            <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px", gridColumn: "span 2" }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Doctor</p>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {record.doctorId?.name || "Your Doctor"}
               </p>
             </div>
           )}
-
-          <div className="bg-white/60 rounded-lg border border-white/80 p-3">
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-              Record Type
-            </p>
-            <p className="text-gray-700 font-medium mt-1">{typeLabel(recordType)}</p>
-          </div>
         </div>
 
-        {/* Content section */}
-        <div className="mt-4">
-          <p className="text-xs font-semibold text-gray-600 uppercase mb-2">
+        <div>
+          <p style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
             Findings / Content
           </p>
-          <div className="text-sm text-gray-700 bg-white/50 p-3 rounded-lg border border-white/80 leading-relaxed whitespace-pre-wrap">
+          <div style={{ fontSize: 13.5, color: "#1e293b", lineHeight: 1.6, background: "#fff", padding: 12, borderRadius: 8, border: "1px solid #e2e8f0", whiteSpace: "pre-wrap" }}>
             {shortContent}
           </div>
         </div>
 
-        {/* Notes section */}
         {record.notes && (
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-gray-600 uppercase mb-2">
+          <div style={{ marginTop: 16 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
               Doctor's Notes
             </p>
-            <div className="text-sm text-gray-700 bg-white/50 p-3 rounded-lg border border-white/80 leading-relaxed italic whitespace-pre-wrap">
+            <div style={{ fontSize: 13.5, color: "#334155", lineHeight: 1.6, background: "#f8fafc", padding: 12, borderRadius: 8, fontStyle: "italic", whiteSpace: "pre-wrap" }}>
               {record.notes}
             </div>
           </div>
         )}
       </div>
-    </div>
+    </SectionCard>
   );
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
-
-function RecordModal({
-  record,
-  isOpen,
-  onClose,
-  onSubmit,
-  formData,
-  setFormData,
-  userRole,
-  patients,
-}) {
+function RecordModal({ record, isOpen, onClose, onSubmit, formData, setFormData, userRole, patients }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-2xl w-full my-8 shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-cyan-50 to-blue-50">
-          <h3 className="text-2xl font-bold text-gray-800">
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(2px)" }} onClick={onClose}></div>
+      <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 600, position: "relative", zIndex: 51, display: "flex", flexDirection: "column", maxHeight: "90vh", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)" }}>
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: "#0f172a" }}>
             {record ? "Edit Health Record" : "New Health Record"}
           </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-200 rounded-lg transition"
-          >
-            <X className="w-6 h-6" />
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", padding: 4 }}>
+            <X style={{ width: 20, height: 20 }} />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={onSubmit} className="p-6 space-y-5">
-          {/* Patient selector — doctors only, new records only */}
-          {userRole === "doctor" && !record && (
+        <div style={{ padding: 24, overflowY: "auto" }}>
+          <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {userRole === "doctor" && !record && (
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
+                  Patient <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                {patients.length > 0 ? (
+                  <PatientEmailSelector
+                    patients={patients}
+                    value={formData.patientId}
+                    onChange={(patient) => setFormData({ ...formData, patientId: patient?._id || "" })}
+                    required
+                  />
+                ) : (
+                  <div style={{ padding: "12px 16px", background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e", borderRadius: 10, fontSize: 13 }}>
+                    No patients found. Patients appear here once they have had an appointment, prescription, or health record with you.
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Patient <span className="text-red-500">*</span>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
+                Title <span style={{ color: "#ef4444" }}>*</span>
               </label>
-              {patients.length > 0 ? (
-                <PatientEmailSelector
-                  patients={patients}
-                  value={formData.patientId}
-                  onChange={(patient) =>
-                    setFormData({ ...formData, patientId: patient?._id || "" })
-                  }
-                  required
-                />
-              ) : (
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800">
-                  No patients found. Patients appear here once they have had an
-                  appointment, prescription, or health record with you.
-                </div>
-              )}
-              <p className="text-xs text-gray-400 mt-1">
-                {patients.length > 0
-                  ? `${patients.length} patient${patients.length !== 1 ? "s" : ""} available — search by name or email`
-                  : ""}
-              </p>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                style={inputStyle}
+                onFocus={onFocus} onBlur={onBlur}
+                placeholder="e.g., Blood Test Results, Annual Checkup"
+                required
+              />
             </div>
-          )}
 
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              placeholder="e.g., Blood Test Results, Annual Checkup"
-              required
-            />
-          </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
+                  Record Type
+                </label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  style={{ ...inputStyle, appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", paddingRight: 36 }}
+                  onFocus={onFocus} onBlur={onBlur}
+                >
+                  {RECORD_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
+                  Severity
+                </label>
+                <select
+                  value={formData.severity}
+                  onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
+                  style={{ ...inputStyle, appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", paddingRight: 36 }}
+                  onFocus={onFocus} onBlur={onBlur}
+                >
+                  {["normal", "mild", "moderate", "severe", "critical"].map((s) => (
+                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-          {/* Type + Severity row */}
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Record Type
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
+                Date
               </label>
-              <select
-                value={formData.type}
-                onChange={(e) =>
-                  setFormData({ ...formData, type: e.target.value })
-                }
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white"
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                style={inputStyle}
+                onFocus={onFocus} onBlur={onBlur}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
+                Content / Findings <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              <textarea
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                style={{ ...inputStyle, resize: "vertical", minHeight: 100 }}
+                onFocus={onFocus} onBlur={onBlur}
+                rows={4}
+                placeholder="Describe the findings, results, or record details…"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>
+                Doctor's Notes
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                style={{ ...inputStyle, resize: "vertical", minHeight: 80 }}
+                onFocus={onFocus} onBlur={onBlur}
+                rows={2}
+                placeholder="Additional notes or recommendations for the patient…"
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ flex: 1, padding: "12px", background: "#f8fafc", color: "#475569", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
               >
-                {RECORD_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Severity
-              </label>
-              <select
-                value={formData.severity}
-                onChange={(e) =>
-                  setFormData({ ...formData, severity: e.target.value })
-                }
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent bg-white"
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={{ flex: 1, padding: "12px", background: "#1db585", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
               >
-                {Object.keys(SEVERITY_STYLES).map((s) => (
-                  <option key={s} value={s}>
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </option>
-                ))}
-              </select>
+                {record ? "Update Record" : "Create Record"}
+              </button>
             </div>
-          </div>
-
-          {/* Date */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Date
-            </label>
-            <input
-              type="date"
-              value={formData.date}
-              onChange={(e) =>
-                setFormData({ ...formData, date: e.target.value })
-              }
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Content */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Content / Findings <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              value={formData.content}
-              onChange={(e) =>
-                setFormData({ ...formData, content: e.target.value })
-              }
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
-              rows={4}
-              placeholder="Describe the findings, results, or record details…"
-              required
-            />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Doctor's Notes
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
-              rows={2}
-              placeholder="Additional notes or recommendations for the patient…"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transition"
-            >
-              {record ? "Update Record" : "Create Record"}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

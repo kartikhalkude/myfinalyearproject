@@ -13,6 +13,8 @@ import {
   Users,
   Minimize2,
   Maximize2,
+  AlertCircle,
+  X
 } from "lucide-react";
 
 function VideoCall({
@@ -37,6 +39,7 @@ function VideoCall({
   const remoteVideoRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const callTimerRef = useRef(null);
   const handlersRef = useRef({});
   const iceCandidateQueueRef = useRef([]);
@@ -69,23 +72,14 @@ function VideoCall({
 
       localStreamRef.current = stream;
 
-      const setLocalVideoStream = () => {
-        if (localVideoRef.current) {
-          addDebugInfo("Setting local video stream on ref...");
-          localVideoRef.current.srcObject = stream;
-          localVideoRef.current
-            .play()
-            .catch((e) =>
-              addDebugInfo("⚠ Local video play error: " + e.message),
-            );
-          addDebugInfo("✓ Local video stream set");
-        } else {
-          addDebugInfo("⚠ Local video ref not ready, retrying...");
-          setTimeout(setLocalVideoStream, 100);
-        }
-      };
-
-      setLocalVideoStream();
+      if (localVideoRef.current) {
+        addDebugInfo("Setting local video stream on ref...");
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch((e) => addDebugInfo("⚠ Local video play error: " + e.message));
+        addDebugInfo("✓ Local video stream set");
+      } else {
+        addDebugInfo("Local video ref not ready yet, will be set when call becomes active.");
+      }
 
       return stream;
     } catch (error) {
@@ -121,20 +115,14 @@ function VideoCall({
               `Stream available with ${remoteStream.getTracks().length} tracks`,
             );
 
-            const setRemoteStream = () => {
-              if (remoteVideoRef.current) {
-                addDebugInfo(`Setting remote video stream on ref`);
-                remoteVideoRef.current.srcObject = remoteStream;
-                remoteVideoRef.current
-                  .play()
-                  .catch((e) => addDebugInfo("⚠ Play error: " + e.message));
-              } else {
-                addDebugInfo("⚠ remoteVideoRef.current is null, retrying...");
-                setTimeout(setRemoteStream, 100);
-              }
-            };
-
-            setRemoteStream();
+            remoteStreamRef.current = remoteStream;
+            if (remoteVideoRef.current) {
+              addDebugInfo(`Setting remote video stream on ref`);
+              remoteVideoRef.current.srcObject = remoteStream;
+              remoteVideoRef.current.play().catch((e) => addDebugInfo("⚠ Play error: " + e.message));
+            } else {
+              addDebugInfo("Remote video ref not ready yet, will be set when call becomes active.");
+            }
           } else {
             addDebugInfo("⚠ No streams in ontrack event");
           }
@@ -404,8 +392,6 @@ function VideoCall({
       peerConnectionRef.current = null;
       addDebugInfo("Peer connection closed");
     }
-
-    // Don't clear callDuration here - keep it for the ended state display
   };
 
   const startCallTimer = () => {
@@ -488,19 +474,16 @@ function VideoCall({
     };
   }, [user.id, appointmentId, otherUserId, isDoctor]);
 
-  // Handle incoming call data passed from notification acceptance
   useEffect(() => {
     if (incomingCallData && !incomingCallProcessedRef.current && !isDoctor) {
       addDebugInfo(
         ">>> Auto-handling incoming call from notification acceptance",
       );
       incomingCallProcessedRef.current = true;
-      // Call handleIncomingCall which will set state to ringing and set up peer connection
       handleIncomingCall(incomingCallData);
     }
   }, [incomingCallData, isDoctor]);
 
-  // Auto-accept the call after peer connection is established from incoming call
   useEffect(() => {
     if (
       incomingCallData &&
@@ -509,7 +492,6 @@ function VideoCall({
       peerConnectionRef.current
     ) {
       addDebugInfo(">>> Auto-accepting call (peer connection ready)");
-      // Use timeout to ensure peer connection is properly configured
       const timer = setTimeout(() => {
         acceptCall();
       }, 500);
@@ -524,123 +506,132 @@ function VideoCall({
   }, []);
 
   useEffect(() => {
-    if (localVideoRef.current) {
-      addDebugInfo("✓ Local video ref is ready");
-    }
-    if (remoteVideoRef.current) {
-      addDebugInfo("✓ Remote video ref is ready");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (
-      callState === "active" &&
-      localStreamRef.current &&
-      localVideoRef.current
-    ) {
-      addDebugInfo("Call is active - ensuring local video stream is set...");
-      if (localVideoRef.current.srcObject !== localStreamRef.current) {
-        addDebugInfo("Setting local video stream (was not set)...");
-        localVideoRef.current.srcObject = localStreamRef.current;
-        localVideoRef.current
-          .play()
-          .catch((e) =>
-            addDebugInfo("⚠ Local video play error on active: " + e.message),
-          );
-      } else {
-        addDebugInfo("✓ Local video stream already set");
+    if (callState === "active") {
+      if (localStreamRef.current && localVideoRef.current) {
+        addDebugInfo("Call is active - ensuring local video stream is set...");
+        if (localVideoRef.current.srcObject !== localStreamRef.current) {
+          addDebugInfo("Setting local video stream (was not set)...");
+          localVideoRef.current.srcObject = localStreamRef.current;
+          localVideoRef.current.play().catch((e) => addDebugInfo("⚠ Local video play error on active: " + e.message));
+        } else {
+          addDebugInfo("✓ Local video stream already set");
+        }
+      }
+      if (remoteStreamRef.current && remoteVideoRef.current) {
+        addDebugInfo("Call is active - ensuring remote video stream is set...");
+        if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
+          addDebugInfo("Setting remote video stream (was not set)...");
+          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          remoteVideoRef.current.play().catch((e) => addDebugInfo("⚠ Remote video play error on active: " + e.message));
+        } else {
+          addDebugInfo("✓ Remote video stream already set");
+        }
       }
     }
   }, [callState]);
 
+  const containerStyle = {
+    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+    background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    zIndex: 50, fontFamily: "'DM Sans', sans-serif"
+  };
+
+  const btnStyle = {
+    padding: "16px 32px", borderRadius: 16, display: "flex", alignItems: "center", gap: 12,
+    fontSize: 16, fontWeight: 600, color: "#fff", cursor: "pointer", border: "none", transition: "all 0.2s ease"
+  };
+
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center z-50">
+    <div style={containerStyle}>
+      <style>{`
+        @keyframes pulseRing { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
+        @keyframes fadeInZoom { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+      `}</style>
+
       {/* Error Banner */}
       {error && (
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top duration-300">
-          <div className="bg-red-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center space-x-3 max-w-md">
-            <div className="bg-white bg-opacity-20 p-2 rounded-full">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
+        <div style={{ position: "absolute", top: 24, left: "50%", transform: "translateX(-50%)", zIndex: 60 }}>
+          <div style={{ background: "#ef4444", color: "#fff", padding: "16px 24px", borderRadius: 16, display: "flex", alignItems: "center", gap: 12, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)" }}>
+            <div style={{ background: "rgba(255,255,255,0.2)", padding: 8, borderRadius: "50%" }}>
+              <AlertCircle style={{ width: 20, height: 20 }} />
             </div>
-            <span className="flex-1 font-medium">{error}</span>
-            <button
-              onClick={() => setError("")}
-              className="bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded-lg text-sm font-semibold transition"
-            >
+            <span style={{ fontWeight: 500 }}>{error}</span>
+            <button onClick={() => setError("")} style={{ background: "rgba(255,255,255,0.2)", padding: "4px 12px", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", marginLeft: 12 }}>
               Dismiss
             </button>
           </div>
         </div>
       )}
 
+      {/* Close Button for Idle / Ringing state */}
+      {(callState === "idle" || callState === "ringing") && (
+        <button
+          onClick={() => {
+            if (callState === "idle") {
+              if (onCallEnd) onCallEnd();
+            } else if (callState === "ringing") {
+              if (isDoctor) endCall();
+              else rejectCall();
+            }
+          }}
+          style={{ position: "absolute", top: 24, left: 24, background: "rgba(30, 41, 59, 0.5)", color: "#cbd5e1", padding: 12, borderRadius: "50%", border: "none", cursor: "pointer", zIndex: 60, backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(239, 68, 68, 0.8)"; e.currentTarget.style.color = "#fff"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(30, 41, 59, 0.5)"; e.currentTarget.style.color = "#cbd5e1"; }}
+          title="Close window"
+        >
+          <X style={{ width: 24, height: 24 }} />
+        </button>
+      )}
+
       {/* Debug Toggle Button */}
       <button
         onClick={() => setShowDebug(!showDebug)}
-        className="absolute top-6 right-6 bg-gray-800 bg-opacity-50 hover:bg-opacity-70 text-gray-300 p-3 rounded-full backdrop-blur-sm transition z-50"
+        style={{ position: "absolute", top: 24, right: 24, background: "rgba(30, 41, 59, 0.5)", color: "#cbd5e1", padding: 12, borderRadius: "50%", border: "none", cursor: "pointer", zIndex: 60, backdropFilter: "blur(4px)" }}
         title="Toggle debug info"
       >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-          />
-        </svg>
+        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
       </button>
 
       {/* Debug Info Panel */}
       {showDebug && (
-        <div className="absolute top-20 right-6 bg-gray-900 bg-opacity-95 text-gray-300 p-4 rounded-2xl max-w-sm max-h-96 overflow-y-auto text-xs font-mono shadow-2xl backdrop-blur-lg border border-gray-700 z-40">
-          <div className="font-bold text-blue-400 mb-2 flex items-center justify-between">
+        <div style={{ position: "absolute", top: 80, right: 24, background: "rgba(15, 23, 42, 0.95)", color: "#cbd5e1", padding: 16, borderRadius: 16, maxWidth: 384, maxHeight: 384, overflowY: "auto", fontSize: 12, fontFamily: "monospace", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", zIndex: 55, border: "1px solid #334155" }}>
+          <div style={{ fontWeight: 700, color: "#60a5fa", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span>Debug Console</span>
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <div style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%" }}></div>
           </div>
-          <div className="whitespace-pre-wrap break-words">{debugInfo}</div>
+          <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{debugInfo}</div>
         </div>
       )}
 
       {/* Idle State */}
       {callState === "idle" && (
-        <div className="text-center animate-in fade-in zoom-in duration-500">
-          <div className="mb-8">
-            <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl">
-              <Users className="w-16 h-16 text-white" />
+        <div style={{ textAlign: "center", animation: "fadeInZoom 0.5s ease" }}>
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ width: 128, height: 128, background: "linear-gradient(135deg, #3b82f6, #2563eb)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)" }}>
+              <Users style={{ width: 64, height: 64, color: "#fff" }} />
             </div>
-            <h2 className="text-4xl font-bold text-white mb-2">
+            <h2 style={{ fontSize: "2.25rem", fontWeight: 700, color: "#fff", marginBottom: 8 }}>
               Ready to Connect
             </h2>
-            <p className="text-gray-400 text-lg">Start a video call with</p>
-            <p className="text-blue-400 text-2xl font-semibold mt-2">
+            <p style={{ color: "#94a3b8", fontSize: "1.125rem" }}>Start a video call with</p>
+            <p style={{ color: "#60a5fa", fontSize: "1.5rem", fontWeight: 600, marginTop: 8 }}>
               {otherUserName}
             </p>
           </div>
           {isDoctor && (
             <button
               onClick={initiateCall}
-              className="group relative px-10 py-5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl hover:from-green-600 hover:to-green-700 text-lg font-semibold shadow-2xl transition-all duration-300 transform hover:scale-105"
+              style={{ ...btnStyle, background: "linear-gradient(to right, #22c55e, #16a34a)", margin: "0 auto", boxShadow: "0 20px 25px -5px rgba(34, 197, 94, 0.4)" }}
             >
-              <div className="flex items-center space-x-3">
-                <div className="bg-white bg-opacity-20 p-2 rounded-full group-hover:bg-opacity-30 transition">
-                  <Video className="w-6 h-6" />
-                </div>
-                <span>Start Video Call</span>
+              <div style={{ background: "rgba(255,255,255,0.2)", padding: 8, borderRadius: "50%" }}>
+                <Video style={{ width: 24, height: 24 }} />
               </div>
+              <span>Start Video Call</span>
             </button>
           )}
           {!isDoctor && (
-            <p className="text-gray-500 text-lg">
+            <p style={{ color: "#64748b", fontSize: "1.125rem" }}>
               Waiting for doctor to initiate call...
             </p>
           )}
@@ -649,44 +640,40 @@ function VideoCall({
 
       {/* Ringing State - Incoming (Patient) */}
       {callState === "ringing" && !isDoctor && (
-        <div className="text-center animate-in fade-in zoom-in duration-500">
-          <div className="mb-8">
-            <div className="relative w-40 h-40 mx-auto mb-6">
-              <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-75"></div>
-              <div className="relative w-40 h-40 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-2xl">
-                <PhoneCall className="w-20 h-20 text-white animate-pulse" />
+        <div style={{ textAlign: "center", animation: "fadeInZoom 0.5s ease" }}>
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ position: "relative", width: 160, height: 160, margin: "0 auto 24px" }}>
+              <div style={{ position: "absolute", inset: 0, background: "#3b82f6", borderRadius: "50%", animation: "pulseRing 2s infinite" }}></div>
+              <div style={{ position: "relative", width: 160, height: 160, background: "linear-gradient(135deg, #3b82f6, #2563eb)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
+                <PhoneCall style={{ width: 80, height: 80, color: "#fff" }} />
               </div>
             </div>
-            <h2 className="text-4xl font-bold text-white mb-2 animate-pulse">
+            <h2 style={{ fontSize: "2.25rem", fontWeight: 700, color: "#fff", marginBottom: 8 }}>
               Incoming Call
             </h2>
-            <p className="text-blue-400 text-2xl font-semibold mt-2">
+            <p style={{ color: "#60a5fa", fontSize: "1.5rem", fontWeight: 600, marginTop: 8 }}>
               {otherUserName}
             </p>
-            <p className="text-gray-400 mt-1">wants to video call with you</p>
+            <p style={{ color: "#94a3b8", marginTop: 4 }}>wants to video call with you</p>
           </div>
-          <div className="flex gap-6 justify-center">
+          <div style={{ display: "flex", gap: 24, justifyContent: "center" }}>
             <button
               onClick={acceptCall}
-              className="group relative px-10 py-5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl hover:from-green-600 hover:to-green-700 text-lg font-semibold shadow-2xl transition-all duration-300 transform hover:scale-105"
+              style={{ ...btnStyle, background: "linear-gradient(to right, #22c55e, #16a34a)", boxShadow: "0 20px 25px -5px rgba(34, 197, 94, 0.4)" }}
             >
-              <div className="flex items-center space-x-3">
-                <div className="bg-white bg-opacity-20 p-2 rounded-full group-hover:bg-opacity-30 transition">
-                  <Phone className="w-6 h-6" />
-                </div>
-                <span>Accept</span>
+              <div style={{ background: "rgba(255,255,255,0.2)", padding: 8, borderRadius: "50%" }}>
+                <Phone style={{ width: 24, height: 24 }} />
               </div>
+              <span>Accept</span>
             </button>
             <button
               onClick={rejectCall}
-              className="group relative px-10 py-5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 text-lg font-semibold shadow-2xl transition-all duration-300 transform hover:scale-105"
+              style={{ ...btnStyle, background: "linear-gradient(to right, #ef4444, #dc2626)", boxShadow: "0 20px 25px -5px rgba(239, 68, 68, 0.4)" }}
             >
-              <div className="flex items-center space-x-3">
-                <div className="bg-white bg-opacity-20 p-2 rounded-full group-hover:bg-opacity-30 transition">
-                  <PhoneOff className="w-6 h-6" />
-                </div>
-                <span>Decline</span>
+              <div style={{ background: "rgba(255,255,255,0.2)", padding: 8, borderRadius: "50%" }}>
+                <PhoneOff style={{ width: 24, height: 24 }} />
               </div>
+              <span>Decline</span>
             </button>
           </div>
         </div>
@@ -694,40 +681,37 @@ function VideoCall({
 
       {/* Ringing State - Outgoing (Doctor) */}
       {callState === "ringing" && isDoctor && (
-        <div className="text-center animate-in fade-in zoom-in duration-500">
-          <div className="mb-8">
-            <div className="relative w-40 h-40 mx-auto mb-6">
-              <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-75"></div>
-              <div className="relative w-40 h-40 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-2xl">
-                <PhoneCall className="w-20 h-20 text-white animate-pulse" />
+        <div style={{ textAlign: "center", animation: "fadeInZoom 0.5s ease" }}>
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ position: "relative", width: 160, height: 160, margin: "0 auto 24px" }}>
+              <div style={{ position: "absolute", inset: 0, background: "#3b82f6", borderRadius: "50%", animation: "pulseRing 2s infinite" }}></div>
+              <div style={{ position: "relative", width: 160, height: 160, background: "linear-gradient(135deg, #3b82f6, #2563eb)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
+                <PhoneCall style={{ width: 80, height: 80, color: "#fff" }} />
               </div>
             </div>
-            <h2 className="text-4xl font-bold text-white mb-2 animate-pulse">
+            <h2 style={{ fontSize: "2.25rem", fontWeight: 700, color: "#fff", marginBottom: 8 }}>
               Calling...
             </h2>
-            <p className="text-blue-400 text-2xl font-semibold mt-2">
+            <p style={{ color: "#60a5fa", fontSize: "1.5rem", fontWeight: 600, marginTop: 8 }}>
               {otherUserName}
             </p>
-            <p className="text-gray-400 mt-1">Waiting for answer...</p>
+            <p style={{ color: "#94a3b8", marginTop: 4 }}>Waiting for answer...</p>
           </div>
           <button
             onClick={endCall}
-            className="group relative px-10 py-5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl hover:from-red-600 hover:to-red-700 text-lg font-semibold shadow-2xl transition-all duration-300 transform hover:scale-105"
+            style={{ ...btnStyle, background: "linear-gradient(to right, #ef4444, #dc2626)", margin: "0 auto", boxShadow: "0 20px 25px -5px rgba(239, 68, 68, 0.4)" }}
           >
-            <div className="flex items-center space-x-3">
-              <div className="bg-white bg-opacity-20 p-2 rounded-full group-hover:bg-opacity-30 transition">
-                <PhoneOff className="w-6 h-6" />
-              </div>
-              <span>Cancel Call</span>
+            <div style={{ background: "rgba(255,255,255,0.2)", padding: 8, borderRadius: "50%" }}>
+              <PhoneOff style={{ width: 24, height: 24 }} />
             </div>
+            <span>Cancel Call</span>
           </button>
         </div>
       )}
 
       {/* Active Call State */}
       {callState === "active" && (
-        <div className="w-full h-full relative bg-black">
-          {/* Remote video (main) - full screen */}
+        <div style={{ width: "100%", height: "100%", position: "relative", background: "#000" }}>
           <video
             key="remote-video"
             ref={remoteVideoRef}
@@ -735,36 +719,23 @@ function VideoCall({
             playsInline={true}
             muted={false}
             controls={false}
-            onLoadedMetadata={() =>
-              addDebugInfo("✓ Remote video metadata loaded")
-            }
-            onPlay={() => addDebugInfo("✓ Remote video started playing")}
-            onError={(e) =>
-              addDebugInfo(
-                `✗ Remote video error: ${e.currentTarget.error?.message || "Unknown"}`,
-              )
-            }
-            className="absolute inset-0 w-full h-full object-cover"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
           />
 
           {/* Connection indicator */}
-          <div className="absolute top-6 left-6 bg-black bg-opacity-60 backdrop-blur-md px-4 py-2 rounded-full flex items-center space-x-2 z-10">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-white text-sm font-medium">Connected</span>
+          <div style={{ position: "absolute", top: 24, left: 24, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: "8px 16px", borderRadius: 999, display: "flex", alignItems: "center", gap: 8, zIndex: 10 }}>
+            <div style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%" }}></div>
+            <span style={{ color: "#fff", fontSize: 14, fontWeight: 500 }}>Connected</span>
           </div>
 
           {/* Participant name */}
-          <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-60 backdrop-blur-md px-6 py-2 rounded-full z-10">
-            <span className="text-white text-sm font-medium">
-              {otherUserName}
-            </span>
+          <div style={{ position: "absolute", top: 24, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: "8px 24px", borderRadius: 999, zIndex: 10 }}>
+            <span style={{ color: "#fff", fontSize: 14, fontWeight: 500 }}>{otherUserName}</span>
           </div>
 
           {/* Local video (PIP) */}
-          <div
-            className={`absolute ${isPipMinimized ? "bottom-6 right-6" : "bottom-32 right-8"} transition-all duration-300 z-10`}
-          >
-            <div className="relative group">
+          <div style={{ position: "absolute", bottom: isPipMinimized ? 24 : 128, right: 32, zIndex: 10, transition: "all 0.3s" }}>
+            <div style={{ position: "relative", group: "pip" }}>
               <video
                 key="local-video"
                 ref={localVideoRef}
@@ -772,114 +743,68 @@ function VideoCall({
                 playsInline={true}
                 muted={true}
                 controls={false}
-                onLoadedMetadata={() =>
-                  addDebugInfo("✓ Local video metadata loaded")
-                }
-                onPlay={() => addDebugInfo("✓ Local video started playing")}
-                onError={(e) =>
-                  addDebugInfo(
-                    `✗ Local video error: ${e.currentTarget.error?.message || "Unknown"}`,
-                  )
-                }
-                className={`bg-gray-900 rounded-2xl overflow-hidden border-2 border-white shadow-2xl object-cover transition-all duration-300 ${
-                  isPipMinimized ? "w-32 h-24" : "w-64 h-48"
-                }`}
+                style={{ background: "#0f172a", borderRadius: 16, overflow: "hidden", border: "2px solid #fff", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", objectFit: "cover", transition: "all 0.3s", width: isPipMinimized ? 128 : 256, height: isPipMinimized ? 96 : 192 }}
               />
               <button
                 onClick={() => setIsPipMinimized(!isPipMinimized)}
-                className="absolute top-2 right-2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition"
+                style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", padding: 6, borderRadius: 8, border: "none", cursor: "pointer", zIndex: 20 }}
               >
-                {isPipMinimized ? (
-                  <Maximize2 className="w-4 h-4" />
-                ) : (
-                  <Minimize2 className="w-4 h-4" />
-                )}
+                {isPipMinimized ? <Maximize2 style={{ width: 16, height: 16 }} /> : <Minimize2 style={{ width: 16, height: 16 }} />}
               </button>
-              <div className="absolute bottom-2 left-2 bg-black bg-opacity-60 px-2 py-1 rounded-md">
-                <span className="text-white text-xs font-medium">You</span>
+              <div style={{ position: "absolute", bottom: 8, left: 8, background: "rgba(0,0,0,0.6)", padding: "4px 8px", borderRadius: 6, zIndex: 20 }}>
+                <span style={{ color: "#fff", fontSize: 12, fontWeight: 500 }}>You</span>
               </div>
             </div>
           </div>
 
           {/* Call controls */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20">
-            <div className="bg-gray-900 bg-opacity-90 backdrop-blur-xl px-8 py-6 rounded-3xl shadow-2xl border border-gray-700">
-              <div className="flex items-center gap-6">
-                {/* Timer */}
-                <div className="bg-gray-800 px-6 py-3 rounded-2xl min-w-28">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                    <span className="text-white text-xl font-bold font-mono tabular-nums">
-                      {formatDuration(callDuration)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Audio Toggle */}
-                <button
-                  onClick={toggleAudio}
-                  className={`group relative p-4 rounded-2xl transition-all duration-300 transform hover:scale-110 ${
-                    isAudioOn
-                      ? "bg-gray-700 hover:bg-gray-600"
-                      : "bg-red-500 hover:bg-red-600"
-                  }`}
-                  title={isAudioOn ? "Mute audio" : "Unmute audio"}
-                >
-                  {isAudioOn ? (
-                    <Mic className="w-6 h-6 text-white" />
-                  ) : (
-                    <MicOff className="w-6 h-6 text-white" />
-                  )}
-                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 px-2 py-1 rounded text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                    {isAudioOn ? "Mute" : "Unmute"}
-                  </div>
-                </button>
-
-                {/* Video Toggle */}
-                <button
-                  onClick={toggleVideo}
-                  className={`group relative p-4 rounded-2xl transition-all duration-300 transform hover:scale-110 ${
-                    isVideoOn
-                      ? "bg-gray-700 hover:bg-gray-600"
-                      : "bg-red-500 hover:bg-red-600"
-                  }`}
-                  title={isVideoOn ? "Turn off video" : "Turn on video"}
-                >
-                  {isVideoOn ? (
-                    <Video className="w-6 h-6 text-white" />
-                  ) : (
-                    <VideoOff className="w-6 h-6 text-white" />
-                  )}
-                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 px-2 py-1 rounded text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                    {isVideoOn ? "Stop Video" : "Start Video"}
-                  </div>
-                </button>
-
-                {/* End Call */}
-                <button
-                  onClick={endCall}
-                  className="group relative p-4 rounded-2xl bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-all duration-300 transform hover:scale-110 shadow-lg"
-                  title="End call"
-                >
-                  <PhoneOff className="w-6 h-6 text-white" />
-                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 px-2 py-1 rounded text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                    End Call
-                  </div>
-                </button>
+          <div style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", zIndex: 20 }}>
+            <div style={{ background: "rgba(15,23,42,0.9)", backdropFilter: "blur(16px)", padding: "24px 32px", borderRadius: 24, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", border: "1px solid #334155", display: "flex", alignItems: "center", gap: 24 }}>
+              
+              {/* Timer */}
+              <div style={{ background: "#1e293b", padding: "12px 24px", borderRadius: 16, minWidth: 112, display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 8, height: 8, background: "#ef4444", borderRadius: "50%" }}></div>
+                <span style={{ color: "#fff", fontSize: 20, fontWeight: 700, fontFamily: "monospace", fontVariantNumeric: "tabular-nums" }}>
+                  {formatDuration(callDuration)}
+                </span>
               </div>
+
+              {/* Audio Toggle */}
+              <button
+                onClick={toggleAudio}
+                style={{ padding: 16, borderRadius: 16, border: "none", cursor: "pointer", transition: "all 0.2s", background: isAudioOn ? "#334155" : "#ef4444" }}
+                title={isAudioOn ? "Mute audio" : "Unmute audio"}
+              >
+                {isAudioOn ? <Mic style={{ width: 24, height: 24, color: "#fff" }} /> : <MicOff style={{ width: 24, height: 24, color: "#fff" }} />}
+              </button>
+
+              {/* Video Toggle */}
+              <button
+                onClick={toggleVideo}
+                style={{ padding: 16, borderRadius: 16, border: "none", cursor: "pointer", transition: "all 0.2s", background: isVideoOn ? "#334155" : "#ef4444" }}
+                title={isVideoOn ? "Turn off video" : "Turn on video"}
+              >
+                {isVideoOn ? <Video style={{ width: 24, height: 24, color: "#fff" }} /> : <VideoOff style={{ width: 24, height: 24, color: "#fff" }} />}
+              </button>
+
+              {/* End Call */}
+              <button
+                onClick={endCall}
+                style={{ padding: 16, borderRadius: 16, border: "none", cursor: "pointer", transition: "all 0.2s", background: "linear-gradient(to right, #ef4444, #dc2626)", boxShadow: "0 10px 15px -3px rgba(239, 68, 68, 0.3)" }}
+                title="End call"
+              >
+                <PhoneOff style={{ width: 24, height: 24, color: "#fff" }} />
+              </button>
             </div>
           </div>
 
-          {/* Video status indicators */}
           {!isVideoOn && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm z-5">
-              <div className="text-center">
-                <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <VideoOff className="w-12 h-12 text-gray-400" />
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 5 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ width: 96, height: 96, background: "#334155", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                  <VideoOff style={{ width: 48, height: 48, color: "#94a3b8" }} />
                 </div>
-                <p className="text-white text-lg font-medium">
-                  Your camera is off
-                </p>
+                <p style={{ color: "#fff", fontSize: 18, fontWeight: 500 }}>Your camera is off</p>
               </div>
             </div>
           )}
@@ -888,42 +813,26 @@ function VideoCall({
 
       {/* Ended State */}
       {callState === "ended" && (
-        <div className="text-center animate-in fade-in zoom-in duration-500">
-          <div className="mb-8">
-            <div className="w-32 h-32 bg-gradient-to-br from-gray-700 to-gray-800 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl">
-              <PhoneOff className="w-16 h-16 text-gray-400" />
+        <div style={{ textAlign: "center", animation: "fadeInZoom 0.5s ease" }}>
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ width: 128, height: 128, background: "linear-gradient(135deg, #334155, #1e293b)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
+              <PhoneOff style={{ width: 64, height: 64, color: "#94a3b8" }} />
             </div>
-            <h2 className="text-4xl font-bold text-white mb-4">Call Ended</h2>
-            <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm px-6 py-3 rounded-2xl inline-block mb-2">
-              <p className="text-gray-300 text-sm">Call Duration</p>
-              <p className="text-white text-2xl font-bold font-mono">
+            <h2 style={{ fontSize: "2.25rem", fontWeight: 700, color: "#fff", marginBottom: 16 }}>Call Ended</h2>
+            <div style={{ background: "rgba(30,41,59,0.5)", backdropFilter: "blur(4px)", padding: "12px 24px", borderRadius: 16, display: "inline-block", marginBottom: 8 }}>
+              <p style={{ color: "#cbd5e1", fontSize: 14 }}>Call Duration</p>
+              <p style={{ color: "#fff", fontSize: "1.5rem", fontWeight: 700, fontFamily: "monospace" }}>
                 {formatDuration(callDuration)}
               </p>
             </div>
-            <p className="text-gray-400 mt-4">
-              Thank you for using Dr.AssistAI
-            </p>
+            <p style={{ color: "#94a3b8", marginTop: 16 }}>Thank you for using Dr.AssistAI</p>
           </div>
           <button
             onClick={() => onCallEnd && onCallEnd()}
-            className="group relative px-10 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 text-lg font-semibold shadow-2xl transition-all duration-300 transform hover:scale-105"
+            style={{ ...btnStyle, background: "linear-gradient(to right, #3b82f6, #2563eb)", margin: "0 auto", boxShadow: "0 20px 25px -5px rgba(59, 130, 246, 0.4)" }}
           >
-            <div className="flex items-center space-x-3">
-              <span>Close</span>
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </div>
+            <span>Close</span>
+            <X style={{ width: 20, height: 20 }} />
           </button>
         </div>
       )}

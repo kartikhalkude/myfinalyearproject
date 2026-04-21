@@ -1,903 +1,325 @@
-// frontend/src/components/Prescriptions.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import apiClient from '../services/apiClient';
-import websocketService from '../services/websocket';
-import { X, Plus, Edit2, Trash2, Calendar, Pill, FileText, AlertCircle, CheckCircle, Search } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import apiClient from "../services/apiClient";
+import websocketService from "../services/websocket";
+import { SectionCard, Badge, EmptyState, Loader, Btn, PageHeader } from "./UI";
+import { X, Pill } from "lucide-react";
 
-// ─── Email Patient Selector ───────────────────────────────────────────────────
-// Shows a searchable dropdown of the doctor's own patients (by email/name).
-// `patients` is the array built by the parent from appointments/prescriptions/records.
-// `value` is the currently-selected patient._id; onChange(patient) calls back with the full obj.
-
-function PatientEmailSelector({ patients, value, onChange, required }) {
-  const [query, setQuery]       = useState('');
-  const [open, setOpen]         = useState(false);
-  const [focused, setFocused]   = useState(false);
-  const wrapRef                 = useRef(null);
-
-  // Display label for the currently-selected patient
-  const selected = patients.find((p) => p._id === value);
-
-  // Filter list
-  const filtered = query.trim()
-    ? patients.filter(
-        (p) =>
-          p.email?.toLowerCase().includes(query.toLowerCase()) ||
-          p.name?.toLowerCase().includes(query.toLowerCase()),
-      )
-    : patients;
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
-        setOpen(false);
-        setQuery('');
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const handleSelect = (patient) => {
-    onChange(patient);
-    setOpen(false);
-    setQuery('');
-  };
-
-  const handleClear = () => {
-    onChange(null);
-    setQuery('');
-    setOpen(false);
-  };
+function PatientSearch({ patients, value, onChange }) {
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = patients.find(p => p._id === value);
+  const filtered = q.trim() ? patients.filter(p => p.email?.toLowerCase().includes(q.toLowerCase()) || p.name?.toLowerCase().includes(q.toLowerCase())) : patients;
 
   return (
-    <div ref={wrapRef} className="relative">
-      {/* Trigger / display */}
-      <div
-        className={`w-full flex items-center px-4 py-3 border rounded-xl cursor-text transition
-          ${open || focused ? 'ring-2 ring-cyan-500 border-transparent' : 'border-gray-300'}
-          ${selected ? 'bg-white' : 'bg-white'}`}
-        onClick={() => { setOpen(true); }}
-      >
-        <Search className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+    <div style={{ position: "relative" }}>
+      <div style={{ display: "flex", alignItems: "center", border: `1.5px solid ${open ? "#1db585" : "#e2e8f0"}`, borderRadius: 10, padding: "8px 12px", cursor: "text", background: "#fff", boxShadow: open ? "0 0 0 3px rgba(29,181,133,0.1)" : "none", transition: "all 0.15s" }} onClick={() => setOpen(true)}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" style={{ flexShrink: 0, marginRight: 8 }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         {selected && !open ? (
-          <span className="flex-1 text-sm text-gray-800 truncate">
-            <span className="font-medium">{selected.name}</span>
-            <span className="text-gray-500 ml-2">({selected.email})</span>
-          </span>
+          <span style={{ flex: 1, fontSize: 13.5, color: "#1e293b" }}><strong>{selected.name}</strong> <span style={{ color: "#94a3b8" }}>({selected.email})</span></span>
         ) : (
-          <input
-            type="text"
-            className="flex-1 outline-none text-sm bg-transparent placeholder-gray-400"
-            placeholder={selected ? `${selected.name} (${selected.email})` : 'Search patient by name or email…'}
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-            onFocus={() => { setFocused(true); setOpen(true); }}
-            onBlur={() => setFocused(false)}
-            required={required && !value}
-          />
+          <input type="text" placeholder={selected ? `${selected.name} (${selected.email})` : "Search patient by name or email…"} value={q} autoFocus={open}
+            onChange={e => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
+            style={{ flex: 1, border: "none", outline: "none", fontSize: 13.5, fontFamily: "inherit", color: "#1e293b", background: "transparent" }} />
         )}
-        {value && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); handleClear(); }}
-            className="ml-2 text-gray-400 hover:text-red-500 transition flex-shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        {value && <button type="button" onClick={e => { e.stopPropagation(); onChange(null); setQ(""); }} style={{ marginLeft: 6, color: "#94a3b8", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>}
       </div>
-
-      {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl max-h-56 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-gray-500 text-center">
-              No patients found
-            </div>
-          ) : (
-            filtered.map((p) => (
-              <button
-                key={p._id}
-                type="button"
-                className="w-full text-left px-4 py-3 hover:bg-cyan-50 transition flex items-center space-x-3 border-b border-gray-100 last:border-0"
-                onMouseDown={(e) => e.preventDefault()} // keep input focused
-                onClick={() => handleSelect(p)}
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                  {p.name?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{p.name || 'Unknown'}</p>
-                  <p className="text-xs text-gray-500 truncate">{p.email}</p>
-                </div>
-              </button>
-            ))
-          )}
+        <div style={{ position: "absolute", zIndex: 50, top: "calc(100% + 4px)", left: 0, right: 0, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(15,23,42,0.1)", maxHeight: 220, overflowY: "auto" }}>
+          {filtered.length === 0 ? <div style={{ padding: "12px 16px", fontSize: 13.5, color: "#94a3b8", textAlign: "center" }}>No patients found</div> : filtered.map(p => (
+            <button key={p._id} type="button" onMouseDown={e => e.preventDefault()} onClick={() => { onChange(p); setOpen(false); setQ(""); }}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", borderBottom: "1px solid #f8fafc", textAlign: "left" }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f0faf7"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{p.name?.charAt(0)?.toUpperCase()}</div>
+              <div><div style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{p.name}</div><div style={{ fontSize: 12, color: "#94a3b8" }}>{p.email}</div></div>
+            </button>
+          ))}
         </div>
-      )}
-
-      {/* Hidden native select so form validation still works */}
-      {required && (
-        <select
-          className="sr-only"
-          value={value || ''}
-          onChange={() => {}}
-          required={required}
-          tabIndex={-1}
-          aria-hidden
-        >
-          <option value="" />
-          {patients.map((p) => <option key={p._id} value={p._id}>{p.email}</option>)}
-        </select>
       )}
     </div>
   );
 }
 
-// ─── Main Prescriptions component ────────────────────────────────────────────
-// `doctorPatients` — optional prop injected by DoctorDashboard with the
-// scoped patient list. Falls back to building the list from fetched data.
+const EMPTY_FORM = { patientId: "", diagnosis: "", medicines: [{ name: "", dosage: "", frequency: "", duration: "" }], advice: "", validUntil: "" };
 
-function Prescriptions({ doctorPatients }) {
+const statusStyle = { active: { bg: "#dcfce7", color: "#166534", border: "#22c55e" }, expired: { bg: "#f1f5f9", color: "#64748b", border: "#cbd5e1" }, cancelled: { bg: "#fee2e2", color: "#991b1b", border: "#ef4444" } };
+
+export default function Prescriptions({ doctorPatients }) {
   const { user } = useAuth();
   const [prescriptions, setPrescriptions] = useState([]);
-  const [patients, setPatients]           = useState([]);
-  const [loading, setLoading]             = useState(true);
-  const [showCreateModal, setShowCreateModal]     = useState(false);
-  const [editingPrescription, setEditingPrescription] = useState(null);
-  const [filterStatus, setFilterStatus]   = useState('all');
-  const [error, setError]                 = useState('');
-  const [success, setSuccess]             = useState('');
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [form, setForm] = useState(EMPTY_FORM);
   const [refillLoading, setRefillLoading] = useState({});
 
-  const [formData, setFormData] = useState({
-    patientId: '',
-    diagnosis: '',
-    medicines: [{ name: '', dosage: '', frequency: '', duration: '' }],
-    advice:    '',
-    validUntil: '',
-  });
+  const extractArr = (data, keys) => { if (Array.isArray(data)) return data; for (const k of keys) { if (Array.isArray(data?.[k])) return data[k]; } return []; };
 
-  // ─── Initial fetch ────────────────────────────────────────────────────────
+  useEffect(() => { if (doctorPatients?.length) setPatients(doctorPatients); }, [doctorPatients]);
 
   useEffect(() => {
-    fetchPrescriptions();
-  }, []);
-
-  // Keep local patient list in sync with parent-provided list
-  useEffect(() => {
-    if (doctorPatients && doctorPatients.length > 0) {
-      setPatients(doctorPatients);
-    }
-  }, [doctorPatients]);
-
-  // ─── Real-time WebSocket listeners ───────────────────────────────────────
-
-  useEffect(() => {
-    const handleCreated = (data) => {
-      // Support both { prescription, type:'created' } and bare prescription object
-      const prescription = data?.prescription || (data?._id ? data : null);
-      if (prescription) {
-        setPrescriptions((prev) => {
-          if (prev.some((p) => p._id === prescription._id)) return prev;
-          return [prescription, ...prev];
-        });
-      }
-    };
-
-    const handleUpdated = (data) => {
-      const prescription = data?.prescription || (data?._id ? data : null);
-      if (prescription) {
-        setPrescriptions((prev) =>
-          prev.map((p) => (p._id === prescription._id ? prescription : p))
-        );
-      }
-    };
-
-    const handleDeleted = (data) => {
-      const id = data?.prescriptionId || data?._id;
-      if (id) {
-        setPrescriptions((prev) => prev.filter((p) => p._id !== id));
-      }
-    };
-
-    websocketService.onPrescriptionCreated(handleCreated);
-    websocketService.onPrescriptionUpdated(handleUpdated);
-    websocketService.onPrescriptionDeleted(handleDeleted);
-
-    return () => {
-      websocketService.offPrescriptionCreated(handleCreated);
-      websocketService.offPrescriptionUpdated(handleUpdated);
-      websocketService.offPrescriptionDeleted(handleDeleted);
-    };
-  }, []);
-
-  // ─── Data fetching ────────────────────────────────────────────────────────
-
-  // Helper: extract an array from various API response shapes
-  // Handles: plain array, { prescriptions: [] }, { data: [] }, etc.
-  const extractArray = (data, keys = []) => {
-    if (Array.isArray(data)) return data;
-    for (const key of keys) {
-      if (Array.isArray(data?.[key])) return data[key];
-    }
-    return [];
-  };
-
-  const fetchPrescriptions = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      if (user?.role === 'patient') {
-        // Patients only need prescriptions — skip the doctor-only cross-fetches
-        const prescRes = await apiClient.get('/prescriptions').catch(() => ({ data: [] }));
-        const prescriptionsData = extractArray(prescRes.data, ['prescriptions', 'data']);
-        setPrescriptions(prescriptionsData);
-        return;
-      }
-
-      // Doctor path: fetch all three sources to build the patient list
-      const [prescRes, appointRes, recordsRes] = await Promise.all([
-        apiClient.get('/prescriptions').catch(() => ({ data: [] })),
-        apiClient.get('/appointments').catch(() => ({ data: [] })),
-        apiClient.get('/health-records').catch(() => ({ data: [] })),
-      ]);
-
-      const prescriptionsData = extractArray(prescRes.data, ['prescriptions', 'data']);
-      const appointmentsData  = extractArray(appointRes.data, ['appointments', 'data']);
-      const recordsData       = extractArray(recordsRes.data, ['records', 'data']);
-
-      setPrescriptions(prescriptionsData);
-
-      // Build scoped patient list (doctorPatients prop takes priority — see other useEffect)
-      if (!(doctorPatients && doctorPatients.length > 0)) {
-        const patientMap = new Map();
-
-        const addPatient = (patientObj) => {
-          if (!patientObj) return;
-          const id = patientObj._id || patientObj;
-          if (typeof id !== 'string') return;
-          if (!patientMap.has(id)) {
-            patientMap.set(id, {
-              _id:   id,
-              name:  patientObj.name  || 'Unknown Patient',
-              email: patientObj.email || '',
-            });
-          }
-        };
-
-        prescriptionsData.forEach((p) => addPatient(p.patientId));
-        appointmentsData.forEach((a)  => addPatient(a.patientId));
-        recordsData.forEach((r)       => addPatient(r.patientId));
-
-        setPatients([...patientMap.values()].sort((a, b) => a.name.localeCompare(b.name)));
-      }
-    } catch (err) {
-      setError('Failed to load prescriptions');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ─── Modal helpers ────────────────────────────────────────────────────────
-
-  const handleCreateClick = () => {
-    setEditingPrescription(null);
-    setFormData({
-      patientId: '',
-      diagnosis: '',
-      medicines: [{ name: '', dosage: '', frequency: '', duration: '' }],
-      advice:    '',
-      validUntil: '',
-    });
-    setShowCreateModal(true);
-  };
-
-  const handleEditClick = (prescription) => {
-    setEditingPrescription(prescription);
-    setFormData({
-      patientId:  prescription.patientId?._id || prescription.patientId,
-      diagnosis:  prescription.diagnosis || '',
-      medicines:  prescription.medicines || [{ name: '', dosage: '', frequency: '', duration: '' }],
-      advice:     prescription.advice    || '',
-      validUntil: prescription.validUntil
-        ? new Date(prescription.validUntil).toISOString().split('T')[0]
-        : '',
-    });
-    setShowCreateModal(true);
-  };
-
-  const handleAddMedicine = () => {
-    setFormData({
-      ...formData,
-      medicines: [...formData.medicines, { name: '', dosage: '', frequency: '', duration: '' }],
-    });
-  };
-
-  const handleRemoveMedicine = (index) => {
-    setFormData({
-      ...formData,
-      medicines: formData.medicines.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleMedicineChange = (index, field, value) => {
-    const updated = [...formData.medicines];
-    updated[index][field] = value;
-    setFormData({ ...formData, medicines: updated });
-  };
-
-  // ─── Submit (create / update) ─────────────────────────────────────────────
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!formData.medicines.some((m) => m.name.trim())) {
-      setError('Please add at least one medicine with a name.');
-      return;
-    }
-
-    try {
-      if (editingPrescription) {
-        const res = await apiClient.patch(`/prescriptions/${editingPrescription._id}`, formData);
-        setPrescriptions((prev) =>
-          prev.map((p) => (p._id === editingPrescription._id ? res.data : p))
-        );
-        setSuccess('Prescription updated successfully');
-      } else {
-        if (user?.role !== 'doctor') {
-          setError('Only doctors can create prescriptions');
+    (async () => {
+      try {
+        setLoading(true);
+        if (user?.role === "patient") {
+          const r = await apiClient.get("/prescriptions").catch(() => ({ data: [] }));
+          setPrescriptions(extractArr(r.data, ["prescriptions", "data"]));
           return;
         }
-        const res = await apiClient.post('/prescriptions', formData);
-        setPrescriptions((prev) => [res.data, ...prev]);
-        setSuccess('Prescription created successfully');
+        const [prescRes, apptRes, recRes] = await Promise.all([
+          apiClient.get("/prescriptions").catch(() => ({ data: [] })),
+          apiClient.get("/appointments").catch(() => ({ data: [] })),
+          apiClient.get("/health-records").catch(() => ({ data: [] })),
+        ]);
+        const prescs = extractArr(prescRes.data, ["prescriptions", "data"]);
+        setPrescriptions(prescs);
+        if (!(doctorPatients?.length)) {
+          const map = new Map();
+          const add = obj => { if (!obj) return; const id = obj._id || obj; if (typeof id !== "string") return; if (!map.has(id)) map.set(id, { _id: id, name: obj.name || "Unknown", email: obj.email || "" }); };
+          prescs.forEach(p => add(p.patientId));
+          extractArr(apptRes.data, ["appointments"]).forEach(a => add(a.patientId));
+          extractArr(recRes.data, ["records"]).forEach(r => add(r.patientId));
+          setPatients([...map.values()].sort((a, b) => a.name.localeCompare(b.name)));
+        }
+      } catch(e) { setError("Failed to load prescriptions."); }
+      finally { setLoading(false); }
+    })();
+    const onCreated = d => { const p = d?.prescription || (d?._id ? d : null); if (p) setPrescriptions(prev => prev.some(x => x._id === p._id) ? prev : [p, ...prev]); };
+    const onUpdated = d => { const p = d?.prescription || (d?._id ? d : null); if (p) setPrescriptions(prev => prev.map(x => x._id === p._id ? p : x)); };
+    const onDeleted = d => { const id = d?.prescriptionId || d?._id; if (id) setPrescriptions(prev => prev.filter(x => x._id !== id)); };
+    websocketService.onPrescriptionCreated(onCreated); websocketService.onPrescriptionUpdated(onUpdated); websocketService.onPrescriptionDeleted(onDeleted);
+    return () => { websocketService.offPrescriptionCreated(onCreated); websocketService.offPrescriptionUpdated(onUpdated); websocketService.offPrescriptionDeleted(onDeleted); };
+  }, [user?.role, doctorPatients]);
+
+  const handleSubmit = async e => {
+    e.preventDefault(); setError(""); setSuccess("");
+    if (!form.medicines.some(m => m.name.trim())) { setError("Add at least one medicine."); return; }
+    try {
+      if (editing) {
+        const res = await apiClient.patch(`/prescriptions/${editing._id}`, form);
+        setPrescriptions(prev => prev.map(p => p._id === editing._id ? res.data : p));
+        setSuccess("Prescription updated.");
+      } else {
+        if (user?.role !== "doctor") { setError("Only doctors can create prescriptions."); return; }
+        const res = await apiClient.post("/prescriptions", form);
+        setPrescriptions(prev => [res.data, ...prev]);
+        setSuccess("Prescription created.");
       }
-
-      setShowCreateModal(false);
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Operation failed');
-    }
+      setShowModal(false); setTimeout(() => setSuccess(""), 3000);
+    } catch(err) { setError(err.response?.data?.error || "Operation failed."); }
   };
 
-  // ─── Delete ───────────────────────────────────────────────────────────────
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this prescription? This cannot be undone.')) return;
-
-    try {
-      setError('');
-      await apiClient.delete(`/prescriptions/${id}`);
-      setPrescriptions((prev) => prev.filter((p) => p._id !== id));
-      setSuccess('Prescription deleted successfully');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete prescription');
-    }
+  const handleDelete = async id => {
+    if (!window.confirm("Delete this prescription? This cannot be undone.")) return;
+    try { await apiClient.delete(`/prescriptions/${id}`); setPrescriptions(prev => prev.filter(p => p._id !== id)); setSuccess("Deleted."); setTimeout(() => setSuccess(""), 3000); }
+    catch(err) { setError(err.response?.data?.error || "Delete failed."); }
   };
 
-  // ─── Refill request (patients only) ──────────────────────────────────────
-
-  const handleRequestRefill = async (id) => {
-    try {
-      setRefillLoading((prev) => ({ ...prev, [id]: true }));
-      setError('');
-      await apiClient.post(`/prescriptions/${id}/refill`);
-      setSuccess('Refill request sent to your doctor');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to request refill');
-    } finally {
-      setRefillLoading((prev) => ({ ...prev, [id]: false }));
-    }
+  const handleRefill = async id => {
+    setRefillLoading(p => ({ ...p, [id]: true }));
+    try { await apiClient.post(`/prescriptions/${id}/refill`); setSuccess("Refill request sent."); setTimeout(() => setSuccess(""), 3000); }
+    catch(err) { setError(err.response?.data?.error || "Failed to request refill."); }
+    finally { setRefillLoading(p => ({ ...p, [id]: false })); }
   };
 
-  // ─── Derived state ────────────────────────────────────────────────────────
-
-  const filteredPrescriptions = filterStatus === 'all'
-    ? prescriptions
-    : prescriptions.filter((p) => p.status === filterStatus);
-  const activeCount = prescriptions.filter((p) => p.status === 'active').length;
-  const expiredCount = prescriptions.filter((p) => p.status === 'expired').length;
-  const refillableCount = prescriptions.filter((p) => p.status === 'active' && (p.medicines?.length || 0) > 0).length;
-
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const filtered = filter === "all" ? prescriptions : prescriptions.filter(p => p.status === filter);
+  const inputCls = { width: "100%", padding: "8px 10px", fontSize: 13.5, fontFamily: "inherit", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 9, outline: "none", boxSizing: "border-box" };
+  const onFocus = e => { e.target.style.borderColor = "#1db585"; e.target.style.boxShadow = "0 0 0 3px rgba(29,181,133,0.08)"; };
+  const onBlur = e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-800">Prescriptions</h2>
-          <p className="text-gray-600 text-sm mt-1">
-            {user?.role === 'doctor'
-              ? 'Manage patient prescriptions'
-              : 'View your prescriptions and request refills'}
-          </p>
-        </div>
-        {user?.role === 'doctor' && (
-          <button
-            onClick={handleCreateClick}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transition"
-          >
-            <Plus className="w-5 h-5" />
-            New Prescription
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <PageHeader title="Prescriptions" subtitle={user?.role === "doctor" ? "Manage prescriptions for your patients" : "View your prescriptions and request refills"}
+        action={user?.role === "doctor" && (
+          <button onClick={() => { setEditing(null); setForm(EMPTY_FORM); setShowModal(true); }} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", background: "#1db585", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" strokeLinecap="round"/></svg>
+            New prescription
           </button>
         )}
+      />
+
+      {/* Alerts */}
+      {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "11px 14px", marginBottom: 14, fontSize: 13.5, color: "#dc2626", display: "flex", justifyContent: "space-between", alignItems: "center" }}>{error}<button onClick={() => setError("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#fca5a5", display: "flex", alignItems: "center" }}><X size={16} /></button></div>}
+      {success && <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "11px 14px", marginBottom: 14, fontSize: 13.5, color: "#166534" }}>{success}</div>}
+
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 20 }}>
+        {[
+          ["Total", prescriptions.length, "#64748b"],
+          ["Active", prescriptions.filter(p => p.status === "active").length, "#16a34a"],
+          ["Expired", prescriptions.filter(p => p.status === "expired").length, "#94a3b8"],
+        ].map(([label, val, color]) => (
+          <div key={label} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 14, padding: "16px 18px" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{label}</div>
+            <div style={{ fontSize: "1.75rem", fontWeight: 500, color, letterSpacing: "-0.02em" }}>{val}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Messages */}
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
-          <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-          <span className="flex-1">{error}</span>
-          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
-      {success && (
-        <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-start">
-          <CheckCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-          <span className="flex-1">{success}</span>
-          <button onClick={() => setSuccess('')} className="text-green-400 hover:text-green-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Prescriptions</p>
-          <p className="text-2xl font-bold text-gray-800 mt-2">{prescriptions.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Visible across all statuses</p>
-        </div>
-        <div className="bg-white rounded-xl border border-green-200 p-4">
-          <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Active</p>
-          <p className="text-2xl font-bold text-green-700 mt-2">{activeCount}</p>
-          <p className="text-sm text-gray-500 mt-1">Currently valid prescriptions</p>
-        </div>
-        <div className="bg-white rounded-xl border border-cyan-200 p-4">
-          <p className="text-xs font-semibold text-cyan-600 uppercase tracking-wide">
-            {user?.role === 'patient' ? 'Can Request Refill' : 'Expired'}
-          </p>
-          <p className="text-2xl font-bold text-cyan-700 mt-2">
-            {user?.role === 'patient' ? refillableCount : expiredCount}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            {user?.role === 'patient' ? 'Active prescriptions with medicines' : 'Need review or renewal'}
-          </p>
-        </div>
-      </div>
-
-      {/* Filter by status */}
-      <div className="flex flex-wrap gap-2">
-        {['all', 'active', 'expired', 'cancelled'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilterStatus(status)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
-              filterStatus === status
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-300 hover:border-cyan-400'
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+      {/* Filter tabs */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
+        {["all", "active", "expired", "cancelled"].map(s => (
+          <button key={s} onClick={() => setFilter(s)} style={{ padding: "6px 14px", fontSize: 13, fontWeight: filter === s ? 500 : 400, background: filter === s ? "#1db585" : "#fff", color: filter === s ? "#fff" : "#64748b", border: filter === s ? "none" : "1.5px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
+            {s.charAt(0).toUpperCase() + s.slice(1)}
           </button>
         ))}
       </div>
 
-      {/* Loading */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-cyan-600" />
-        </div>
-      ) : filteredPrescriptions.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
-          <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg">No prescriptions found</p>
-          <p className="text-gray-400 text-sm mt-1">
-            {user?.role === 'doctor'
-              ? 'Create a new prescription for your patients'
-              : 'Your prescriptions will appear here'}
-          </p>
-        </div>
+      {/* List */}
+      {loading ? <Loader message="Loading prescriptions..." /> : filtered.length === 0 ? (
+        <SectionCard><EmptyState icon={<Pill size={24} color="#94a3b8" />} title="No prescriptions found" subtitle={user?.role === "doctor" ? "Create a new prescription for a patient." : "Your doctor will add prescriptions here."} /></SectionCard>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {filteredPrescriptions.map((prescription) => (
-            <PrescriptionCard
-              key={prescription._id}
-              prescription={prescription}
-              userRole={user?.role}
-              refillLoading={refillLoading}
-              onEdit={handleEditClick}
-              onDelete={handleDelete}
-              onRefill={handleRequestRefill}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Create / Edit Modal */}
-      {showCreateModal && (
-        <PrescriptionModal
-          prescription={editingPrescription}
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={handleSubmit}
-          formData={formData}
-          setFormData={setFormData}
-          onAddMedicine={handleAddMedicine}
-          onRemoveMedicine={handleRemoveMedicine}
-          onMedicineChange={handleMedicineChange}
-          userRole={user?.role}
-          patients={patients}
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── Prescription card ────────────────────────────────────────────────────────
-
-function PrescriptionCard({ prescription, userRole, refillLoading, onEdit, onDelete, onRefill }) {
-  const statusStyles = {
-    active:    'border-green-200 bg-gradient-to-r from-green-50 to-emerald-50',
-    expired:   'border-gray-300 bg-gradient-to-r from-gray-50 to-slate-50',
-    cancelled: 'border-red-200 bg-gradient-to-r from-red-50 to-pink-50',
-  };
-  const statusBadge = {
-    active:    'bg-green-100 text-green-700',
-    expired:   'bg-gray-100 text-gray-700',
-    cancelled: 'bg-red-100 text-red-700',
-  };
-  const medicineCount = prescription.medicines?.length || 0;
-  const validUntilLabel = prescription.validUntil
-    ? new Date(prescription.validUntil).toLocaleDateString()
-    : 'Not set';
-  const createdAtLabel = prescription.createdAt
-    ? new Date(prescription.createdAt).toLocaleDateString()
-    : 'Unknown';
-
-  return (
-    <div
-      className={`rounded-2xl shadow-sm border overflow-hidden transition-all hover:shadow-md ${
-        statusStyles[prescription.status] || statusStyles.active
-      }`}
-    >
-      {/* Header */}
-      <div className="p-6 border-b border-current border-opacity-10">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
-              {prescription.diagnosis || 'General Prescription'}
-            </p>
-            {userRole === 'doctor' && prescription.patientId && (
-              <h3 className="text-lg font-bold text-gray-800 mt-1">
-                Patient:{' '}
-                <span className="text-cyan-600">
-                  {prescription.patientId.name || 'Unknown'}
-                </span>
-                {prescription.patientId.email && (
-                  <span className="text-sm font-normal text-gray-500 ml-2">
-                    ({prescription.patientId.email})
-                  </span>
-                )}
-              </h3>
-            )}
-            {userRole === 'patient' && (
-              <h3 className="text-lg font-bold text-gray-800 mt-1">
-                By{' '}
-                <span className="text-cyan-600">
-                  {prescription.doctorId?.name || prescription.doctorName || 'Your Doctor'}
-                </span>
-              </h3>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-            <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusBadge[prescription.status]}`}>
-              {prescription.status.charAt(0).toUpperCase() + prescription.status.slice(1)}
-            </span>
-            {userRole === 'doctor' && (
-              <div className="flex gap-1">
-                <button
-                  onClick={() => onEdit(prescription)}
-                  className="p-2 hover:bg-blue-200 rounded-lg transition text-blue-600"
-                  title="Edit"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => onDelete(prescription._id)}
-                  className="p-2 hover:bg-red-200 rounded-lg transition text-red-600"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="p-6 space-y-5">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-white rounded-lg border border-current border-opacity-20 p-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Medicines</p>
-            <p className="text-lg font-bold text-gray-800 mt-1">{medicineCount}</p>
-          </div>
-          <div className="bg-white rounded-lg border border-current border-opacity-20 p-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Issued</p>
-            <p className="text-sm font-semibold text-gray-800 mt-1">{createdAtLabel}</p>
-          </div>
-          <div className="bg-white rounded-lg border border-current border-opacity-20 p-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Valid Until</p>
-            <p className="text-sm font-semibold text-gray-800 mt-1">{validUntilLabel}</p>
-          </div>
-          <div className="bg-white rounded-lg border border-current border-opacity-20 p-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</p>
-            <p className="text-sm font-semibold text-gray-800 mt-1 capitalize">{prescription.status}</p>
-          </div>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center">
-            <Pill className="w-4 h-4 mr-2" /> Medicines
-          </h4>
-          <div className="space-y-3">
-            {prescription.medicines?.map((medicine, i) => (
-              <div key={i} className="p-4 bg-white rounded-lg border border-current border-opacity-20">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-gray-800">{medicine.name}</p>
-                    <p className="text-xs text-gray-500 mt-1">Medicine {i + 1}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
+          {filtered.map(rx => {
+            const st = statusStyle[rx.status] || statusStyle.expired;
+            return (
+              <div key={rx._id} style={{ background: "#fff", border: "1px solid #f1f5f9", borderRadius: 16, overflow: "hidden", borderLeft: `3px solid ${st.border}`, boxShadow: "0 1px 3px rgba(15,23,42,0.04)" }}>
+                <div style={{ padding: "16px 18px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 500, color: "#0f172a", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {rx.diagnosis || "General Prescription"}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: "#94a3b8" }}>
+                      {user?.role === "doctor" ? `For: ${rx.patientId?.name || "Patient"}` : `By: ${rx.doctorId?.name || rx.doctorName || "Doctor"}`}
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
-                  <div className="rounded-md bg-gray-50 px-3 py-2">
-                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Dosage</p>
-                    <p className="text-sm font-medium text-gray-800 mt-1">{medicine.dosage || 'Not specified'}</p>
-                  </div>
-                  <div className="rounded-md bg-gray-50 px-3 py-2">
-                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Frequency</p>
-                    <p className="text-sm font-medium text-gray-800 mt-1">{medicine.frequency || 'Not specified'}</p>
-                  </div>
-                  <div className="rounded-md bg-gray-50 px-3 py-2">
-                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Duration</p>
-                    <p className="text-sm font-medium text-gray-800 mt-1">{medicine.duration || 'Not specified'}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {prescription.advice && (
-          <div>
-            <p className="text-xs font-bold text-gray-700 uppercase mb-2">Additional Advice</p>
-            <div className="text-sm text-gray-700 italic bg-white rounded-lg border border-current border-opacity-20 p-3">
-              {prescription.advice}
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-current border-opacity-20">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Calendar className="w-4 h-4" />
-            <span>
-              Valid until{' '}
-              <span className="font-semibold text-gray-800">
-                {new Date(prescription.validUntil).toLocaleDateString()}
-              </span>
-            </span>
-          </div>
-
-          {userRole === 'patient' && prescription.status === 'active' && (
-            <button
-              onClick={() => onRefill(prescription._id)}
-              disabled={refillLoading[prescription._id]}
-              className="px-4 py-2 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {refillLoading[prescription._id] ? 'Requesting…' : 'Request Refill'}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Modal ────────────────────────────────────────────────────────────────────
-
-function PrescriptionModal({
-  prescription,
-  isOpen,
-  onClose,
-  onSubmit,
-  formData,
-  setFormData,
-  onAddMedicine,
-  onRemoveMedicine,
-  onMedicineChange,
-  userRole,
-  patients,
-}) {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-3xl w-full my-8 shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-cyan-50 to-blue-50">
-          <h3 className="text-2xl font-bold text-gray-800">
-            {prescription ? 'Edit Prescription' : 'New Prescription'}
-          </h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-lg transition">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={onSubmit} className="p-6 space-y-5">
-          {/* Patient selector — doctors, new prescriptions only */}
-          {userRole === 'doctor' && !prescription && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Patient <span className="text-red-500">*</span>
-              </label>
-              {patients.length > 0 ? (
-                <PatientEmailSelector
-                  patients={patients}
-                  value={formData.patientId}
-                  onChange={(patient) =>
-                    setFormData({ ...formData, patientId: patient?._id || '' })
-                  }
-                  required
-                />
-              ) : (
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800">
-                  No patients found. Patients appear here once they have had an appointment, prescription, or health record with you.
-                </div>
-              )}
-              <p className="text-xs text-gray-400 mt-1">
-                {patients.length > 0
-                  ? `${patients.length} patient${patients.length !== 1 ? 's' : ''} available — search by name or email`
-                  : ''}
-              </p>
-            </div>
-          )}
-
-          {/* Diagnosis */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Diagnosis</label>
-            <input
-              type="text"
-              value={formData.diagnosis}
-              onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              placeholder="e.g., Common Cold, Hypertension"
-            />
-          </div>
-
-          {/* Medicines */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-sm font-semibold text-gray-700">
-                Medicines <span className="text-red-500">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={onAddMedicine}
-                className="text-sm text-cyan-600 hover:text-cyan-700 font-semibold"
-              >
-                + Add Medicine
-              </button>
-            </div>
-            <div className="space-y-3">
-              {formData.medicines.map((medicine, i) => (
-                <div key={i} className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-700 text-sm">Medicine {i + 1}</h4>
-                    {formData.medicines.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => onRemoveMedicine(i)}
-                        className="text-red-500 hover:text-red-700 transition"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 999, background: st.bg, color: st.color }}>{rx.status.charAt(0).toUpperCase() + rx.status.slice(1)}</span>
+                    {user?.role === "doctor" && (
+                      <div style={{ display: "flex", gap: 2 }}>
+                        <button onClick={() => { setEditing(rx); setForm({ patientId: rx.patientId?._id || rx.patientId, diagnosis: rx.diagnosis || "", medicines: rx.medicines || [{ name: "", dosage: "", frequency: "", duration: "" }], advice: rx.advice || "", validUntil: rx.validUntil ? new Date(rx.validUntil).toISOString().split("T")[0] : "" }); setShowModal(true); }}
+                          style={{ padding: "5px", background: "#eff6ff", border: "none", borderRadius: 6, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center" }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </button>
+                        <button onClick={() => handleDelete(rx._id)} style={{ padding: "5px", background: "#fef2f2", border: "none", borderRadius: 6, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center" }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                        </button>
+                      </div>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      value={medicine.name}
-                      onChange={(e) => onMedicineChange(i, 'name', e.target.value)}
-                      placeholder="Medicine name *"
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
-                      required
-                    />
-                    <input
-                      type="text"
-                      value={medicine.dosage}
-                      onChange={(e) => onMedicineChange(i, 'dosage', e.target.value)}
-                      placeholder="e.g., 500mg"
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={medicine.frequency}
-                      onChange={(e) => onMedicineChange(i, 'frequency', e.target.value)}
-                      placeholder="e.g., 3 times daily"
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={medicine.duration}
-                      onChange={(e) => onMedicineChange(i, 'duration', e.target.value)}
-                      placeholder="e.g., 7 days"
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
-                    />
-                  </div>
                 </div>
-              ))}
+                <div style={{ padding: "14px 18px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 14 }}>
+                    {[["Medicines", rx.medicines?.length || 0], ["Issued", rx.createdAt ? new Date(rx.createdAt).toLocaleDateString() : "—"], ["Valid until", rx.validUntil ? new Date(rx.validUntil).toLocaleDateString() : "Not set"]].map(([k, v]) => (
+                      <div key={k} style={{ background: "#f8fafc", borderRadius: 8, padding: "8px 10px" }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>{k}</div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: "#1e293b" }}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Medicines list */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {rx.medicines?.slice(0, 3).map((m, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#f8fafc", borderRadius: 8 }}>
+                        <div style={{ width: 28, height: 28, background: "#f0faf7", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Pill size={14} color="#1db585" />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                          <div style={{ fontSize: 11.5, color: "#94a3b8" }}>{[m.dosage, m.frequency, m.duration].filter(Boolean).join(" · ")}</div>
+                        </div>
+                      </div>
+                    ))}
+                    {rx.medicines?.length > 3 && <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", padding: "4px" }}>+{rx.medicines.length - 3} more medicines</div>}
+                  </div>
+                  {rx.advice && <div style={{ marginTop: 10, padding: "8px 10px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, fontSize: 12.5, color: "#92400e", fontStyle: "italic" }}>{rx.advice}</div>}
+                  {user?.role === "patient" && rx.status === "active" && (
+                    <button onClick={() => handleRefill(rx._id)} disabled={refillLoading[rx._id]} style={{ marginTop: 12, width: "100%", padding: "9px", background: "#f0faf7", border: "1.5px solid #a3e7d4", borderRadius: 10, fontSize: 13, fontWeight: 500, color: "#0a7a57", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      {refillLoading[rx._id] ? "Requesting…" : "Request refill"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal */}
+      {showModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", backdropFilter: "blur(2px)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(15,23,42,0.15)" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 500, color: "#0f172a" }}>{editing ? "Edit prescription" : "New prescription"}</div>
+                <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 2 }}>{editing ? "Update prescription details below" : "Fill in the details to create a new prescription"}</div>
+              </div>
+              <button onClick={() => setShowModal(false)} style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "none", borderRadius: 8, cursor: "pointer" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
             </div>
+            <form onSubmit={handleSubmit} style={{ padding: 24 }}>
+              {user?.role === "doctor" && !editing && (
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>Patient *</label>
+                  {patients.length > 0 ? <PatientSearch patients={patients} value={form.patientId} onChange={p => setForm(prev => ({ ...prev, patientId: p?._id || "" }))} />
+                    : <div style={{ padding: "12px 14px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, fontSize: 13, color: "#92400e" }}>No patients found. Patients appear after their first interaction with you.</div>}
+                </div>
+              )}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>Diagnosis</label>
+                <input type="text" value={form.diagnosis} onChange={e => setForm(p => ({ ...p, diagnosis: e.target.value }))} placeholder="e.g., Hypertension, Common Cold" style={inputCls} onFocus={onFocus} onBlur={onBlur} />
+              </div>
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: "#475569" }}>Medicines *</label>
+                  <button type="button" onClick={() => setForm(p => ({ ...p, medicines: [...p.medicines, { name: "", dosage: "", frequency: "", duration: "" }] }))} style={{ fontSize: 13, color: "#1db585", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>+ Add medicine</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {form.medicines.map((med, i) => (
+                    <div key={i} style={{ background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9", padding: "14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 600, color: "#64748b" }}>Medicine {i + 1}</div>
+                        {form.medicines.length > 1 && <button type="button" onClick={() => setForm(p => ({ ...p, medicines: p.medicines.filter((_, j) => j !== i) }))} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button>}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        {[["name", "Medicine name *", "e.g., Amoxicillin"], ["dosage", "Dosage", "e.g., 500mg"], ["frequency", "Frequency", "e.g., 3× daily"], ["duration", "Duration", "e.g., 7 days"]].map(([key, label, ph]) => (
+                          <div key={key}>
+                            <label style={{ display: "block", fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>{label}</label>
+                            <input type="text" value={med[key]} onChange={e => { const meds = [...form.medicines]; meds[i][key] = e.target.value; setForm(p => ({ ...p, medicines: meds })); }} placeholder={ph} required={key === "name"} style={{ ...inputCls, padding: "7px 9px", fontSize: 13 }} onFocus={onFocus} onBlur={onBlur} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>Valid until</label>
+                  <input type="date" value={form.validUntil} onChange={e => setForm(p => ({ ...p, validUntil: e.target.value }))} style={inputCls} onFocus={onFocus} onBlur={onBlur} />
+                  <p style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 4 }}>Defaults to 30 days if blank</p>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>Additional advice</label>
+                  <textarea value={form.advice} onChange={e => setForm(p => ({ ...p, advice: e.target.value }))} placeholder="e.g., Take with food…" rows={3} style={{ ...inputCls, resize: "vertical" }} onFocus={onFocus} onBlur={onBlur} />
+                </div>
+              </div>
+              {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#dc2626" }}>{error}</div>}
+              <div style={{ display: "flex", gap: 10 }}>
+                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: "11px", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#475569", cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                <button type="submit" style={{ flex: 1, padding: "11px", background: "#1db585", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>{editing ? "Update prescription" : "Create prescription"}</button>
+              </div>
+            </form>
           </div>
-
-          {/* Advice */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Additional Advice</label>
-            <textarea
-              value={formData.advice}
-              onChange={(e) => setFormData({ ...formData, advice: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none"
-              rows={3}
-              placeholder="e.g., Take with food, avoid dairy products, rest well..."
-            />
-          </div>
-
-          {/* Valid Until */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Valid Until</label>
-            <input
-              type="date"
-              value={formData.validUntil}
-              onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-            />
-            <p className="text-xs text-gray-400 mt-1">Defaults to 30 days if left blank</p>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-lg transition"
-            >
-              {prescription ? 'Update Prescription' : 'Create Prescription'}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+      )}
+      
+      {/* Dummy inputCls & focus helpers for modal (defined outside JSX scope) */}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
+
+  
 }
 
-export default Prescriptions;
+// Fix: define inputCls as an object properly
+const inputCls = { width: "100%", padding: "9px 11px", fontSize: 13.5, fontFamily: "'DM Sans', sans-serif", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 9, outline: "none", boxSizing: "border-box", transition: "border-color 0.15s" };
+const onFocus = e => { e.target.style.borderColor = "#1db585"; e.target.style.boxShadow = "0 0 0 3px rgba(29,181,133,0.08)"; };
+const onBlur = e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; };

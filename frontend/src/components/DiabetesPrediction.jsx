@@ -1,176 +1,196 @@
-// frontend/src/components/DiabetesPrediction.jsx
-import React, { useState, useEffect } from 'react';
-import apiClient from '../services/apiClient'; // FIX: was raw axios + API_URL from useAuth
+import React, { useState, useEffect } from "react";
+import apiClient from "../services/apiClient";
+import { SectionCard, Loader, Badge } from "./UI";
+import { CheckCircle, AlertTriangle, Info, Microscope } from "lucide-react";
 
-function DiabetesPrediction() {
-  const [formData, setFormData] = useState({
-    pregnancies: '', glucose: '', bloodPressure: '', skinThickness: '',
-    insulin: '', bmi: '', diabetesPedigreeFunction: '', age: '',
-  });
+const FIELDS = [
+  { name: "pregnancies", label: "Pregnancies", placeholder: "0", step: "1", min: "0", hint: "Number of times pregnant" },
+  { name: "glucose", label: "Glucose (mg/dL)", placeholder: "120", step: "1", min: "0", hint: "Plasma glucose concentration" },
+  { name: "bloodPressure", label: "Blood Pressure (mm Hg)", placeholder: "80", step: "1", min: "0", hint: "Diastolic blood pressure" },
+  { name: "skinThickness", label: "Skin Thickness (mm)", placeholder: "20", step: "1", min: "0", hint: "Triceps skinfold thickness" },
+  { name: "insulin", label: "Insulin (µU/mL)", placeholder: "80", step: "1", min: "0", hint: "2-Hour serum insulin" },
+  { name: "bmi", label: "BMI", placeholder: "25.5", step: "0.1", min: "0", hint: "Body mass index" },
+  { name: "diabetesPedigreeFunction", label: "Pedigree Function", placeholder: "0.5", step: "0.001", min: "0", hint: "Diabetes hereditary score" },
+  { name: "age", label: "Age (years)", placeholder: "35", step: "1", min: "0", hint: "Patient age in years" },
+];
+
+const SAMPLES = {
+  lowRisk:  { pregnancies: "1", glucose: "85",  bloodPressure: "66", skinThickness: "29", insulin: "0",  bmi: "26.6", diabetesPedigreeFunction: "0.351", age: "31" },
+  highRisk: { pregnancies: "6", glucose: "148", bloodPressure: "72", skinThickness: "35", insulin: "0",  bmi: "33.6", diabetesPedigreeFunction: "0.627", age: "50" },
+  moderate: { pregnancies: "2", glucose: "120", bloodPressure: "70", skinThickness: "20", insulin: "80", bmi: "25.5", diabetesPedigreeFunction: "0.5",   age: "35" },
+};
+
+const EMPTY = { pregnancies: "", glucose: "", bloodPressure: "", skinThickness: "", insulin: "", bmi: "", diabetesPedigreeFunction: "", age: "" };
+
+export default function DiabetesPrediction() {
+  const [form, setForm] = useState(EMPTY);
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [history, setHistory] = useState([]);
 
-  useEffect(() => { fetchHistory(); }, []);
+  useEffect(() => { apiClient.get("/predictions").then(r => setHistory(r.data)).catch(() => {}); }, []);
 
-  const fetchHistory = async () => {
-    try {
-      const response = await apiClient.get('/predictions');
-      setHistory(response.data);
-    } catch (err) {
-      console.error('Failed to fetch prediction history:', err);
-    }
-  };
-
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    setError(""); setLoading(true);
     try {
-      const numericData = {};
-      Object.keys(formData).forEach((key) => { numericData[key] = parseFloat(formData[key]); });
-      const response = await apiClient.post('/predict-diabetes', numericData);
-      setPrediction(response.data);
-      fetchHistory();
-    } catch (err) {
-      setError(err.response?.data?.error || 'Prediction failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+      const numeric = {}; Object.keys(form).forEach(k => numeric[k] = parseFloat(form[k]));
+      const res = await apiClient.post("/predict-diabetes", numeric);
+      setPrediction(res.data);
+      apiClient.get("/predictions").then(r => setHistory(r.data)).catch(() => {});
+    } catch (err) { setError(err.response?.data?.error || "Prediction failed."); }
+    finally { setLoading(false); }
   };
 
-  const resetForm = () => {
-    setFormData({ pregnancies: '', glucose: '', bloodPressure: '', skinThickness: '', insulin: '', bmi: '', diabetesPedigreeFunction: '', age: '' });
-    setPrediction(null);
-    setError('');
-  };
+  const inputStyle = { width: "100%", padding: "9px 11px", fontSize: 13.5, fontFamily: "inherit", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 9, outline: "none", boxSizing: "border-box", transition: "border-color 0.15s" };
 
-  const testSamples = {
-    lowRisk:  { pregnancies: '1', glucose: '85',  bloodPressure: '66', skinThickness: '29', insulin: '0',  bmi: '26.6', diabetesPedigreeFunction: '0.351', age: '31' },
-    highRisk: { pregnancies: '6', glucose: '148', bloodPressure: '72', skinThickness: '35', insulin: '0',  bmi: '33.6', diabetesPedigreeFunction: '0.627', age: '50' },
-    moderate: { pregnancies: '2', glucose: '120', bloodPressure: '70', skinThickness: '20', insulin: '80', bmi: '25.5', diabetesPedigreeFunction: '0.5',   age: '35' },
-  };
-
-  const fillTestData = (t) => { setFormData(testSamples[t]); setPrediction(null); setError(''); };
-
-  const fields = [
-    { name: 'pregnancies',              label: 'Pregnancies',                  placeholder: 'Number of pregnancies', step: '1',     min: '0' },
-    { name: 'glucose',                  label: 'Glucose Level (mg/dL)',         placeholder: 'e.g., 120',             step: '1',     min: '0' },
-    { name: 'bloodPressure',            label: 'Blood Pressure (mm Hg)',        placeholder: 'e.g., 80',              step: '1',     min: '0' },
-    { name: 'skinThickness',            label: 'Skin Thickness (mm)',           placeholder: 'e.g., 20',              step: '1',     min: '0' },
-    { name: 'insulin',                  label: 'Insulin Level (\u03bcU/mL)',    placeholder: 'e.g., 80',              step: '1',     min: '0' },
-    { name: 'bmi',                      label: 'BMI (Body Mass Index)',         placeholder: 'e.g., 25.5',            step: '0.1',   min: '0' },
-    { name: 'diabetesPedigreeFunction', label: 'Diabetes Pedigree Function',    placeholder: 'e.g., 0.5',             step: '0.001', min: '0' },
-    { name: 'age',                      label: 'Age (years)',                   placeholder: 'e.g., 35',              step: '1',     min: '0' },
-  ];
+  const riskColor = prediction ? (prediction.prediction === 1 ? "red" : prediction.probability > 0.35 ? "yellow" : "green") : "slate";
+  const riskBg = { red: "#fff1f2", yellow: "#fffbeb", green: "#f0fdf4", slate: "#f8fafc" };
+  const riskBorder = { red: "#fda4af", yellow: "#fde68a", green: "#86efac", slate: "#e2e8f0" };
+  const riskText = { red: "#9f1239", yellow: "#78350f", green: "#14532d", slate: "#475569" };
 
   return (
-    <div>
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">Diabetes Risk Prediction</h2>
-
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start">
-          <svg className="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <div className="text-sm text-blue-800">
-            <p className="font-semibold mb-1">Quick Testing Available</p>
-            <p>Use the test buttons to fill the form with sample data for different risk profiles.</p>
-          </div>
-        </div>
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Diabetes Risk Screening</h1>
+        <p style={{ fontSize: 13.5, color: "#64748b" }}>Enter health metrics to get an AI-powered risk assessment. For educational use only.</p>
       </div>
 
-      {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">{error}</div>}
+      {/* Info banner */}
+      <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style={{ color: "#1e40af" }}>Use the sample buttons to auto-fill with example data for different risk profiles.</span>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Enter Health Metrics</h3>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => fillTestData('lowRisk')}  className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition">Low Risk</button>
-                <button type="button" onClick={() => fillTestData('moderate')} className="px-3 py-1.5 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition">Moderate</button>
-                <button type="button" onClick={() => fillTestData('highRisk')} className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition">High Risk</button>
-              </div>
+      {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "11px 14px", marginBottom: 16, fontSize: 13.5, color: "#dc2626" }}>{error}</div>}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "flex-start" }}>
+        <SectionCard>
+          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Health metrics</div>
+              <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>All 8 fields are required</div>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {fields.map(({ name, label, placeholder, step, min }) => (
-                  <div key={name}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
-                    <input type="number" name={name} value={formData[name]} onChange={handleChange}
-                      placeholder={placeholder} step={step} min={min} required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                  </div>
-                ))}
-              </div>
-              <div className="flex space-x-4 pt-4">
-                <button type="submit" disabled={loading}
-                  className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-blue-400">
-                  {loading ? 'Analyzing...' : 'Predict Risk'}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {[["Low risk", "lowRisk", "#dcfce7", "#166534"], ["Moderate", "moderate", "#fef9c3", "#854d0e"], ["High risk", "highRisk", "#fee2e2", "#991b1b"]].map(([label, key, bg, color]) => (
+                <button key={key} onClick={() => { setForm(SAMPLES[key]); setPrediction(null); setError(""); }}
+                  style={{ padding: "6px 12px", fontSize: 12, fontWeight: 500, background: bg, color, border: "none", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "transform 0.1s" }}
+                  onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                >
+                  {label}
                 </button>
-                <button type="button" onClick={resetForm}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition">
-                  Reset
-                </button>
-              </div>
-            </form>
+              ))}
+            </div>
           </div>
-        </div>
+          <form onSubmit={handleSubmit} style={{ padding: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+              {FIELDS.map(f => (
+                <div key={f.name}>
+                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 500, color: "#475569", marginBottom: 4 }}>{f.label}</label>
+                  <input type="number" name={f.name} value={form[f.name]} onChange={e => setForm(p => ({ ...p, [f.name]: e.target.value }))} placeholder={f.placeholder} step={f.step} min={f.min} required style={inputStyle}
+                    onFocus={e => { e.target.style.borderColor = "#1db585"; e.target.style.boxShadow = "0 0 0 3px rgba(29,181,133,0.08)"; }}
+                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
+                  />
+                  <p style={{ fontSize: 11, color: "#cbd5e1", marginTop: 3 }}>{f.hint}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+              <button type="submit" disabled={loading} style={{ flex: 1, padding: "11px", background: loading ? "#94a3b8" : "#1db585", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                {loading ? <><div style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }}></div>Analyzing...</> : "Run prediction"}
+              </button>
+              <button type="button" onClick={() => { setForm(EMPTY); setPrediction(null); setError(""); }} style={{ padding: "11px 20px", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#64748b", cursor: "pointer", fontFamily: "inherit" }}>Reset</button>
+            </div>
+          </form>
+        </SectionCard>
 
-        <div>
+        {/* Results */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {prediction ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Prediction Result</h3>
-              <div className={`p-6 rounded-lg mb-4 ${prediction.prediction === 1 ? 'bg-red-50 border-2 border-red-200' : 'bg-green-50 border-2 border-green-200'}`}>
-                <div className="text-center">
-                  <h4 className={`text-2xl font-bold mb-2 ${prediction.prediction === 1 ? 'text-red-700' : 'text-green-700'}`}>{prediction.risk_level} Risk</h4>
-                  <p className={`text-sm ${prediction.prediction === 1 ? 'text-red-600' : 'text-green-600'}`}>{prediction.message}</p>
+            <SectionCard style={{ animation: "fadeIn 0.25s ease" }}>
+              <div style={{ padding: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 16 }}>Result</div>
+                <div style={{ background: riskBg[riskColor], border: `1.5px solid ${riskBorder[riskColor]}`, borderRadius: 14, padding: "24px 16px", textAlign: "center", marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                    {riskColor === "green" ? <CheckCircle size={36} color="#166534" /> : riskColor === "red" ? <AlertTriangle size={36} color="#991b1b" /> : <Info size={36} color="#854d0e" />}
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 600, color: riskText[riskColor], letterSpacing: "-0.01em" }}>{prediction.risk_level} Risk</div>
+                  <div style={{ fontSize: 13, color: riskText[riskColor], opacity: 0.8, marginTop: 6, lineHeight: 1.5 }}>{prediction.message}</div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f8fafc", borderRadius: 10 }}>
+                  <span style={{ fontSize: 13, color: "#64748b" }}>Probability</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{(prediction.probability * 100).toFixed(1)}%</span>
+                </div>
+                {/* Probability bar */}
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ height: 6, background: "#f1f5f9", borderRadius: 999, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${(prediction.probability * 100).toFixed(1)}%`, background: riskColor === "green" ? "#22c55e" : riskColor === "red" ? "#ef4444" : "#eab308", borderRadius: 999, transition: "width 0.8s ease" }}></div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 14, padding: "10px 12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, fontSize: 12, color: "#92400e", lineHeight: 1.5 }}>
+                  <AlertTriangle size={14} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }} /> This is not a medical diagnosis. Always consult a qualified healthcare provider.
                 </div>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm font-medium text-gray-700">Probability</span>
-                <span className="text-sm font-bold text-gray-900">{(prediction.probability * 100).toFixed(1)}%</span>
-              </div>
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-xs text-blue-800"><strong>Note:</strong> This prediction should not replace professional medical advice.</p>
-              </div>
-            </div>
+            </SectionCard>
           ) : (
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 text-center py-16">
-              <p className="text-gray-600 text-sm">Fill in the form to get your diabetes risk prediction</p>
-            </div>
+            <SectionCard>
+              <div style={{ padding: 32, textAlign: "center" }}>
+                <Microscope size={48} color="#cbd5e1" style={{ display: "block", margin: "0 auto 12px" }} />
+                <div style={{ fontSize: 14, fontWeight: 500, color: "#475569", marginBottom: 4 }}>Ready to analyze</div>
+                <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>Fill in the health metrics and click "Run prediction"</div>
+              </div>
+            </SectionCard>
           )}
+
+          {/* Quick reference */}
+          <SectionCard>
+            <div style={{ padding: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", marginBottom: 12 }}>Reference ranges</div>
+              {[["Glucose", "70–99 mg/dL (normal)"], ["Blood pressure", "< 80 mm Hg (normal)"], ["BMI", "18.5–24.9 (healthy)"], ["Pedigree", "< 0.5 (lower hereditary risk)"]].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#64748b", paddingBottom: 7, marginBottom: 7, borderBottom: "1px solid #f8fafc" }}>
+                  <span style={{ fontWeight: 500, color: "#475569" }}>{k}</span><span>{v}</span>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
         </div>
       </div>
 
+      {/* History */}
       {history.length > 0 && (
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Recent Predictions</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>{['Date','Result','Probability','Glucose','BMI','Age'].map((h) => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {history.map((item, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-3 text-sm text-gray-900">{new Date(item.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.prediction === 1 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>{item.prediction === 1 ? 'High Risk' : 'Low Risk'}</span></td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{(item.probability * 100).toFixed(1)}%</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.glucose}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.bmi}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.age}</td>
+        <SectionCard style={{ marginTop: 24 }}>
+          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Prediction history</div>
+            <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>Last {history.length} assessments</div>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead><tr style={{ background: "#f8fafc" }}>
+                {["Date", "Result", "Probability", "Glucose", "BMI", "Age"].map(h => (
+                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9" }}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {history.map((r, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f8fafc" }}>
+                    <td style={{ padding: "11px 16px", color: "#475569" }}>{new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td style={{ padding: "11px 16px" }}>
+                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: r.prediction === 1 ? "#fee2e2" : "#dcfce7", color: r.prediction === 1 ? "#991b1b" : "#166534" }}>{r.prediction === 1 ? "High risk" : "Low risk"}</span>
+                    </td>
+                    <td style={{ padding: "11px 16px", color: "#1e293b", fontWeight: 500 }}>{(r.probability * 100).toFixed(1)}%</td>
+                    <td style={{ padding: "11px 16px", color: "#64748b" }}>{r.glucose}</td>
+                    <td style={{ padding: "11px 16px", color: "#64748b" }}>{r.bmi}</td>
+                    <td style={{ padding: "11px 16px", color: "#64748b" }}>{r.age}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </SectionCard>
       )}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>
   );
 }
-
-export default DiabetesPrediction;

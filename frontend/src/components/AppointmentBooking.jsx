@@ -1,238 +1,216 @@
-// frontend/src/components/AppointmentBooking.jsx
-import React, { useState, useEffect } from 'react';
-import apiClient from '../services/apiClient'; // FIX: was raw axios + API_URL from useAuth
+import React, { useState, useEffect } from "react";
+import apiClient from "../services/apiClient";
+import { SectionCard, Badge, Btn, EmptyState, Loader } from "./UI";
+import { Stethoscope } from "lucide-react";
 
-function AppointmentBooking({ onBookingComplete }) {
+const TIME_SLOTS = ["09:00","09:30","10:00","10:30","11:00","11:30","14:00","14:30","15:00","15:30","16:00","16:30"];
+
+export default function AppointmentBooking({ onBookingComplete }) {
   const [doctors, setDoctors] = useState([]);
-  const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [formData, setFormData] = useState({ date: '', time: '', reason: '' });
+  const [selected, setSelected] = useState(null);
+  const [form, setForm] = useState({ date: "", time: "", reason: "" });
   const [loading, setLoading] = useState(false);
-  const [fetchingDoctors, setFetchingDoctors] = useState(true);
-  const [error, setError] = useState('');
+  const [fetching, setFetching] = useState(true);
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    fetchDoctors();
+    apiClient.get("/doctors").then(r => setDoctors(r.data)).catch(() => setError("Failed to load doctors.")).finally(() => setFetching(false));
   }, []);
 
-  const fetchDoctors = async () => {
-    try {
-      setFetchingDoctors(true);
-      const response = await apiClient.get('/doctors');
-      setDoctors(response.data);
-    } catch (error) {
-      console.error('Failed to fetch doctors:', error);
-      setError('Failed to load doctors. Please refresh the page.');
-    } finally {
-      setFetchingDoctors(false);
-    }
+  const minDate = () => {
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    if (!selectedDoctor) { setError('Please select a doctor'); return; }
-    if (!formData.date || !formData.time) { setError('Please select both date and time'); return; }
-
-    setError('');
-    setLoading(true);
+    if (!selected) { setError("Please select a doctor."); return; }
+    if (!form.date || !form.time) { setError("Please choose a date and time."); return; }
+    setLoading(true); setError("");
     try {
-      await apiClient.post('/appointments', { doctorId: selectedDoctor._id, ...formData });
-      setSuccess(true);
-      setFormData({ date: '', time: '', reason: '' });
-      setSelectedDoctor(null);
+      await apiClient.post("/appointments", { doctorId: selected._id, ...form });
+      setSuccess(true); setForm({ date: "", time: "", reason: "" }); setSelected(null);
       if (onBookingComplete) onBookingComplete();
-      setTimeout(() => setSuccess(false), 5000);
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to book appointment. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+      setTimeout(() => setSuccess(false), 6000);
+    } catch (err) {
+      setError(err.response?.data?.error || "Booking failed. Please try again.");
+    } finally { setLoading(false); }
   };
 
-  const timeSlots = ['09:00','09:30','10:00','10:30','11:00','11:30','14:00','14:30','15:00','15:30','16:00','16:30'];
-
-  const getMinDate = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
-  };
+  const avatarColors = ["#1db585","#3b82f6","#8b5cf6","#f59e0b","#f43f5e","#14b8a6"];
 
   return (
-    <div>
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">Book an Appointment</h2>
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Book an Appointment</h1>
+        <p style={{ fontSize: 13.5, color: "#64748b" }}>Select a doctor and choose a time that works for you.</p>
+      </div>
 
       {success && (
-        <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 text-green-700 rounded-xl flex items-center">
-          <svg className="w-6 h-6 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, padding: "14px 16px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" style={{ flexShrink: 0, marginTop: 1 }}><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>
           <div>
-            <p className="font-semibold">Appointment booked successfully!</p>
-            <p className="text-sm">The doctor will review and confirm your appointment soon.</p>
+            <div style={{ fontSize: 14, fontWeight: 500, color: "#166534" }}>Appointment booked</div>
+            <div style={{ fontSize: 13, color: "#16a34a", marginTop: 2 }}>The doctor will review and confirm your appointment shortly.</div>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 text-red-700 rounded-xl flex items-center">
-          <svg className="w-6 h-6 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <p className="font-medium">{error}</p>
+        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 14px", marginBottom: 16, fontSize: 13.5, color: "#dc2626", display: "flex", gap: 8, alignItems: "center" }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          {/* Doctor selection */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-              <svg className="w-5 h-5 mr-2 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-              Select a Doctor
-            </h3>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "flex-start" }}>
+        {/* Main */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Doctor select */}
+          <SectionCard>
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Choose a doctor</div>
+              <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>{doctors.length} available specialists</div>
+            </div>
+            <div style={{ padding: 16 }}>
+              {fetching ? <Loader message="Loading doctors..." /> : doctors.length === 0 ? (
+                <EmptyState icon={<Stethoscope size={24} color="#94a3b8" />} title="No doctors available" subtitle="Please check back later." />
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+                  {doctors.map((doc, i) => {
+                    const isSelected = selected?._id === doc._id;
+                    const color = avatarColors[i % avatarColors.length];
+                    return (
+                      <div key={doc._id} onClick={() => setSelected(doc)}
+                        style={{ padding: "14px", border: isSelected ? "2px solid #1db585" : "1.5px solid #f1f5f9", borderRadius: 12, cursor: "pointer", background: isSelected ? "#f0faf7" : "#fff", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 12 }}
+                        onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.borderColor = "#d1f3ea"; e.currentTarget.style.background = "#fafffe"; } }}
+                        onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.borderColor = "#f1f5f9"; e.currentTarget.style.background = "#fff"; } }}
+                      >
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 15, flexShrink: 0 }}>{doc.name.charAt(0)}</div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 500, color: isSelected ? "#0a7a57" : "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
+                          <div style={{ fontSize: 12, color: isSelected ? "#1db585" : "#94a3b8", marginTop: 1 }}>{doc.specialization}</div>
+                        </div>
+                        {isSelected && (
+                          <div style={{ marginLeft: "auto", width: 18, height: 18, background: "#1db585", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </SectionCard>
 
-            {fetchingDoctors ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
-                <p className="text-gray-600 mt-4">Loading doctors...</p>
+          {/* Appointment details */}
+          {selected && (
+            <SectionCard style={{ animation: "fadeIn 0.25s ease" }}>
+              <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Appointment details</div>
+                <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>With Dr. {selected.name}</div>
               </div>
-            ) : doctors.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-600">No doctors available at the moment</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {doctors.map(doctor => (
-                  <div
-                    key={doctor._id}
-                    onClick={() => setSelectedDoctor(doctor)}
-                    className={`p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${selectedDoctor?._id === doctor._id ? 'border-cyan-600 bg-gradient-to-r from-cyan-50 to-blue-50 shadow-lg scale-105' : 'border-gray-200 hover:border-cyan-300 hover:shadow-md'}`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md ${selectedDoctor?._id === doctor._id ? 'bg-gradient-to-br from-cyan-600 to-blue-600' : 'bg-gradient-to-br from-gray-400 to-gray-500'}`}>
-                        {doctor.name.charAt(0)}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-gray-800">{doctor.name}</p>
-                        <p className="text-sm text-cyan-600 font-medium">{doctor.specialization}</p>
-                        {doctor.phone && <p className="text-xs text-gray-500 mt-1">📞 {doctor.phone}</p>}
-                      </div>
-                      {selectedDoctor?._id === doctor._id && (
-                        <svg className="w-6 h-6 text-cyan-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                      )}
+              <form onSubmit={handleSubmit} style={{ padding: 20 }}>
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>Date *</label>
+                  <input type="date" value={form.date} min={minDate()} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} required
+                    style={{ padding: "9px 12px", fontSize: 14, fontFamily: "inherit", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, outline: "none", width: "100%", boxSizing: "border-box" }}
+                    onFocus={e => { e.target.style.borderColor = "#1db585"; e.target.style.boxShadow = "0 0 0 3px rgba(29,181,133,0.1)"; }}
+                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
+                  />
+                  <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 5 }}>Appointments can be booked from tomorrow onwards.</p>
+                </div>
+
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 8 }}>Time slot *</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                    {TIME_SLOTS.map(slot => {
+                      const isSelected = form.time === slot;
+                      return (
+                        <button key={slot} type="button" onClick={() => setForm(p => ({ ...p, time: slot }))}
+                          style={{ padding: "8px 4px", fontSize: 13, fontFamily: "inherit", fontWeight: isSelected ? 500 : 400, textAlign: "center", border: isSelected ? "2px solid #1db585" : "1.5px solid #e2e8f0", borderRadius: 9, cursor: "pointer", background: isSelected ? "#f0faf7" : "#fff", color: isSelected ? "#0a7a57" : "#475569", transition: "all 0.15s" }}>
+                          {slot}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>Reason for visit <span style={{ fontWeight: 400, color: "#94a3b8" }}>(optional)</span></label>
+                  <textarea value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} rows={3} placeholder="Describe your symptoms or reason for this consultation..."
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 14, fontFamily: "inherit", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.5 }}
+                    onFocus={e => { e.target.style.borderColor = "#1db585"; e.target.style.boxShadow = "0 0 0 3px rgba(29,181,133,0.1)"; }}
+                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
+                  />
+                </div>
+
+                <Btn type="submit" loading={loading} disabled={!form.date || !form.time || loading} style={{ width: "100%", justifyContent: "center", padding: "12px" }}>
+                  {loading ? "Booking..." : "Confirm appointment"}
+                </Btn>
+              </form>
+            </SectionCard>
+          )}
+        </div>
+
+        {/* Right sidebar */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {selected ? (
+            <SectionCard>
+              <div style={{ padding: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: 11 }}>Selected doctor</div>
+                <div style={{ textAlign: "center", paddingBottom: 18, borderBottom: "1px solid #f8fafc", marginBottom: 16 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 22, margin: "0 auto 10px" }}>{selected.name.charAt(0)}</div>
+                  <div style={{ fontSize: 15, fontWeight: 500, color: "#0f172a" }}>{selected.name}</div>
+                  <div style={{ fontSize: 13, color: "#1db585", marginTop: 3 }}>{selected.specialization}</div>
+                  {selected.email && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{selected.email}</div>}
+                </div>
+                {form.date && form.time && (
+                  <div style={{ background: "#f0faf7", borderRadius: 10, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Booking summary</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475569", marginBottom: 4 }}>
+                      <span>Date</span><span style={{ fontWeight: 500, color: "#1e293b" }}>{new Date(form.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                     </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475569" }}>
+                      <span>Time</span><span style={{ fontWeight: 500, color: "#1e293b" }}>{form.time}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+          ) : (
+            <SectionCard>
+              <EmptyState icon={<Stethoscope size={24} color="#94a3b8" />} title="No doctor selected" subtitle="Pick a doctor from the list to continue booking." />
+            </SectionCard>
+          )}
+
+          <SectionCard>
+            <div style={{ padding: 18 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", marginBottom: 12 }}>Booking guidelines</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  "Appointments confirmed within 24 hours",
+                  "Arrive 10 min before scheduled time",
+                  "Email confirmation will be sent",
+                  "Bring valid ID and previous records",
+                  "Consultation: 15–30 minutes",
+                ].map((tip, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, color: "#64748b" }}>
+                    <div style={{ width: 16, height: 16, background: "#f0faf7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#1db585" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    {tip}
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Appointment form */}
-          {selectedDoctor && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                Appointment Details
-              </h3>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Appointment Date *</label>
-                  <input type="date" name="date" value={formData.date} onChange={handleChange} min={getMinDate()}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all" required />
-                  <p className="text-xs text-gray-500 mt-1">Select a date from tomorrow onwards</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Preferred Time *</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {timeSlots.map(slot => (
-                      <button key={slot} type="button" onClick={() => setFormData({ ...formData, time: slot })}
-                        className={`py-3 px-4 rounded-xl border-2 text-sm font-semibold transition-all duration-200 ${formData.time === slot ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white border-cyan-600 shadow-lg scale-105' : 'bg-white text-gray-700 border-gray-300 hover:border-cyan-300 hover:shadow-md'}`}>
-                        {slot}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Reason for Visit <span className="text-gray-400 font-normal">(Optional)</span>
-                  </label>
-                  <textarea name="reason" value={formData.reason} onChange={handleChange} rows="4"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none transition-all"
-                    placeholder="Describe your symptoms or reason for consultation..."></textarea>
-                </div>
-                <button type="submit" disabled={loading || !formData.date || !formData.time}
-                  className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
-                  {loading ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                      <span>Booking...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <span>Book Appointment</span>
-                    </>
-                  )}
-                </button>
-              </form>
             </div>
-          )}
-        </div>
-
-        {/* Sidebar info */}
-        <div className="space-y-6">
-          {selectedDoctor ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Selected Doctor</h3>
-              <div className="text-center">
-                <div className="w-24 h-24 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-3xl mx-auto mb-4 shadow-lg">
-                  {selectedDoctor.name.charAt(0)}
-                </div>
-                <h4 className="text-xl font-bold text-gray-800">{selectedDoctor.name}</h4>
-                <p className="text-cyan-600 font-semibold mt-1">{selectedDoctor.specialization}</p>
-                {selectedDoctor.email && (
-                  <p className="text-sm text-gray-600 mt-3 flex items-center justify-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                    {selectedDoctor.email}
-                  </p>
-                )}
-                {selectedDoctor.phone && (
-                  <p className="text-sm text-gray-600 mt-1 flex items-center justify-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                    {selectedDoctor.phone}
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border-2 border-dashed border-gray-300 p-8">
-              <div className="text-center">
-                <svg className="w-20 h-20 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                <p className="text-gray-600 font-medium">Select a doctor to continue</p>
-                <p className="text-sm text-gray-500 mt-2">Choose from the available doctors above</p>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 p-6">
-            <h4 className="text-sm font-bold text-blue-900 mb-3 flex items-center">
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              Appointment Guidelines
-            </h4>
-            <ul className="space-y-3">
-              {['Appointments are confirmed within 24 hours','Arrive 10 minutes before scheduled time',"You'll receive email confirmation",'Bring valid ID and previous records','Consultation time: 15-30 minutes'].map((item, idx) => (
-                <li key={idx} className="flex items-start text-xs text-blue-800">
-                  <svg className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                  <span className="leading-relaxed">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          </SectionCard>
         </div>
       </div>
+      <style>{`@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }`}</style>
     </div>
   );
 }
-
-export default AppointmentBooking;

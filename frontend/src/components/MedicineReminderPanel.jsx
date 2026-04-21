@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import apiClient from "../services/apiClient";
 import { AlertCircle, CheckCircle, Clock3, Pill, Trash2 } from "lucide-react";
+import { SectionCard, StatCard, EmptyState, Loader, Btn, Badge } from "./UI";
 
-function MedicineReminderPanel() {
+export default function MedicineReminderPanel() {
   const [reminders, setReminders] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,9 +78,9 @@ function MedicineReminderPanel() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-cyan-600 mb-4" />
-        <p className="text-gray-600 font-medium">Loading your medicines...</p>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 250 }}>
+        <Loader />
+        <p style={{ marginTop: 16, color: "#64748b", fontWeight: 500 }}>Loading your medicines...</p>
       </div>
     );
   }
@@ -95,268 +96,232 @@ function MedicineReminderPanel() {
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Medicine Reminders</h2>
-        <p className="text-gray-600 text-sm">
+    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: 600, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 4 }}>Medicine Reminders</h2>
+        <p style={{ fontSize: 13.5, color: "#64748b" }}>
           Review your active medicines and keep track of scheduled doses more clearly.
         </p>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
-          <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fca5a5", color: "#b91c1c", borderRadius: 12, display: "flex", alignItems: "flex-start", marginBottom: 20 }}>
+          <AlertCircle style={{ width: 20, height: 20, marginRight: 12, flexShrink: 0, marginTop: 2 }} />
+          <span style={{ fontSize: 14 }}>{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-start">
-          <CheckCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-          <span>{success}</span>
+        <div style={{ padding: "12px 16px", background: "#f0fdf4", border: "1px solid #86efac", color: "#15803d", borderRadius: 12, display: "flex", alignItems: "flex-start", marginBottom: 20 }}>
+          <CheckCircle style={{ width: 20, height: 20, marginRight: 12, flexShrink: 0, marginTop: 2 }} />
+          <span style={{ fontSize: 14 }}>{success}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <SummaryCard
-          title="Active Prescriptions"
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginBottom: 24 }}>
+        <StatCard
+          label="Active Prescriptions"
           value={activePrescriptions.length}
-          subtitle="Current doctor-issued prescriptions"
         />
-        <SummaryCard
-          title="Prescribed Medicines"
+        <StatCard
+          label="Prescribed Medicines"
           value={totalMedicines}
-          subtitle="Medicines across active prescriptions"
-          accent="cyan"
         />
-        <SummaryCard
-          title="Custom Reminders"
+        <StatCard
+          label="Custom Reminders"
           value={reminders.length}
-          subtitle={`Recent tracked logs: ${recentLogs}`}
-          accent="green"
         />
       </div>
 
       {activePrescriptions.length > 0 && (
-        <section className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-800">Active Prescriptions</h3>
-          <div className="grid gap-4">
+        <div style={{ marginBottom: 24 }}>
+          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#0f172a", marginBottom: 16 }}>Active Prescriptions</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {activePrescriptions.map((prescription) => (
-              <div
-                key={prescription._id}
-                className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-900">
-                      Dr.{" "}
-                      <span className="text-blue-600">
-                        {prescription.doctorId?.name || prescription.doctorName || "Your Doctor"}
-                      </span>
-                    </h4>
-                    <p className="text-sm text-gray-600 mt-1">
-                      <span className="font-semibold text-gray-700">Diagnosis:</span>{" "}
-                      {prescription.diagnosis || "Not specified"}
-                    </p>
+              <SectionCard key={prescription._id}>
+                <div style={{ padding: 20 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <h4 style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>
+                        Dr. <span style={{ color: "#1db585" }}>{prescription.doctorId?.name || prescription.doctorName || "Your Doctor"}</span>
+                      </h4>
+                      <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+                        <span style={{ fontWeight: 600, color: "#475569" }}>Diagnosis:</span> {prescription.diagnosis || "Not specified"}
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      <Badge color="blue">{(prescription.medicines?.length || 0)} medicines</Badge>
+                      {prescription.validUntil && (
+                        <Badge color="slate">Valid until {new Date(prescription.validUntil).toLocaleDateString()}</Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">
-                      {(prescription.medicines?.length || 0)} medicines
-                    </span>
-                    {prescription.validUntil && (
-                      <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
-                        Valid until {new Date(prescription.validUntil).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
 
-                <div className="space-y-3 mb-4">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    Prescribed medicines
-                  </p>
-                  {prescription.medicines?.length ? (
-                    <ul className="space-y-3">
-                      {prescription.medicines.map((med, idx) => (
-                        <li key={idx} className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center flex-shrink-0">
-                              <Pill className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900">{med.name}</p>
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 text-sm">
-                                <InfoTile label="Dosage" value={med.dosage || "As prescribed"} />
-                                <InfoTile label="Frequency" value={med.frequency || "Not specified"} />
-                                <InfoTile label="Duration" value={med.duration || "Not specified"} />
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
+                      Prescribed medicines
+                    </p>
+                    {prescription.medicines?.length ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {prescription.medicines.map((med, idx) => (
+                          <div key={idx} style={{ background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0", padding: 16 }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#e0f2fe", color: "#0369a1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                <Pill style={{ width: 18, height: 18 }} />
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{med.name}</p>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginTop: 12 }}>
+                                  <InfoTile label="Dosage" value={med.dosage || "As prescribed"} />
+                                  <InfoTile label="Frequency" value={med.frequency || "Not specified"} />
+                                  <InfoTile label="Duration" value={med.duration || "Not specified"} />
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-gray-600 text-sm">No medicines specified</p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 13, color: "#64748b" }}>No medicines specified</p>
+                    )}
+                  </div>
+
+                  {prescription.advice && (
+                    <div style={{ fontSize: 13, color: "#0f172a", background: "#f0fdfa", padding: 12, borderRadius: 10, border: "1px solid #ccfbf1" }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#0f766e", marginBottom: 4 }}>
+                        Advice
+                      </p>
+                      <p style={{ lineHeight: 1.5 }}>{prescription.advice}</p>
+                    </div>
                   )}
                 </div>
-
-                {prescription.advice && (
-                  <div className="text-sm text-gray-700 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-1">
-                      Advice
-                    </p>
-                    <p>{prescription.advice}</p>
-                  </div>
-                )}
-              </div>
+              </SectionCard>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
       {reminders.length > 0 && (
-        <section className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-800">Custom Medicine Reminders</h3>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div>
+          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#0f172a", marginBottom: 16 }}>Custom Medicine Reminders</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
             {reminders.map((reminder) => (
-              <div
-                key={reminder._id}
-                className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition"
-              >
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-900">{reminder.medicineName}</h4>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {reminder.dosage || "As prescribed"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteReminder(reminder._id)}
-                    className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 font-medium text-sm"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete
-                  </button>
-                </div>
-
-                {reminder.instructions && (
-                  <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                      Instructions
-                    </p>
-                    <p>{reminder.instructions}</p>
-                  </div>
-                )}
-
-                {reminder.times?.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                      Scheduled times
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {reminder.times.map((time, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full text-xs font-medium"
-                        >
-                          <Clock3 className="w-3 h-3" />
-                          {time}
-                        </span>
-                      ))}
+              <SectionCard key={reminder._id}>
+                <div style={{ padding: 20 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <h4 style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{reminder.medicineName}</h4>
+                      <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+                        {reminder.dosage || "As prescribed"}
+                      </p>
                     </div>
+                    <button
+                      onClick={() => handleDeleteReminder(reminder._id)}
+                      style={{ display: "flex", alignItems: "center", gap: 4, color: "#ef4444", background: "none", border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      <Trash2 style={{ width: 14, height: 14 }} />
+                      Delete
+                    </button>
                   </div>
-                )}
 
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <button
-                    onClick={() => handleLogMedicine(reminder._id)}
-                    disabled={loggingId === reminder._id}
-                    className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium text-sm disabled:opacity-50"
-                  >
-                    {loggingId === reminder._id ? "..." : "Mark as Taken"}
-                  </button>
-                  <button
-                    onClick={() => handleLogMedicine(reminder._id, true)}
-                    disabled={loggingId === reminder._id}
-                    className="px-3 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium text-sm disabled:opacity-50"
-                  >
-                    {loggingId === reminder._id ? "..." : "Skip"}
-                  </button>
-                </div>
+                  {reminder.instructions && (
+                    <div style={{ fontSize: 13, color: "#475569", background: "#f8fafc", padding: 12, borderRadius: 10, border: "1px solid #e2e8f0", marginBottom: 16 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>
+                        Instructions
+                      </p>
+                      <p style={{ lineHeight: 1.5 }}>{reminder.instructions}</p>
+                    </div>
+                  )}
 
-                {reminder.logs?.length > 0 && (
-                  <div className="text-xs text-gray-600 pt-4 border-t border-gray-200">
-                    <p className="font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                      Recent logs
-                    </p>
-                    <div className="space-y-2">
-                      {reminder.logs
-                        .slice(-3)
-                        .reverse()
-                        .map((log, idx) => (
-                          <div
+                  {reminder.times?.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+                        Scheduled times
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {reminder.times.map((time, idx) => (
+                          <span
                             key={idx}
-                            className="flex items-center justify-between gap-3 bg-gray-50 rounded-md px-3 py-2"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#e0f2fe", color: "#0369a1", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 500 }}
                           >
-                            <span className={`font-semibold ${log.skipped ? "text-gray-500" : "text-green-600"}`}>
-                              {log.skipped ? "Skipped" : "Taken"}
-                            </span>
-                            <span className="text-right">
-                              {new Date(log.takenAt).toLocaleDateString()}{" "}
-                              {new Date(log.takenAt).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
+                            <Clock3 style={{ width: 12, height: 12 }} />
+                            {time}
+                          </span>
                         ))}
+                      </div>
                     </div>
+                  )}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                    <Btn
+                      onClick={() => handleLogMedicine(reminder._id)}
+                      disabled={loggingId === reminder._id}
+                      style={{ background: "#1db585", color: "#fff", borderColor: "#1db585" }}
+                    >
+                      {loggingId === reminder._id ? "..." : "Mark as Taken"}
+                    </Btn>
+                    <Btn
+                      onClick={() => handleLogMedicine(reminder._id, true)}
+                      disabled={loggingId === reminder._id}
+                    >
+                      {loggingId === reminder._id ? "..." : "Skip"}
+                    </Btn>
                   </div>
-                )}
-              </div>
+
+                  {reminder.logs?.length > 0 && (
+                    <div style={{ fontSize: 12, color: "#64748b", paddingTop: 16, borderTop: "1px solid #e2e8f0" }}>
+                      <p style={{ fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+                        Recent logs
+                      </p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {reminder.logs
+                          .slice(-3)
+                          .reverse()
+                          .map((log, idx) => (
+                            <div
+                              key={idx}
+                              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "#f8fafc", borderRadius: 6, padding: "8px 12px" }}
+                            >
+                              <span style={{ fontWeight: 600, color: log.skipped ? "#94a3b8" : "#1db585" }}>
+                                {log.skipped ? "Skipped" : "Taken"}
+                              </span>
+                              <span style={{ textAlign: "right" }}>
+                                {new Date(log.takenAt).toLocaleDateString()}{" "}
+                                {new Date(log.takenAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </SectionCard>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
       {activePrescriptions.length === 0 && reminders.length === 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-          <p className="text-gray-600 text-lg mb-2">No medicines assigned yet</p>
-          <p className="text-gray-500 text-sm">
-            Your doctor will add prescriptions here. Custom reminders will also
-            appear here once they are created.
-          </p>
-        </div>
+        <EmptyState 
+          icon={<Pill style={{ width: 32, height: 32, color: "#94a3b8" }} />} 
+          title="No medicines assigned yet" 
+          message="Your doctor will add prescriptions here. Custom reminders will also appear here once they are created." 
+        />
       )}
-    </div>
-  );
-}
-
-function SummaryCard({ title, value, subtitle, accent = "gray" }) {
-  const accentStyles = {
-    gray: "border-gray-200 text-gray-800",
-    cyan: "border-cyan-200 text-cyan-700",
-    green: "border-green-200 text-green-700",
-  };
-
-  return (
-    <div className={`bg-white rounded-xl border p-4 ${accentStyles[accent] || accentStyles.gray}`}>
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {title}
-      </p>
-      <p className="text-2xl font-bold mt-2">{value}</p>
-      <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
     </div>
   );
 }
 
 function InfoTile({ label, value }) {
   return (
-    <div className="bg-white rounded-md border border-gray-200 px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+    <div style={{ background: "#fff", borderRadius: 8, border: "1px solid #e2e8f0", padding: "8px 12px" }}>
+      <p style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "#94a3b8", marginBottom: 4 }}>
         {label}
       </p>
-      <p className="text-sm text-gray-800 mt-1">{value}</p>
+      <p style={{ fontSize: 13, color: "#0f172a", fontWeight: 500 }}>{value}</p>
     </div>
   );
 }

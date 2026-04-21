@@ -14,7 +14,7 @@ const PNEUMONIA_SCRIPT = path.join(ML_DIR, 'pneumonia_predict.py');
 
 const runPythonScript = (scriptPath, inputData) =>
   new Promise((resolve, reject) => {
-    const pythonCmd = process.env.PYTHON_CMD || 'python3';
+    const pythonCmd = process.env.PYTHON_CMD || 'python';
     // NOTE: no cwd override — scripts resolve paths via __file__ internally
     const python = spawn(pythonCmd, [scriptPath]);
 

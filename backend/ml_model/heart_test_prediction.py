@@ -1,200 +1,162 @@
 """
-Heart Disease Model Testing Script
-Tests with cases that match the actual data distribution
+Heart Disease Model — Test Script
+Compatible with heart_train_model.py (stacking ensemble, no one-hot encoding).
+
+Run from ml_model/ directory:
+    python heart_test_prediction.py
 """
+
+import os
+import sys
+
 import joblib
 import pandas as pd
-import numpy as np
 
-MODEL_PATH = "heart_predict_model.pkl"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(SCRIPT_DIR, "heart_model.pkl")   # fixed: was heart_predict_model.pkl
 
-print("=" * 60)
-print("TESTING HEART DISEASE MODEL - CORRECTED TEST CASES")
-print("=" * 60)
-
-# Load model
-data = joblib.load(MODEL_PATH)
-model = data["model"]
-features = data["features"]
-feature_types = data.get("feature_types", {})
-metadata = data.get("metadata", {})
-
-print(f"\n✓ Model loaded successfully")
-print(f"✓ Test Accuracy: {metadata.get('test_accuracy', 'N/A'):.4f}")
-
-# CORRECTED test cases based on actual data patterns
-# Key insights from data:
-# - cp=0 (typical angina) → MORE likely NO disease
-# - thal=2 (fixed defect) → MORE likely DISEASE
-# - thal=3 (reversible defect) → MORE likely NO disease  
-# - ca=0 (no blocked vessels) → MORE likely DISEASE (counterintuitive but true in this dataset)
-# - High oldpeak → MORE likely disease
-# - Low thalach (max HR) → MORE likely disease
-
-test_patients = [
-    {
-        "label": "LIKELY NO DISEASE - Based on Data Patterns",
-        "age": 45,
-        "sex": 1,
-        "cp": 0,           # Typical angina → NO disease pattern
-        "trestbps": 130,
-        "chol": 250,
-        "fbs": 0,
-        "restecg": 1,
-        "thalach": 160,    # Good max HR
-        "exang": 0,
-        "oldpeak": 0.5,    # Low ST depression
-        "slope": 2,
-        "ca": 1,           # Some blockage
-        "thal": 3,         # Reversible defect → NO disease pattern
-        "expected": "No Disease"
-    },
-    {
-        "label": "LIKELY DISEASE - Based on Data Patterns",
-        "age": 55,
-        "sex": 0,
-        "cp": 2,           # Non-anginal → DISEASE pattern
-        "trestbps": 140,
-        "chol": 230,
-        "fbs": 0,
-        "restecg": 0,
-        "thalach": 140,    # Lower max HR
-        "exang": 1,
-        "oldpeak": 1.5,    # Moderate ST depression
-        "slope": 1,
-        "ca": 0,           # No blockage → DISEASE pattern (counterintuitive!)
-        "thal": 2,         # Fixed defect → DISEASE pattern
-        "expected": "Disease"
-    },
-    {
-        "label": "STRONG DISEASE INDICATORS",
-        "age": 60,
-        "sex": 1,
-        "cp": 2,           # Non-anginal pain
-        "trestbps": 150,
-        "chol": 270,
-        "fbs": 1,
-        "restecg": 2,
-        "thalach": 120,    # Low max HR
-        "exang": 1,        # Exercise angina
-        "oldpeak": 3.0,    # High ST depression
-        "slope": 0,
-        "ca": 0,           # No blockage (disease pattern in this data)
-        "thal": 2,         # Fixed defect
-        "expected": "Disease"
-    },
-    {
-        "label": "STRONG NO DISEASE INDICATORS",
-        "age": 40,
-        "sex": 1,
-        "cp": 0,           # Typical angina
-        "trestbps": 120,
-        "chol": 200,
-        "fbs": 0,
-        "restecg": 0,
-        "thalach": 170,    # High max HR
-        "exang": 0,
-        "oldpeak": 0.0,
-        "slope": 2,
-        "ca": 2,           # Multiple blocked vessels
-        "thal": 3,         # Reversible defect
-        "expected": "No Disease"
-    },
-    {
-        "label": "MIXED SIGNALS - Uncertain",
-        "age": 50,
-        "sex": 0,
-        "cp": 1,
-        "trestbps": 135,
-        "chol": 220,
-        "fbs": 0,
-        "restecg": 1,
-        "thalach": 150,
-        "exang": 0,
-        "oldpeak": 1.0,
-        "slope": 1,
-        "ca": 1,
-        "thal": 1,
-        "expected": "Uncertain"
-    }
+FEATURE_COLS = [
+    "age", "sex", "cp", "trestbps", "chol", "fbs",
+    "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal",
 ]
 
-def predict_patient(patient_data):
-    """Make prediction for a single patient"""
-    patient = {k: v for k, v in patient_data.items() 
-               if k not in ['label', 'expected']}
-    
-    df = pd.DataFrame([patient])
-    categorical_cols = feature_types.get('categorical', 
-                                        ['sex', 'cp', 'fbs', 'restecg', 'exang', 'slope', 'ca', 'thal'])
-    df_encoded = pd.get_dummies(df, columns=categorical_cols, drop_first=False)
-    df_encoded = df_encoded.reindex(columns=features, fill_value=0)
-    
-    prob = model.predict_proba(df_encoded)[0]
-    prob_no_disease = prob[0]
-    prob_disease = prob[1]
-    
-    prediction = 1 if prob_disease >= 0.5 else 0
-    prediction_label = "Disease" if prediction == 1 else "No Disease"
-    
-    if prob_disease < 0.3:
-        risk_level = "Low"
-    elif prob_disease < 0.7:
-        risk_level = "Moderate"
-    else:
-        risk_level = "High"
-    
+print("=" * 60)
+print("TESTING HEART DISEASE MODEL (stacking ensemble)")
+print("=" * 60)
+
+# ─── Load model ───────────────────────────────────────────────────────────────
+
+if not os.path.exists(MODEL_PATH):
+    print(f"\nERROR: {MODEL_PATH} not found.")
+    print("Run: python heart_train_model.py")
+    sys.exit(1)
+
+data = joblib.load(MODEL_PATH)
+if not isinstance(data, dict) or "model" not in data:
+    print("ERROR: Unexpected model format. Delete heart_model.pkl and retrain.")
+    sys.exit(1)
+
+model        = data["model"]
+feature_cols = data.get("feature_cols", FEATURE_COLS)
+metadata     = data.get("metadata", {})
+
+print(f"\n✓ Model loaded: {metadata.get('model_type', 'unknown')}")
+print(f"  Test accuracy : {metadata.get('test_accuracy', 'N/A'):.4f}")
+print(f"  Test AUC      : {metadata.get('test_auc', 'N/A'):.4f}")
+print(f"  CV AUC        : {metadata.get('cv_auc_mean', 'N/A'):.4f} ± "
+      f"{metadata.get('cv_auc_std', 'N/A'):.4f}")
+
+
+# ─── Prediction helper ────────────────────────────────────────────────────────
+
+def predict_patient(patient_dict):
+    """Raw-feature prediction (integers, no one-hot encoding)."""
+    df = pd.DataFrame([patient_dict])[feature_cols].astype(float)
+    probs = model.predict_proba(df)[0]
+    pred  = int(model.predict(df)[0])
+    prob_disease = float(probs[1])
+    risk = (
+        "Low"      if prob_disease < 0.30 else
+        "Moderate" if prob_disease < 0.60 else
+        "High"
+    )
     return {
-        'prediction': prediction,
-        'prediction_label': prediction_label,
-        'prob_no_disease': prob_no_disease,
-        'prob_disease': prob_disease,
-        'risk_level': risk_level
+        "prediction":    pred,
+        "label":         "Disease" if pred == 1 else "No Disease",
+        "prob_disease":  prob_disease,
+        "prob_no_disease": float(probs[0]),
+        "risk":          risk,
     }
 
-# Run tests
+
+# ─── Test cases ───────────────────────────────────────────────────────────────
+# Values are raw integers — the stacking pipeline handles scaling internally.
+# Key dataset patterns (counterintuitive but real):
+#   cp=0 (typical angina)  → often NO disease in this dataset
+#   thal=2 (fixed defect)  → often DISEASE
+#   thal=3 (reversible)    → often NO disease
+#   ca=0 (no vessels)      → often DISEASE (counterintuitive)
+
+TEST_CASES = [
+    {
+        "label":    "LIKELY NO DISEASE — young male, high max-HR, low ST depression",
+        "expected": "No Disease",
+        "data": dict(age=40, sex=1, cp=0, trestbps=120, chol=200, fbs=0,
+                     restecg=0, thalach=170, exang=0, oldpeak=0.0,
+                     slope=2, ca=2, thal=3),
+    },
+    {
+        "label":    "LIKELY DISEASE — female, non-anginal pain, exercise angina, fixed defect",
+        "expected": "Disease",
+        "data": dict(age=55, sex=0, cp=2, trestbps=140, chol=230, fbs=0,
+                     restecg=0, thalach=140, exang=1, oldpeak=1.5,
+                     slope=1, ca=0, thal=2),
+    },
+    {
+        "label":    "STRONG DISEASE — older male, low max-HR, high ST depression",
+        "expected": "Disease",
+        "data": dict(age=60, sex=1, cp=2, trestbps=150, chol=270, fbs=1,
+                     restecg=2, thalach=120, exang=1, oldpeak=3.0,
+                     slope=0, ca=0, thal=2),
+    },
+    {
+        "label":    "STRONG NO DISEASE — young male, typical angina, reversible defect",
+        "expected": "No Disease",
+        "data": dict(age=35, sex=1, cp=0, trestbps=118, chol=195, fbs=0,
+                     restecg=0, thalach=175, exang=0, oldpeak=0.0,
+                     slope=2, ca=0, thal=3),
+    },
+    {
+        "label":    "MIXED SIGNALS — uncertain",
+        "expected": "Uncertain",
+        "data": dict(age=50, sex=0, cp=1, trestbps=135, chol=220, fbs=0,
+                     restecg=1, thalach=150, exang=0, oldpeak=1.0,
+                     slope=1, ca=1, thal=1),
+    },
+]
+
+# ─── Run tests ────────────────────────────────────────────────────────────────
+
 print("\n" + "=" * 60)
 print("RUNNING PREDICTIONS")
 print("=" * 60)
 
-for i, patient in enumerate(test_patients, 1):
-    print(f"\n{'='*60}")
-    print(f"Test Case {i}: {patient['label']}")
-    print("="*60)
-    
-    result = predict_patient(patient)
-    
-    print(f"Age: {patient['age']}, Sex: {'M' if patient['sex']==1 else 'F'}, CP: {patient['cp']}")
-    print(f"CA: {patient['ca']}, Thal: {patient['thal']}, Oldpeak: {patient['oldpeak']}")
-    print(f"Max HR: {patient['thalach']}, Exercise Angina: {'Yes' if patient['exang']==1 else 'No'}")
-    
-    print(f"\n{'RESULT':>25}: {result['prediction_label']}")
-    print(f"{'Disease Probability':>25}: {result['prob_disease']*100:.1f}%")
-    print(f"{'No Disease Probability':>25}: {result['prob_no_disease']*100:.1f}%")
-    print(f"{'Risk Level':>25}: {result['risk_level']}")
-    print(f"{'Expected':>25}: {patient['expected']}")
-    
-    if "No Disease" in patient['expected'] and result['prediction'] == 0:
-        print(f"{'Status':>25}: ✅ CORRECT")
-    elif "Disease" in patient['expected'] and result['prediction'] == 1:
-        print(f"{'Status':>25}: ✅ CORRECT")
-    elif "Uncertain" in patient['expected']:
-        print(f"{'Status':>25}: ⚠️  UNCERTAIN CASE")
+correct = skipped = wrong = 0
+
+for i, tc in enumerate(TEST_CASES, 1):
+    res = predict_patient(tc["data"])
+
+    print(f"\n{'=' * 60}")
+    print(f"Test {i}: {tc['label']}")
+    print(f"  Age {tc['data']['age']}, Sex {'M' if tc['data']['sex'] else 'F'}, "
+          f"CP={tc['data']['cp']}, CA={tc['data']['ca']}, "
+          f"Thal={tc['data']['thal']}, Oldpeak={tc['data']['oldpeak']}")
+    print(f"  {'Prediction':>20}: {res['label']}")
+    print(f"  {'Disease prob':>20}: {res['prob_disease'] * 100:.1f}%")
+    print(f"  {'No-disease prob':>20}: {res['prob_no_disease'] * 100:.1f}%")
+    print(f"  {'Risk level':>20}: {res['risk']}")
+    print(f"  {'Expected':>20}: {tc['expected']}")
+
+    if tc["expected"] == "Uncertain":
+        print(f"  {'Status':>20}: ⚠  UNCERTAIN (skipped)")
+        skipped += 1
+    elif tc["expected"] == res["label"]:
+        print(f"  {'Status':>20}: ✅ CORRECT")
+        correct += 1
     else:
-        print(f"{'Status':>25}: ❌ MISMATCH")
+        print(f"  {'Status':>20}: ❌ MISMATCH")
+        wrong += 1
 
 print("\n" + "=" * 60)
-print("TESTING COMPLETE")
+print(f"RESULTS  ✅ {correct} correct  ❌ {wrong} wrong  ⚠  {skipped} uncertain")
 print("=" * 60)
 
 print("""
-NOTE: This dataset has some counterintuitive patterns:
-- cp=0 (typical angina) is more common in NO disease cases
-- ca=0 (no blocked vessels) is more common in DISEASE cases
-- thal=2 (fixed defect) is more common in DISEASE cases
-- thal=3 (reversible defect) is more common in NO disease cases
+NOTE: This UCI Heart Disease dataset has counterintuitive patterns:
+  cp=0 (typical angina)   → more common in NO-disease cases
+  ca=0 (no vessels)       → more common in DISEASE cases
+  thal=2 (fixed defect)   → more common in DISEASE cases
+  thal=3 (reversible)     → more common in NO-disease cases
 
-The model learns these patterns from the data, even if they seem
-medically counterintuitive. This is why test cases must match the
-actual data distribution to get expected results.
+The model learns these from the data. Mismatches on edge cases are expected.
 """)

@@ -616,7 +616,7 @@ export default function DoctorDashboard() {
       />
       
       <div style={{ flex: 1, overflowY: "auto", background: "#f8fafc" }}>
-        <div style={{ padding: 32, maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ padding: 40, maxWidth: 1400 }}>
           {loading ? <Loader message="Loading dashboard..." /> : renderContent()}
         </div>
       </div>

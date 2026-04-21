@@ -13,7 +13,7 @@ import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader } from "../co
 import { 
   Home, Brain, HeartPulse, Stethoscope, CalendarPlus, Calendar, 
   ClipboardList, Pill, Bell, Droplet, Footprints, Moon, Salad, 
-  Smile, Phone, CheckCircle, XCircle, Info, X, Check
+  Smile, Phone, CheckCircle, XCircle, Info, X, Check, Clock
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
@@ -245,6 +245,8 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
 
 // ─── Medicine Reminders tab ───────────────────────────────────────────────────
 
+// ─── Medicine Reminders tab ───────────────────────────────────────────────────
+
 function MedicineReminders() {
   const [reminders, setReminders] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
@@ -273,47 +275,70 @@ function MedicineReminders() {
 
   if (loading) return <Loader message="Loading medicines..." />;
 
+  const activeMedicinesCount = prescriptions.reduce((sum, p) => sum + (p.medicines?.length || 0), 0);
+  const takenTodayCount = reminders.reduce((sum, r) => sum + (r.logs?.filter(l => new Date(l.takenAt).toDateString() === new Date().toDateString() && !l.skipped).length ? 1 : 0), 0);
+
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Medicine Reminders</h1>
-        <p style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Track your prescribed medicines and custom reminders.</p>
+    <div style={{ fontFamily: "'Inter', 'DM Sans', sans-serif" }}>
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em" }}>Medicine Reminders</h1>
+        <p style={{ fontSize: 15, color: "#64748b", marginTop: 4 }}>Keep track of your active prescriptions and daily intake schedule.</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
+        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.02)" }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>Active Prescriptions</div>
+            <div style={{ fontSize: "1.875rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{prescriptions.length}</div>
+          </div>
+          <div style={{ width: 44, height: 44, background: "#f8fafc", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}><ClipboardList size={20} color="#94a3b8" /></div>
+        </div>
+        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.02)" }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>Total Medicines</div>
+            <div style={{ fontSize: "1.875rem", fontWeight: 700, color: "#3b82f6", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{activeMedicinesCount}</div>
+          </div>
+          <div style={{ width: 44, height: 44, background: "#eff6ff", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}><Pill size={20} color="#3b82f6" /></div>
+        </div>
+        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.02)" }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>Doses Logged Today</div>
+            <div style={{ fontSize: "1.875rem", fontWeight: 700, color: "#10b981", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{takenTodayCount}</div>
+          </div>
+          <div style={{ width: 44, height: 44, background: "#f0fdf4", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle size={20} color="#10b981" /></div>
+        </div>
       </div>
 
       {prescriptions.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: "#64748b", marginBottom: 14, display: "flex", alignItems: "center", gap: 7 }}>
-            <span style={{ width: 6, height: 6, background: "#1db585", borderRadius: "50%", display: "inline-block" }}></span>
-            Active prescriptions
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <ClipboardList size={20} color="#10b981" /> Active Prescriptions
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(450px, 1fr))", gap: 20 }}>
             {prescriptions.map(rx => (
-              <SectionCard key={rx._id}>
-                <div style={{ padding: "14px 18px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div key={rx._id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(15,23,42,0.03)", transition: "transform 0.2s", display: "flex", flexDirection: "column" }} onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", background: "#fafafa", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: "#1e293b" }}>Dr. {rx.doctorId?.name || rx.doctorName || "Your Doctor"}</div>
-                    <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>Diagnosis: {rx.diagnosis || "Not specified"}</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", marginBottom: 2 }}>{rx.diagnosis || "General Prescription"}</div>
+                    <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}><Stethoscope size={14} /> Dr. {rx.doctorId?.name || rx.doctorName || "Your Doctor"}</div>
                   </div>
-                  <div style={{ display: "flex", gap: 7 }}>
-                    <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 999, background: "#f0faf7", color: "#0a7a57" }}>{rx.medicines?.length || 0} medicines</span>
-                    {rx.validUntil && <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 999, background: "#f1f5f9", color: "#64748b" }}>Until {new Date(rx.validUntil).toLocaleDateString()}</span>}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {rx.validUntil && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: "#f1f5f9", color: "#64748b" }}><Calendar size={12} /> Until {new Date(rx.validUntil).toLocaleDateString()}</span>}
                   </div>
                 </div>
-                <div style={{ padding: 16 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-                    {rx.medicines?.map((m, i) => (
-                      <div key={i} style={{ background: "#f8fafc", borderRadius: 10, padding: "12px 14px", display: "flex", gap: 10, alignItems: "flex-start" }}>
-                        <div style={{ width: 32, height: 32, background: "#f0faf7", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Pill size={16} color="#1db585" /></div>
-                        <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{m.name}</div>
-                          <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 3 }}>{[m.dosage, m.frequency, m.duration].filter(Boolean).join(" · ")}</div>
-                        </div>
+                <div style={{ padding: 20, flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+                  {rx.medicines?.map((m, i) => (
+                    <div key={i} style={{ background: "#f8fafc", border: "1px solid #f1f5f9", borderRadius: 12, padding: "12px 16px", display: "flex", gap: 12, alignItems: "center" }}>
+                      <div style={{ width: 36, height: 36, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Pill size={18} color="#10b981" /></div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>{m.name}</div>
+                        <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 2 }}>{[m.dosage, m.frequency, m.duration].filter(Boolean).join(" • ")}</div>
                       </div>
-                    ))}
-                  </div>
-                  {rx.advice && <div style={{ marginTop: 12, padding: "10px 14px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, fontSize: 13, color: "#92400e", display: "flex", alignItems: "center", gap: 8 }}><Info size={16} color="#d97706" /> {rx.advice}</div>}
+                    </div>
+                  ))}
+                  {rx.advice && <div style={{ marginTop: "auto", paddingTop: 12, padding: "12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, fontSize: 13, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 8 }}><Info size={16} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }}/> <span style={{ lineHeight: 1.5 }}>{rx.advice}</span></div>}
                 </div>
-              </SectionCard>
+              </div>
             ))}
           </div>
         </div>
@@ -321,50 +346,53 @@ function MedicineReminders() {
 
       {reminders.length > 0 && (
         <div>
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: "#64748b", marginBottom: 14, display: "flex", alignItems: "center", gap: 7 }}>
-            <span style={{ width: 6, height: 6, background: "#3b82f6", borderRadius: "50%", display: "inline-block" }}></span>
-            Custom reminders
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Bell size={20} color="#3b82f6" /> Daily Medication Schedule
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
             {reminders.map(r => (
-              <SectionCard key={r._id}>
-                <div style={{ padding: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: "#1e293b" }}>{r.medicineName}</div>
-                      <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>{r.dosage || "As prescribed"}</div>
-                    </div>
-                    <button onClick={() => del(r._id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", padding: 4 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                    </button>
+              <div key={r._id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "20px", boxShadow: "0 4px 12px rgba(15,23,42,0.03)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{r.medicineName}</div>
+                    <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{r.dosage || "As prescribed"}</div>
                   </div>
-                  {r.times?.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>{r.times.map((t, i) => <span key={i} style={{ padding: "3px 10px", background: "#f0faf7", color: "#0a7a57", fontSize: 12, fontWeight: 500, borderRadius: 999, display: "flex", alignItems: "center", gap: 4 }}><Bell size={12} /> {t}</span>)}</div>}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
-                    <button onClick={() => log(r._id)} disabled={loggingId === r._id} style={{ padding: "8px", fontSize: 13, fontWeight: 500, background: "#1db585", color: "#fff", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                      {loggingId === r._id ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /> : <><Check size={14} /> Taken</>}
-                    </button>
-                    <button onClick={() => log(r._id, true)} disabled={loggingId === r._id} style={{ padding: "8px", fontSize: 13, fontWeight: 500, background: "#f8fafc", color: "#64748b", border: "1.5px solid #e2e8f0", borderRadius: 9, cursor: "pointer", fontFamily: "inherit" }}>Skip</button>
-                  </div>
-                  {r.logs?.length > 0 && (
-                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #f8fafc" }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recent logs</div>
+                  <button onClick={() => del(r._id)} style={{ width: 28, height: 28, background: "#fef2f2", border: "none", borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#fee2e2"} onMouseLeave={e=>e.currentTarget.style.background="#fef2f2"}>
+                    <X size={14} />
+                  </button>
+                </div>
+                {r.times?.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>{r.times.map((t, i) => <span key={i} style={{ padding: "4px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", color: "#475569", fontSize: 12, fontWeight: 600, borderRadius: 999, display: "flex", alignItems: "center", gap: 6 }}><Clock size={12} /> {t}</span>)}</div>}
+                
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <button onClick={() => log(r._id)} disabled={loggingId === r._id} style={{ padding: "10px", fontSize: 14, fontWeight: 600, background: "#10b981", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#059669"} onMouseLeave={e=>e.currentTarget.style.background="#10b981"}>
+                    {loggingId === r._id ? <div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /> : <><CheckCircle size={16} /> Mark Taken</>}
+                  </button>
+                  <button onClick={() => log(r._id, true)} disabled={loggingId === r._id} style={{ padding: "10px", fontSize: 14, fontWeight: 600, background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#f1f5f9";e.currentTarget.style.borderColor="#cbd5e1";}} onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";e.currentTarget.style.borderColor="#e2e8f0";}}>Skip</button>
+                </div>
+                
+                {r.logs?.length > 0 && (
+                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recent Logs</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {r.logs.slice(-2).reverse().map((l, i) => (
-                        <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#64748b", marginBottom: 3 }}>
-                          <span style={{ color: l.skipped ? "#94a3b8" : "#16a34a", fontWeight: 500 }}>{l.skipped ? "Skipped" : "Taken"}</span>
-                          <span>{new Date(l.takenAt).toLocaleDateString()} {new Date(l.takenAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                          <span style={{ color: l.skipped ? "#64748b" : "#10b981", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                            {l.skipped ? <XCircle size={14} /> : <CheckCircle size={14} />} {l.skipped ? "Skipped" : "Taken"}
+                          </span>
+                          <span style={{ color: "#64748b", fontWeight: 500 }}>{new Date(l.takenAt).toLocaleDateString()} at {new Date(l.takenAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
-              </SectionCard>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
       )}
 
       {prescriptions.length === 0 && reminders.length === 0 && (
-        <SectionCard><EmptyState icon={<Pill size={24} color="#94a3b8" />} title="No medicines yet" subtitle="Your doctor will add prescriptions here. You can also create custom reminders." /></SectionCard>
+        <SectionCard><EmptyState icon={<Pill size={32} color="#94a3b8" />} title="No medicines to track" subtitle="Your doctor will add prescriptions here. You can also create custom reminders." /></SectionCard>
       )}
     </div>
   );
@@ -456,7 +484,7 @@ export default function PatientDashboard() {
       <ToastStack toasts={toasts} onDismiss={dismissToast} onAction={handleToastAction} />
       <Sidebar user={user} navItems={getNavItems(appointments.filter(a => a.status === "confirmed" || a.status === "pending").length)} activeTab={tab} onTabChange={setTab} onLogout={logout} wsConnected={wsConnected} />
       <div style={{ flex: 1, overflowY: "auto", background: "#f8fafc" }}>
-        <div style={{ padding: 32, maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ padding: 40, maxWidth: 1400 }}>
           {loading ? <Loader message="Loading your dashboard…" /> : renderTab()}
         </div>
       </div>

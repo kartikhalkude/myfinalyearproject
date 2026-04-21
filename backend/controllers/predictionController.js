@@ -3,14 +3,12 @@ const path                   = require('path');
 const DiabetesPrediction     = require('../models/DiabetesPrediction');
 const HeartDiseasePrediction = require('../models/HeartDiseasePrediction');
 const PneumoniaPrediction    = require('../models/PneumoniaPrediction');
-const BrainTumorPrediction   = require('../models/BrainTumorPrediction');
 
 // Absolute paths — work regardless of where Node is started from
 const ML_DIR          = path.join(__dirname, '..', 'ml_model');
 const DIABETES_SCRIPT = path.join(ML_DIR, 'predict.py');
 const HEART_SCRIPT    = path.join(ML_DIR, 'heart_predict.py');
 const PNEUMONIA_SCRIPT = path.join(ML_DIR, 'pneumonia_predict.py');
-const BRAIN_TUMOR_SCRIPT = path.join(ML_DIR, 'brain_tumor_predict.py');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -203,67 +201,7 @@ const getPneumoniaPredictions = async (req, res) => {
   }
 };
 
-// ─── Brain Tumor ─────────────────────────────────────────────────────────────
 
-const BRAIN_TUMOR_ALLOWED_MIMETYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/bmp', 'image/tiff'];
-const BRAIN_TUMOR_MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-
-const predictBrainTumor = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image file uploaded' });
-    }
-
-    if (!BRAIN_TUMOR_ALLOWED_MIMETYPES.includes(req.file.mimetype)) {
-      return res.status(400).json({ 
-        error: `Invalid file type. Allowed: PNG, JPEG, WEBP, BMP, TIFF. Got: ${req.file.mimetype}` 
-      });
-    }
-
-    if (req.file.size > BRAIN_TUMOR_MAX_SIZE) {
-      return res.status(400).json({ 
-        error: `File too large. Maximum size: 10 MB. Got: ${(req.file.size / 1024 / 1024).toFixed(2)} MB` 
-      });
-    }
-
-    const imageBase64 = req.file.buffer.toString('base64');
-    const inputData = { image: imageBase64 };
-
-    const prediction = await runPythonScript(BRAIN_TUMOR_SCRIPT, inputData);
-
-    if (!prediction.prediction || prediction.probability === undefined) {
-      throw new Error('Invalid prediction output from model');
-    }
-
-    await new BrainTumorPrediction({
-      userId: req.userId,
-      prediction: prediction.prediction,
-      probability: prediction.probability
-    }).save();
-
-    res.json(prediction);
-  } catch (error) {
-    console.error('[predictBrainTumor]', error.message);
-    res.status(500).json({ 
-      error: 'Prediction failed', 
-      details: error.message 
-    });
-  }
-};
-
-const getBrainTumorPredictions = async (req, res) => {
-  try {
-    const predictions = await BrainTumorPrediction
-      .find({ userId: req.userId })
-      .sort({ createdAt: -1 })
-      .limit(10);
-    
-    res.json(predictions);
-  } catch (error) {
-    console.error('[getBrainTumorPredictions]', error.message);
-    res.status(500).json({ error: 'Failed to fetch predictions' });
-  }
-};
 
 module.exports = { 
   predictDiabetes, 
@@ -271,7 +209,5 @@ module.exports = {
   predictHeartDisease, 
   getHeartPredictions, 
   predictPneumonia, 
-  getPneumoniaPredictions,
-  predictBrainTumor,
-  getBrainTumorPredictions
+  getPneumoniaPredictions
 };

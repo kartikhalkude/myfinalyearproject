@@ -275,53 +275,7 @@ export const statsAPI = {
   },
 };
 
-// ─── Reminders API ────────────────────────────────────────────────────────────
-export const remindersAPI = {
-  getReminders: async () => {
-    try {
-      const response = await apiClient.get('/reminders');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { error: 'Failed to fetch reminders' };
-    }
-  },
 
-  getTodaySchedule: async () => {
-    try {
-      const response = await apiClient.get('/reminders/today');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { error: "Failed to fetch today's schedule" };
-    }
-  },
-
-  createReminder: async (reminderData) => {
-    try {
-      const response = await apiClient.post('/reminders', reminderData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { error: 'Failed to create reminder' };
-    }
-  },
-
-  logMedicine: async (id, logData) => {
-    try {
-      const response = await apiClient.post(`/reminders/${id}/log`, logData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { error: 'Failed to log medicine' };
-    }
-  },
-
-  deleteReminder: async (id) => {
-    try {
-      const response = await apiClient.delete(`/reminders/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { error: 'Failed to delete reminder' };
-    }
-  },
-};
 
 // Also export as default for legacy imports
 export default apiClient;

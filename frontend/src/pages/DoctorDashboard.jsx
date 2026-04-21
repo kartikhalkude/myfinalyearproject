@@ -5,11 +5,10 @@ import VideoCall from "../components/VideoCall";
 import apiClient from "../services/apiClient";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
-import BrainTumorPrediction from "../components/BrainTumorPrediction";
 import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader } from "../components/UI";
 import { 
   Home, Calendar, CalendarClock, Users, FileText, Pill, ClipboardList, 
-  Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, Brain
+  Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
@@ -26,8 +25,6 @@ function getNavItems(apptCount) {
     { section: "Medical" },
     { id: "prescriptions", label: "Prescriptions", icon: <Pill size={18} /> },
     { id: "health-records", label: "Health Records", icon: <ClipboardList size={18} /> },
-    { section: "AI Screening" },
-    { id: "braintumor", label: "Brain Tumor Check", icon: <Brain size={18} /> },
   ];
 }
 
@@ -393,6 +390,8 @@ export default function DoctorDashboard() {
   const [doctorPatients, setDoctorPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
+  const activeCallRef = useRef(null);
+  useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
   const [incomingCall, setIncomingCall] = useState(null);
   const [toasts, setToasts] = useState([]);
 
@@ -459,17 +458,22 @@ export default function DoctorDashboard() {
   useEffect(() => {
     fetchDashboardData();
 
-    const handleAppointmentUpdate = () => {
+    const handleAppointmentUpdate = (data) => {
       fetchDashboardData();
+      if (data?.initiatorId === user?.id) return;
       addToast({ type: "appointment", title: "Appointment Updated", message: "An appointment was updated", autoClose: true });
     };
 
     const handleNewAppointment = (data) => {
       fetchDashboardData();
+      if (data?.initiatorId === user?.id) return;
       addToast({ type: "appointment", title: "New Appointment Request", message: `${data.appointment?.patientName || "A patient"} requested an appointment`, autoClose: true });
     };
 
     const handleIncomingCall = (data) => {
+      // Don't show if already in a call for this specific appointment
+      if (activeCallRef.current?.appointmentId?.toString() === data.appointmentId?.toString()) return;
+      if (activeCallRef.current) return; // Don't show if already in another call
       setIncomingCall(data);
       addToast({
         type: "call",
@@ -483,18 +487,22 @@ export default function DoctorDashboard() {
     };
 
     const handlePrescriptionCreated = (data) => {
+      if (data?.initiatorId === user?.id) return;
       addToast({ type: "success", title: "Prescription Created", message: `Prescription for ${data.prescription?.patientId?.name || "patient"} has been created`, autoClose: true });
     };
 
     const handlePrescriptionUpdated = (data) => {
+      if (data?.initiatorId === user?.id) return;
       addToast({ type: "success", title: "Prescription Updated", message: `Prescription updated successfully`, autoClose: true });
     };
 
     const handleHealthRecordCreated = (data) => {
+      if (data?.initiatorId === user?.id) return;
       addToast({ type: "success", title: "Health Record Created", message: `Health record "${data.record?.title}" has been created`, autoClose: true });
     };
 
     const handleHealthRecordUpdated = (data) => {
+      if (data?.initiatorId === user?.id) return;
       addToast({ type: "success", title: "Health Record Updated", message: `Health record updated successfully`, autoClose: true });
     };
 
@@ -520,13 +528,15 @@ export default function DoctorDashboard() {
     };
   }, [fetchDashboardData, addToast]);
 
-  const startVideoCall = (appointment) => {
-    setActiveCall({
-      appointmentId: appointment._id,
-      otherUserId: appointment.patientId?._id || appointment.patientId,
-      otherUserName: appointment.patientName,
+  const startVideoCall = (apt) => {
+    const callObj = {
+      appointmentId: apt._id,
+      otherUserId: apt.patientId?._id || apt.patientId,
+      otherUserName: apt.patientName,
       isDoctor: true,
-    });
+    };
+    activeCallRef.current = callObj;
+    setActiveCall(callObj);
   };
 
   const answerCall = () => {
@@ -571,7 +581,7 @@ export default function DoctorDashboard() {
       case "reports": return <Reports stats={stats} appointments={appointments} />;
       case "prescriptions": return <Prescriptions doctorPatients={doctorPatients} />;
       case "health-records": return <HealthRecords doctorPatients={doctorPatients} />;
-      case "braintumor": return <BrainTumorPrediction />;
+
       default: return null;
     }
   };

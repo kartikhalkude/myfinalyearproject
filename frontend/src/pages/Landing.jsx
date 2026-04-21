@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Video, Brain, Calendar, Pill, Folder, Bell, ArrowRight, ShieldCheck, Activity, Users, Star, CheckCircle } from "lucide-react";
+import { Video, Brain, Calendar, Pill, Folder, ArrowRight, ShieldCheck, Activity, Users, Star, CheckCircle } from "lucide-react";
 
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
@@ -18,7 +18,6 @@ export default function Landing() {
     { icon: <Calendar size={24} color="#1db585" />, tag: "Instant", title: "Smart Scheduling", desc: "Book, reschedule, or cancel appointments with real-time slot availability." },
     { icon: <Pill size={24} color="#1db585" />, tag: "Digital", title: "E-Prescriptions", desc: "Receive and manage digital prescriptions with refill requests built in." },
     { icon: <Folder size={24} color="#1db585" />, tag: "Secure", title: "Health Records", desc: "All your medical history in one encrypted, HIPAA-compliant place." },
-    { icon: <Bell size={24} color="#1db585" />, tag: "Proactive", title: "Medicine Reminders", desc: "Custom schedules and dose logs so you never miss a medication." },
   ];
 
   const stats = [

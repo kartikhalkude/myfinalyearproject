@@ -34,6 +34,7 @@ function VideoCall({
   const [debugInfo, setDebugInfo] = useState("");
   const [showDebug, setShowDebug] = useState(false);
   const [isPipMinimized, setIsPipMinimized] = useState(false);
+  const [manualIncomingCall, setManualIncomingCall] = useState(null);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -41,9 +42,12 @@ function VideoCall({
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const callTimerRef = useRef(null);
+  const mediaInitializationPromiseRef = useRef(null);
   const handlersRef = useRef({});
   const iceCandidateQueueRef = useRef([]);
   const incomingCallProcessedRef = useRef(false);
+  const callStateRef = useRef(callState);
+  useEffect(() => { callStateRef.current = callState; }, [callState]);
 
   const iceServers = {
     iceServers: [
@@ -59,35 +63,51 @@ function VideoCall({
   };
 
   const initializeMedia = async () => {
-    try {
-      addDebugInfo("Requesting media access...");
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: true,
-      });
-
-      addDebugInfo(
-        `✓ Media stream acquired. Video: ${stream.getVideoTracks().length}, Audio: ${stream.getAudioTracks().length}`,
-      );
-
-      localStreamRef.current = stream;
-
-      if (localVideoRef.current) {
-        addDebugInfo("Setting local video stream on ref...");
-        localVideoRef.current.srcObject = stream;
-        localVideoRef.current.play().catch((e) => addDebugInfo("⚠ Local video play error: " + e.message));
-        addDebugInfo("✓ Local video stream set");
-      } else {
-        addDebugInfo("Local video ref not ready yet, will be set when call becomes active.");
-      }
-
-      return stream;
-    } catch (error) {
-      const errorMsg = "Failed to access camera/microphone: " + error.message;
-      addDebugInfo("✗ " + errorMsg);
-      setError(errorMsg);
-      return null;
+    // 1. If already have an active stream, return it
+    if (localStreamRef.current && localStreamRef.current.active) {
+      addDebugInfo("Reusing existing local media stream");
+      return localStreamRef.current;
     }
+
+    // 2. If already initializing, wait for that promise
+    if (mediaInitializationPromiseRef.current) {
+      addDebugInfo("Waiting for existing media initialization...");
+      return mediaInitializationPromiseRef.current;
+    }
+
+    // 3. Start new initialization
+    mediaInitializationPromiseRef.current = (async () => {
+      try {
+        addDebugInfo("Requesting media access...");
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true,
+        });
+
+        addDebugInfo(
+          `✓ Media stream acquired. Video: ${stream.getVideoTracks().length}, Audio: ${stream.getAudioTracks().length}`,
+        );
+
+        localStreamRef.current = stream;
+
+        if (localVideoRef.current) {
+          addDebugInfo("Setting local video stream on ref...");
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch((e) => addDebugInfo("⚠ Local video play error: " + e.message));
+        }
+
+        return stream;
+      } catch (error) {
+        const errorMsg = "Failed to access camera/microphone: " + error.message;
+        addDebugInfo("✗ " + errorMsg);
+        setError(errorMsg);
+        return null;
+      } finally {
+        mediaInitializationPromiseRef.current = null;
+      }
+    })();
+
+    return mediaInitializationPromiseRef.current;
   };
 
   const createPeerConnection = async (stream) => {
@@ -172,27 +192,31 @@ function VideoCall({
         }
       };
 
-      addDebugInfo(
-        `Processing ${iceCandidateQueueRef.current.length} queued ICE candidates`,
-      );
-      while (iceCandidateQueueRef.current.length > 0) {
-        const queuedCandidate = iceCandidateQueueRef.current.shift();
-        try {
-          await peerConnection.addIceCandidate(
-            new RTCIceCandidate(queuedCandidate),
-          );
-          addDebugInfo(`✓ Added queued ICE candidate`);
-        } catch (error) {
-          addDebugInfo(`⚠ Failed to add queued candidate: ${error.message}`);
-        }
-      }
-
       return peerConnection;
     } catch (error) {
       const errorMsg = "Failed to create peer connection: " + error.message;
       addDebugInfo("✗ " + errorMsg);
       setError(errorMsg);
       return null;
+    }
+  };
+
+  const processIceCandidateQueue = async () => {
+    if (!peerConnectionRef.current || !peerConnectionRef.current.remoteDescription) return;
+    
+    const queue = iceCandidateQueueRef.current;
+    if (queue.length === 0) return;
+    
+    addDebugInfo(`Processing ${queue.length} queued ICE candidates`);
+    while (queue.length > 0) {
+      const candidate = queue.shift();
+      if (!candidate) continue;
+      try {
+        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        addDebugInfo(`✓ Added queued ICE candidate`);
+      } catch (error) {
+        addDebugInfo(`⚠ Failed to add queued candidate: ${error.message}`);
+      }
     }
   };
 
@@ -241,11 +265,32 @@ function VideoCall({
 
   const handleIncomingCall = async (data) => {
     try {
+      if (data.appointmentId !== appointmentId) {
+        addDebugInfo(
+          `⚠ Incoming call for different appointment (${data.appointmentId}) ignored`,
+        );
+        return;
+      }
+      
+      if (incomingCallProcessedRef.current || peerConnectionRef.current) {
+        addDebugInfo(
+          "⚠ Incoming call already being processed or PC exists, ignoring",
+        );
+        return;
+      }
+      incomingCallProcessedRef.current = true;
+
       addDebugInfo(
         `>>> Received incoming call from ${data.callerName} (${data.callerId})`,
       );
       const { offer } = data;
-      setCallState("ringing");
+      
+      const isWaitingInRoom = callStateRef.current === "idle" && !isDoctor;
+      if (!isWaitingInRoom) {
+        setCallState("ringing");
+      } else {
+        addDebugInfo("Waiting room detected - preparing for auto-answer");
+      }
 
       const stream = await initializeMedia();
       if (!stream) {
@@ -264,6 +309,9 @@ function VideoCall({
         new RTCSessionDescription(offer),
       );
 
+      // Process any queued candidates now that remote description is set
+      await processIceCandidateQueue();
+
       addDebugInfo("Creating answer...");
       const answer = await peerConnection.createAnswer({
         offerToReceiveAudio: true,
@@ -280,6 +328,23 @@ function VideoCall({
       });
 
       addDebugInfo("✓ Answer sent");
+      
+      // If we were auto-handling from the waiting room, transition to active
+      if (isWaitingInRoom) {
+        setManualIncomingCall(data);
+        addDebugInfo(">>> Auto-accepting call (handshake complete)");
+        setCallState("active");
+        startCallTimer();
+      } else {
+        // Safe reset: if auto-accept was triggered but we're still idle after 10s, 
+        // allow another attempt.
+        setTimeout(() => {
+          if (callStateRef.current === "idle") {
+            incomingCallProcessedRef.current = false;
+            addDebugInfo("Guard reset: auto-accept timed out without connecting");
+          }
+        }, 10000);
+      }
     } catch (error) {
       const errorMsg = "Failed to handle incoming call: " + error.message;
       addDebugInfo("✗ " + errorMsg);
@@ -297,10 +362,18 @@ function VideoCall({
         return;
       }
 
+      if (peerConnectionRef.current.signalingState === "stable") {
+        addDebugInfo("⚠ Connection is already stable, ignoring duplicate answer");
+        return;
+      }
+
       addDebugInfo("Setting remote description from answer...");
       await peerConnectionRef.current.setRemoteDescription(
         new RTCSessionDescription(answer),
       );
+
+      // Process any queued candidates now that remote description is set
+      await processIceCandidateQueue();
 
       addDebugInfo("✓ Answer processed - transitioning to active state");
       setCallState("active");
@@ -317,15 +390,15 @@ function VideoCall({
     try {
       const { candidate } = data;
 
-      if (!peerConnectionRef.current) {
-        addDebugInfo(`Queueing ICE candidate (peer connection not ready yet)`);
+      if (!peerConnectionRef.current || !peerConnectionRef.current.remoteDescription) {
+        addDebugInfo(`Queueing ICE candidate (remote description not ready yet)`);
         iceCandidateQueueRef.current.push(candidate);
         return;
       }
 
       if (candidate) {
         addDebugInfo(
-          `Adding ICE candidate: ${candidate.candidate.substring(0, 50)}...`,
+          `Adding ICE candidate: ${candidate.candidate?.substring(0, 50) || "..." }...`,
         );
         await peerConnectionRef.current.addIceCandidate(
           new RTCIceCandidate(candidate),
@@ -392,6 +465,8 @@ function VideoCall({
       peerConnectionRef.current = null;
       addDebugInfo("Peer connection closed");
     }
+    
+    incomingCallProcessedRef.current = false;
   };
 
   const startCallTimer = () => {
@@ -479,7 +554,6 @@ function VideoCall({
       addDebugInfo(
         ">>> Auto-handling incoming call from notification acceptance",
       );
-      incomingCallProcessedRef.current = true;
       handleIncomingCall(incomingCallData);
     }
   }, [incomingCallData, isDoctor]);
@@ -631,9 +705,25 @@ function VideoCall({
             </button>
           )}
           {!isDoctor && (
-            <p style={{ color: "#64748b", fontSize: "1.125rem" }}>
-              Waiting for doctor to initiate call...
+            <p style={{ color: "#60a5fa", fontSize: "1.125rem", fontWeight: 600, animation: "pulse 2s infinite" }}>
+              {incomingCallProcessedRef.current 
+                ? "Incoming call detected - Connecting..." 
+                : "Waiting for doctor to initiate call..."}
             </p>
+          )}
+          {manualIncomingCall && callState === "idle" && (
+            <button
+              onClick={() => handleIncomingCall(manualIncomingCall)}
+              style={{ 
+                ...btnStyle, 
+                background: "linear-gradient(to right, #3b82f6, #2563eb)", 
+                marginTop: 24,
+                boxShadow: "0 20px 25px -5px rgba(59, 130, 246, 0.4)" 
+              }}
+            >
+              <Video style={{ width: 20, height: 20, marginRight: 8 }} />
+              <span>Join Consultation Now</span>
+            </button>
           )}
         </div>
       )}

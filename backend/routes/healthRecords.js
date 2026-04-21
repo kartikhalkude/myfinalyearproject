@@ -1,6 +1,7 @@
 const express        = require('express');
 const router         = express.Router();
 const authMiddleware = require('../middleware/auth');
+const upload         = require('../middleware/upload');
 const {
   getHealthRecords,
   getHealthRecordById,
@@ -10,6 +11,7 @@ const {
   getRecordsByType,
   getPatientRecords,
   addVitalSign,
+  getHealthRecordFile
 } = require('../controllers/healthRecordController');
 
 // ─── Health Record Routes ─────────────────────────────────────────────────────
@@ -23,11 +25,14 @@ router.get('/type/:type', authMiddleware, getRecordsByType);
 // Get patient's records (doctor view)
 router.get('/patient/:patientId', authMiddleware, getPatientRecords);
 
+// Get a specific health record's attached file
+router.get('/:id/file', authMiddleware, getHealthRecordFile);
+
 // Get a specific health record
 router.get('/:id', authMiddleware, getHealthRecordById);
 
-// Create a new health record (doctor only)
-router.post('/', authMiddleware, createHealthRecord);
+// Create a new health record (doctor or patient with optional file)
+router.post('/', authMiddleware, upload.single('file'), createHealthRecord);
 
 // Update a health record (doctor only)
 router.patch('/:id', authMiddleware, updateHealthRecord);

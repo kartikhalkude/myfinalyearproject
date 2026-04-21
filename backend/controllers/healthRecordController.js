@@ -1,6 +1,6 @@
 const HealthRecord = require('../models/HealthRecord');
 const User        = require('../models/User');
-const { userSockets, getIo } = require('../socket');
+const { getIo } = require('../socket');
 
 // ─── Get All Health Records ───────────────────────────────────────────────────
 
@@ -17,6 +17,7 @@ const getHealthRecords = async (req, res) => {
     }
     
     const records = await query
+      .select('-fileData')
       .populate('doctorId', 'name specialization email')
       .populate('patientId', 'name email')
       .sort({ date: -1, createdAt: -1 });
@@ -89,8 +90,14 @@ const createHealthRecord = async (req, res) => {
       resolvedPatientId = patientId;
       resolvedDoctorId  = req.userId;
     } else {
-      // Patient creates a record for themselves — no doctorId
+      // Patient creates a record for themselves — can optionally specify a doctor
       resolvedPatientId = req.userId;
+      if (req.body.doctorId) {
+        const doctor = await User.findById(req.body.doctorId);
+        if (doctor && doctor.role === 'doctor') {
+          resolvedDoctorId = req.body.doctorId;
+        }
+      }
     }
 
     const record = await new HealthRecord({
@@ -101,6 +108,9 @@ const createHealthRecord = async (req, res) => {
       content,
       severity:   severity || 'normal',
       notes,
+      fileData:    req.file ? req.file.buffer : undefined,
+      fileContentType: req.file ? req.file.mimetype : undefined,
+      fileName:   req.file ? req.file.originalname : undefined,
       date:       date ? new Date(date) : new Date(),
     }).save();
 
@@ -108,15 +118,21 @@ const createHealthRecord = async (req, res) => {
       .populate('doctorId', 'name specialization email')
       .populate('patientId', 'name email');
 
-    // If a doctor created this, notify the patient via WebSocket
+    // Notification logic
     if (isDoctor) {
-      const patientSocketId = userSockets.get(resolvedPatientId.toString());
-      if (patientSocketId) {
-        getIo().to(patientSocketId).emit('health-record:created', {
-          type:   'created',
-          record: populated,
-        });
-      }
+      // Notify patient when doctor creates record
+      getIo().to(`user:${resolvedPatientId}`).emit('health-record:created', {
+        type:   'created',
+        record: populated,
+        initiatorId: req.userId
+      });
+    } else if (resolvedDoctorId) {
+      // Notify doctor when patient sends/shares a record
+      getIo().to(`user:${resolvedDoctorId}`).emit('health-record:created', {
+        type:   'created',
+        record: populated,
+        initiatorId: req.userId
+      });
     }
 
     res.status(201).json({ record: populated });
@@ -169,13 +185,11 @@ const updateHealthRecord = async (req, res) => {
 
     // Notify patient when a doctor updates their record
     if (req.userRole === 'doctor') {
-      const patientSocketId = userSockets.get(record.patientId.toString());
-      if (patientSocketId) {
-        getIo().to(patientSocketId).emit('health-record:updated', {
-          type:   'updated',
-          record: populated,
-        });
-      }
+      getIo().to(`user:${record.patientId}`).emit('health-record:updated', {
+        type:   'updated',
+        record: populated,
+        initiatorId: req.userId
+      });
     }
 
     res.json({ record: populated });
@@ -215,13 +229,11 @@ const deleteHealthRecord = async (req, res) => {
 
     // Notify patient when a doctor deletes their record
     if (wasCreatedByDoctor) {
-      const patientSocketId = userSockets.get(patientId);
-      if (patientSocketId) {
-        getIo().to(patientSocketId).emit('health-record:deleted', {
-          type:     'deleted',
-          recordId: id,
-        });
-      }
+      getIo().to(`user:${patientId}`).emit('health-record:deleted', {
+        type:     'deleted',
+        recordId: id,
+        initiatorId: req.userId
+      });
     }
 
     res.json({ message: 'Health record deleted successfully' });
@@ -270,6 +282,7 @@ const getPatientRecords = async (req, res) => {
 
     const { patientId } = req.params;
     const records = await HealthRecord.find({ patientId, doctorId: req.userId })
+      .select('-fileData')
       .populate('doctorId', 'name specialization email')
       .populate('patientId', 'name email')
       .sort({ date: -1, createdAt: -1 });
@@ -316,6 +329,21 @@ const addVitalSign = async (req, res) => {
   }
 };
 
+const getHealthRecordFile = async (req, res) => {
+  try {
+    const record = await HealthRecord.findById(req.params.id);
+    if (!record || !record.fileData) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    res.set('Content-Type', record.fileContentType || 'application/octet-stream');
+    res.set('Content-Disposition', `inline; filename="${record.fileName || 'report'}"`);
+    res.send(record.fileData);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch file', details: error.message });
+  }
+};
+
 module.exports = {
   getHealthRecords,
   getHealthRecordById,
@@ -325,4 +353,5 @@ module.exports = {
   getRecordsByType,
   getPatientRecords,
   addVitalSign,
+  getHealthRecordFile
 };

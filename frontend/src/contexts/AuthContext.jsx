@@ -46,10 +46,11 @@ export const AuthProvider = ({ children }) => {
       if (storedToken) {
         try {
           const userData = await authAPI.getCurrentUser();
-          setUser(userData);
+          const normalizedUser = { ...userData, id: userData.id || userData._id };
+          setUser(normalizedUser);
           setToken(storedToken);
           setError(null);
-          connectWebSocket(userData._id);
+          connectWebSocket(normalizedUser.id);
         } catch (error) {
           console.error('Auth check failed:', error);
           localStorage.removeItem('token');
@@ -102,8 +103,9 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem('token', newToken);
       setToken(newToken);
-      setUser(userData);
-      connectWebSocket(userData.id);
+      const normalizedUser = { ...userData, id: userData.id || userData._id };
+      setUser(normalizedUser);
+      connectWebSocket(normalizedUser.id);
 
       return { success: true, user: userData };
     } catch (err) {
@@ -126,8 +128,9 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem('token', newToken);
       setToken(newToken);
-      setUser(newUser);
-      connectWebSocket(newUser.id);
+      const normalizedUser = { ...newUser, id: newUser.id || newUser._id };
+      setUser(normalizedUser);
+      connectWebSocket(normalizedUser.id);
 
       return { success: true, user: newUser };
     } catch (err) {

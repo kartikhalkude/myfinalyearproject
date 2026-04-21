@@ -6,15 +6,14 @@ import apiClient from "../services/apiClient";
 import DiabetesPrediction from "../components/DiabetesPrediction";
 import HeartDiseasePrediction from "../components/HeartDiseasePrediction";
 import PneumoniaPrediction from "../components/PneumoniaPrediction";
-import BrainTumorPrediction from "../components/BrainTumorPrediction";
 import AppointmentBooking from "../components/AppointmentBooking";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
 import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader } from "../components/UI";
 import { 
   Home, Brain, HeartPulse, Stethoscope, CalendarPlus, Calendar, 
-  ClipboardList, Pill, Bell, Droplet, Footprints, Moon, Salad, 
-  Smile, Phone, CheckCircle, XCircle, Info, X, Check, Clock
+  ClipboardList, Pill, Smile, Phone, CheckCircle, XCircle, Info, X, Check, Clock,
+  Droplet, Footprints, Moon, Salad
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
@@ -27,14 +26,12 @@ function getNavItems(apptCount) {
     { id: "diabetes",  label: "Diabetes Check",   icon: <Brain size={18} />,  tag: "AI" },
     { id: "heart",     label: "Heart Check",      icon: <HeartPulse size={18} />, tag: "AI" },
     { id: "pneumonia", label: "Pneumonia Check",  icon: <Stethoscope size={18} />, tag: "AI" },
-    { id: "braintumor",label: "Brain Tumor Check",icon: <Brain size={18} />, tag: "AI" },
     { section: "Appointments" },
     { id: "book",      label: "Book Appointment", icon: <CalendarPlus size={18} /> },
     { id: "history",   label: "My Appointments",  icon: <Calendar size={18} />, badge: apptCount },
     { section: "Medical" },
     { id: "health",    label: "Health Records",   icon: <ClipboardList size={18} /> },
     { id: "prescriptions", label: "Prescriptions", icon: <Pill size={18} /> },
-    { id: "reminders", label: "Medicine Reminders", icon: <Bell size={18} /> },
   ];
 }
 
@@ -245,160 +242,7 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
   );
 }
 
-// ─── Medicine Reminders tab ───────────────────────────────────────────────────
 
-// ─── Medicine Reminders tab ───────────────────────────────────────────────────
-
-function MedicineReminders() {
-  const [reminders, setReminders] = useState([]);
-  const [prescriptions, setPrescriptions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loggingId, setLoggingId] = useState(null);
-
-  useEffect(() => {
-    Promise.all([
-      apiClient.get("/reminders").then(r => r.data).catch(() => []),
-      apiClient.get("/prescriptions").then(r => r.data?.prescriptions || []).catch(() => []),
-    ]).then(([rem, presc]) => { setReminders(rem || []); setPrescriptions((presc || []).filter(p => p.status === "active")); }).finally(() => setLoading(false));
-  }, []);
-
-  const log = async (id, skipped = false) => {
-    setLoggingId(id);
-    await apiClient.post(`/reminders/${id}/log`, { skipped }).catch(() => {});
-    setReminders(prev => prev.map(r => r._id === id ? { ...r, logs: [...(r.logs || []), { takenAt: new Date(), skipped }] } : r));
-    setLoggingId(null);
-  };
-
-  const del = async id => {
-    if (!window.confirm("Delete this reminder?")) return;
-    await apiClient.delete(`/reminders/${id}`).catch(() => {});
-    setReminders(prev => prev.filter(r => r._id !== id));
-  };
-
-  if (loading) return <Loader message="Loading medicines..." />;
-
-  const activeMedicinesCount = prescriptions.reduce((sum, p) => sum + (p.medicines?.length || 0), 0);
-  const takenTodayCount = reminders.reduce((sum, r) => sum + (r.logs?.filter(l => new Date(l.takenAt).toDateString() === new Date().toDateString() && !l.skipped).length ? 1 : 0), 0);
-
-  return (
-    <div style={{ fontFamily: "'Inter', 'DM Sans', sans-serif" }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em" }}>Medicine Reminders</h1>
-        <p style={{ fontSize: 15, color: "#64748b", marginTop: 4 }}>Keep track of your active prescriptions and daily intake schedule.</p>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.02)" }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>Active Prescriptions</div>
-            <div style={{ fontSize: "1.875rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{prescriptions.length}</div>
-          </div>
-          <div style={{ width: 44, height: 44, background: "#f8fafc", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}><ClipboardList size={20} color="#94a3b8" /></div>
-        </div>
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.02)" }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>Total Medicines</div>
-            <div style={{ fontSize: "1.875rem", fontWeight: 700, color: "#3b82f6", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{activeMedicinesCount}</div>
-          </div>
-          <div style={{ width: 44, height: 44, background: "#eff6ff", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}><Pill size={20} color="#3b82f6" /></div>
-        </div>
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 8px rgba(15, 23, 42, 0.02)" }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>Doses Logged Today</div>
-            <div style={{ fontSize: "1.875rem", fontWeight: 700, color: "#10b981", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{takenTodayCount}</div>
-          </div>
-          <div style={{ width: 44, height: 44, background: "#f0fdf4", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle size={20} color="#10b981" /></div>
-        </div>
-      </div>
-
-      {prescriptions.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-            <ClipboardList size={20} color="#10b981" /> Active Prescriptions
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(450px, 1fr))", gap: 20 }}>
-            {prescriptions.map(rx => (
-              <div key={rx._id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(15,23,42,0.03)", transition: "transform 0.2s", display: "flex", flexDirection: "column" }} onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", background: "#fafafa", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", marginBottom: 2 }}>{rx.diagnosis || "General Prescription"}</div>
-                    <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}><Stethoscope size={14} /> Dr. {rx.doctorId?.name || rx.doctorName || "Your Doctor"}</div>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {rx.validUntil && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: "#f1f5f9", color: "#64748b" }}><Calendar size={12} /> Until {new Date(rx.validUntil).toLocaleDateString()}</span>}
-                  </div>
-                </div>
-                <div style={{ padding: 20, flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-                  {rx.medicines?.map((m, i) => (
-                    <div key={i} style={{ background: "#f8fafc", border: "1px solid #f1f5f9", borderRadius: 12, padding: "12px 16px", display: "flex", gap: 12, alignItems: "center" }}>
-                      <div style={{ width: 36, height: 36, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Pill size={18} color="#10b981" /></div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>{m.name}</div>
-                        <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 2 }}>{[m.dosage, m.frequency, m.duration].filter(Boolean).join(" • ")}</div>
-                      </div>
-                    </div>
-                  ))}
-                  {rx.advice && <div style={{ marginTop: "auto", paddingTop: 12, padding: "12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, fontSize: 13, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 8 }}><Info size={16} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }}/> <span style={{ lineHeight: 1.5 }}>{rx.advice}</span></div>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {reminders.length > 0 && (
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-            <Bell size={20} color="#3b82f6" /> Daily Medication Schedule
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
-            {reminders.map(r => (
-              <div key={r._id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "20px", boxShadow: "0 4px 12px rgba(15,23,42,0.03)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>{r.medicineName}</div>
-                    <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>{r.dosage || "As prescribed"}</div>
-                  </div>
-                  <button onClick={() => del(r._id)} style={{ width: 28, height: 28, background: "#fef2f2", border: "none", borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#fee2e2"} onMouseLeave={e=>e.currentTarget.style.background="#fef2f2"}>
-                    <X size={14} />
-                  </button>
-                </div>
-                {r.times?.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>{r.times.map((t, i) => <span key={i} style={{ padding: "4px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", color: "#475569", fontSize: 12, fontWeight: 600, borderRadius: 999, display: "flex", alignItems: "center", gap: 6 }}><Clock size={12} /> {t}</span>)}</div>}
-                
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <button onClick={() => log(r._id)} disabled={loggingId === r._id} style={{ padding: "10px", fontSize: 14, fontWeight: 600, background: "#10b981", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#059669"} onMouseLeave={e=>e.currentTarget.style.background="#10b981"}>
-                    {loggingId === r._id ? <div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /> : <><CheckCircle size={16} /> Mark Taken</>}
-                  </button>
-                  <button onClick={() => log(r._id, true)} disabled={loggingId === r._id} style={{ padding: "10px", fontSize: 14, fontWeight: 600, background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#f1f5f9";e.currentTarget.style.borderColor="#cbd5e1";}} onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";e.currentTarget.style.borderColor="#e2e8f0";}}>Skip</button>
-                </div>
-                
-                {r.logs?.length > 0 && (
-                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recent Logs</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {r.logs.slice(-2).reverse().map((l, i) => (
-                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
-                          <span style={{ color: l.skipped ? "#64748b" : "#10b981", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                            {l.skipped ? <XCircle size={14} /> : <CheckCircle size={14} />} {l.skipped ? "Skipped" : "Taken"}
-                          </span>
-                          <span style={{ color: "#64748b", fontWeight: 500 }}>{new Date(l.takenAt).toLocaleDateString()} at {new Date(l.takenAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {prescriptions.length === 0 && reminders.length === 0 && (
-        <SectionCard><EmptyState icon={<Pill size={32} color="#94a3b8" />} title="No medicines to track" subtitle="Your doctor will add prescriptions here. You can also create custom reminders." /></SectionCard>
-      )}
-    </div>
-  );
-}
 
 // ─── Main dashboard ───────────────────────────────────────────────────────────
 
@@ -409,6 +253,8 @@ export default function PatientDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
+  const activeCallRef = useRef(null);
+  useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
   const [toasts, setToasts] = useState([]);
   const apptRef = useRef(appointments);
   useEffect(() => { apptRef.current = appointments; }, [appointments]);
@@ -436,17 +282,44 @@ export default function PatientDashboard() {
 
   useEffect(() => {
     fetchData();
-    const onApptUpdate = d => { fetchData(); addToast({ type: "appointment", title: "Appointment updated", message: `Status: ${d.appointment?.status}`, autoClose: true }); };
+    const onApptUpdate = d => { 
+      fetchData(); 
+      if (d?.initiatorId === user?.id) return;
+      addToast({ type: "appointment", title: "Appointment updated", message: `Status: ${d.appointment?.status}`, autoClose: true }); 
+    };
     const onCall = d => {
+      // Don't show if already in a call for this specific appointment
+      if (activeCallRef.current?.appointmentId?.toString() === d.appointmentId?.toString()) {
+        return;
+      }
+      if (activeCallRef.current) return; // Don't show if in another call already
       const apt = apptRef.current.find(a => a._id === d.appointmentId);
       addToast({ type: "call", title: "Incoming call", message: `${d.callerName} is calling`, autoClose: false, actions: [{ label: "Accept", type: "accept", primary: true, data: { appointment: apt, callData: d } }, { label: "Decline", type: "decline", data: { callData: d } }] });
     };
-    const onRxCreated = d => { if (d.prescription && d.type === "created") addToast({ type: "prescription", title: "New prescription", message: `Dr. ${d.prescription.doctorId?.name || "Doctor"} added a prescription`, autoClose: true, actions: [{ label: "View", type: "view-prescriptions", primary: true }] }); };
-    const onRxUpdated = d => { if (d.prescription && d.type === "updated") addToast({ type: "prescription", title: "Prescription updated", autoClose: true }); };
-    const onRxDeleted = () => addToast({ type: "prescription", title: "Prescription removed", autoClose: true });
-    const onRecCreated = d => { if (d.record && d.type === "created") addToast({ type: "record", title: "New health record", message: `"${d.record.title}" added by your doctor`, autoClose: true, actions: [{ label: "View", type: "view-health", primary: true }] }); };
-    const onRecUpdated = d => { if (d.record && d.type === "updated") addToast({ type: "record", title: "Health record updated", autoClose: true }); };
-    const onRecDeleted = () => addToast({ type: "record", title: "Health record removed", autoClose: true });
+    const onRxCreated = d => { 
+      if (d?.initiatorId === user?.id) return;
+      if (d.prescription && d.type === "created") addToast({ type: "prescription", title: "New prescription", message: `Dr. ${d.prescription.doctorId?.name || "Doctor"} added a prescription`, autoClose: true, actions: [{ label: "View", type: "view-prescriptions", primary: true }] }); 
+    };
+    const onRxUpdated = d => { 
+      if (d?.initiatorId === user?.id) return;
+      if (d.prescription && d.type === "updated") addToast({ type: "prescription", title: "Prescription updated", autoClose: true }); 
+    };
+    const onRxDeleted = d => {
+      if (d?.initiatorId === user?.id) return;
+      addToast({ type: "prescription", title: "Prescription removed", autoClose: true });
+    };
+    const onRecCreated = d => { 
+      if (d?.initiatorId === user?.id) return;
+      if (d.record && d.type === "created") addToast({ type: "record", title: "New health record", message: `"${d.record.title}" added by your doctor`, autoClose: true, actions: [{ label: "View", type: "view-health", primary: true }] }); 
+    };
+    const onRecUpdated = d => { 
+      if (d?.initiatorId === user?.id) return;
+      if (d.record && d.type === "updated") addToast({ type: "record", title: "Health record updated", autoClose: true }); 
+    };
+    const onRecDeleted = d => {
+      if (d?.initiatorId === user?.id) return;
+      addToast({ type: "record", title: "Health record removed", autoClose: true });
+    };
     websocketService.onAppointmentUpdated(onApptUpdate);
     websocketService.on("call:incoming", onCall);
     websocketService.onPrescriptionCreated(onRxCreated); websocketService.onPrescriptionUpdated(onRxUpdated); websocketService.onPrescriptionDeleted(onRxDeleted);
@@ -458,7 +331,11 @@ export default function PatientDashboard() {
     };
   }, [fetchData, addToast]);
 
-  const startCall = (apt, callData = null) => setActiveCall({ appointmentId: apt._id, otherUserId: apt.doctorId?._id || apt.doctorId, otherUserName: apt.doctorName, isDoctor: false, incomingCallData: callData });
+  const startCall = (apt, callData = null) => {
+    const callObj = { appointmentId: apt._id, otherUserId: apt.doctorId?._id || apt.doctorId, otherUserName: apt.doctorName, isDoctor: false, incomingCallData: callData };
+    activeCallRef.current = callObj;
+    setActiveCall(callObj);
+  };
   const cancelAppt = async id => {
     if (!window.confirm("Cancel this appointment?")) return;
     try { await apiClient.patch(`/appointments/${id}`, { status: "cancelled" }); fetchData(); addToast({ type: "success", title: "Appointment cancelled", autoClose: true }); }
@@ -471,12 +348,12 @@ export default function PatientDashboard() {
       case "diabetes":    return <DiabetesPrediction />;
       case "heart":       return <HeartDiseasePrediction />;
       case "pneumonia":   return <PneumoniaPrediction />;
-      case "braintumor":  return <BrainTumorPrediction />;
+
       case "book":        return <AppointmentBooking onBookingComplete={() => { fetchData(); addToast({ type: "success", title: "Appointment booked", message: "Doctor will confirm within 24 hours.", autoClose: true }); }} />;
       case "history":     return <AppointmentHistory appointments={appointments} onStartCall={startCall} onCancelAppt={cancelAppt} onRefresh={() => fetchData()} />;
       case "health":      return <HealthRecords />;
       case "prescriptions": return <Prescriptions />;
-      case "reminders":   return <MedicineReminders />;
+
       default: return null;
     }
   };

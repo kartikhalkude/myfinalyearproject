@@ -19,7 +19,7 @@ const createAppointment = async (req, res) => {
       date, time, reason: reason || ''
     }).save();
 
-    await broadcastAppointmentUpdate(appointment, 'created');
+    await broadcastAppointmentUpdate(appointment, 'created', req.userId);
     res.status(201).json(appointment);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create appointment', details: error.message });
@@ -59,7 +59,7 @@ const updateAppointment = async (req, res) => {
 
     appointment.status = status;
     await appointment.save();
-    await broadcastAppointmentUpdate(appointment, 'updated');
+    await broadcastAppointmentUpdate(appointment, 'updated', req.userId);
     res.json(appointment);
   } catch {
     res.status(500).json({ error: 'Failed to update appointment' });

@@ -13,7 +13,7 @@ const appointmentRoutes   = require('./routes/appointments');
 const predictionRoutes    = require('./routes/predictions');
 const healthRecordRoutes  = require('./routes/healthRecords');
 const prescriptionRoutes  = require('./routes/prescriptions');
-const reminderRoutes      = require('./routes/reminders');
+
 const statsRoutes         = require('./routes/stats');
 
 // ─── CORS origins ─────────────────────────────────────────────────────────────
@@ -34,6 +34,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 
 // ─── Socket.IO ────────────────────────────────────────────────────────────────
 initSocket(server, allowedOrigins);
@@ -50,7 +51,7 @@ app.use('/api/appointments',   appointmentRoutes);
 app.use('/api',                predictionRoutes);   // keeps /api/predict-diabetes etc.
 app.use('/api/health-records', healthRecordRoutes);
 app.use('/api/prescriptions',  prescriptionRoutes);
-app.use('/api/reminders',      reminderRoutes);
+
 app.use('/api/stats',          statsRoutes);
 
 // ─── Global error handler ─────────────────────────────────────────────────────

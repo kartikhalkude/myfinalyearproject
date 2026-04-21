@@ -8,6 +8,9 @@ const healthRecordSchema = new mongoose.Schema({
   content:     { type: String, required: true }, // Main findings/content
   severity:    { type: String, enum: ['normal', 'mild', 'moderate', 'severe', 'critical'], default: 'normal' },
   notes:       { type: String }, // Doctor's additional notes
+  fileData:    { type: Buffer },   // Binary data of the file
+  fileContentType: { type: String }, // MIME type of the file
+  fileName:    { type: String }, // Original name of the uploaded file
   date:        { type: Date, default: Date.now },
   // Legacy fields for backward compatibility
   recordType:  { type: String },

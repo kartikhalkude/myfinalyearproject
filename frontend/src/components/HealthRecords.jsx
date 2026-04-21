@@ -5,13 +5,13 @@ import websocketService from "../services/websocket";
 import { SectionCard, EmptyState, Loader, PageHeader } from "./UI";
 import { X, Plus, Edit2, Trash2, FileText, AlertCircle, CheckCircle, Search, Activity, Thermometer, Heart, ClipboardList, Calendar } from "lucide-react";
 
-function PatientSearch({ patients, value, onChange }) {
+function EntitySearch({ entities, value, onChange, placeholder = "Search..." }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const wrapRef = useRef(null);
-  const selected = patients.find(p => p._id === value);
-  const filtered = q.trim() ? patients.filter(p => p.email?.toLowerCase().includes(q.toLowerCase()) || p.name?.toLowerCase().includes(q.toLowerCase())) : patients;
+  const selected = entities.find(e => e._id === value);
+  const filtered = q.trim() ? entities.filter(e => e.email?.toLowerCase().includes(q.toLowerCase()) || e.name?.toLowerCase().includes(q.toLowerCase())) : entities;
 
   useEffect(() => {
     const handler = e => { if (wrapRef.current && !wrapRef.current.contains(e.target)) { setOpen(false); setQ(""); } };
@@ -35,7 +35,7 @@ function PatientSearch({ patients, value, onChange }) {
             <strong style={{ fontWeight: 600 }}>{selected.name}</strong> <span style={{ color: "#64748b", marginLeft: 4 }}>({selected.email})</span>
           </span>
         ) : (
-          <input type="text" placeholder={selected ? `${selected.name} (${selected.email})` : "Search patient by name or email…"} value={q} autoFocus={open}
+          <input type="text" placeholder={selected ? `${selected.name} (${selected.email})` : placeholder} value={q} autoFocus={open}
             onChange={e => { setQ(e.target.value); setOpen(true); }} onFocus={() => { setFocused(true); setOpen(true); }} onBlur={() => setFocused(false)}
             style={{ flex: 1, border: "none", outline: "none", fontSize: 14, fontFamily: "inherit", color: "#0f172a", background: "transparent", padding: 0 }} />
         )}
@@ -43,7 +43,7 @@ function PatientSearch({ patients, value, onChange }) {
       </div>
       {open && (
         <div style={{ position: "absolute", zIndex: 50, top: "calc(100% + 8px)", left: 0, right: 0, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, boxShadow: "0 12px 32px rgba(15,23,42,0.1)", maxHeight: 240, overflowY: "auto", padding: 8 }}>
-          {filtered.length === 0 ? <div style={{ padding: "12px", fontSize: 13, color: "#64748b", textAlign: "center" }}>No patients found</div> : filtered.map(p => (
+          {filtered.length === 0 ? <div style={{ padding: "12px", fontSize: 13, color: "#64748b", textAlign: "center" }}>No results found</div> : filtered.map(p => (
             <button key={p._id} type="button" onClick={() => { onChange(p); setOpen(false); setQ(""); }}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", borderRadius: 8, textAlign: "left", transition: "background 0.15s" }}
               onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -89,6 +89,7 @@ export default function HealthRecords({ doctorPatients }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [file, setFile] = useState(null);
 
   const extractArray = (data, keys = []) => {
     if (Array.isArray(data)) return data;
@@ -102,20 +103,19 @@ export default function HealthRecords({ doctorPatients }) {
     const fetchRecords = async () => {
       try {
         setLoading(true); setError("");
-        if (user?.role === "patient") {
-          const res = await apiClient.get("/health-records").catch(() => ({ data: [] }));
-          setRecords(extractArray(res.data, ["records", "data"]));
-          return;
-        }
-        const [recordsRes, appointRes, prescRes] = await Promise.all([
+        const [recordsRes, appointRes, prescRes, doctorsRes] = await Promise.all([
           apiClient.get("/health-records").catch(() => ({ data: [] })),
           apiClient.get("/appointments").catch(() => ({ data: [] })),
           apiClient.get("/prescriptions").catch(() => ({ data: [] })),
+          user?.role === "patient" ? apiClient.get("/doctors").catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
         ]);
+
         const recordsData = extractArray(recordsRes.data, ["records", "data"]);
         setRecords(recordsData);
 
-        if (!(doctorPatients?.length > 0)) {
+        if (user?.role === "patient") {
+          setPatients(extractArray(doctorsRes.data, ["doctors", "data"]));
+        } else if (!(doctorPatients?.length > 0)) {
           const patientMap = new Map();
           const addPatient = obj => {
             if (!obj) return;
@@ -146,17 +146,34 @@ export default function HealthRecords({ doctorPatients }) {
     if (!formData.title.trim()) { setError("Title is required."); return; }
     if (!formData.content.trim()) { setError("Content is required."); return; }
     try {
+      const data = new FormData();
+      Object.keys(formData).forEach(key => {
+        if (formData[key] && key !== 'patientId') data.append(key, formData[key]);
+      });
+
+      if (user?.role === "patient" && formData.patientId) {
+        data.append("doctorId", formData.patientId);
+      } else if (user?.role === "doctor" && formData.patientId) {
+        data.append("patientId", formData.patientId);
+      }
+
+      if (file) data.append("file", file);
+
       if (editingRecord) {
+        // PATCH with FormData might be tricky depending on backend, 
+        // but for now let's focus on creation.
+        // If editing doesn't support file update yet, we can fall back to JSON if no file.
         const res = await apiClient.patch(`/health-records/${editingRecord._id}`, formData);
         setRecords(prev => prev.map(r => (r._id === editingRecord._id ? res.data.record || res.data : r)));
         setSuccess("Health record updated successfully");
       } else {
-        if (user?.role !== "doctor") { setError("Only doctors can create health records"); return; }
-        const res = await apiClient.post("/health-records", formData);
+        const res = await apiClient.post("/health-records", data, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
         setRecords(prev => [res.data.record || res.data, ...prev]);
-        setSuccess("Health record created successfully");
+        setSuccess(user?.role === "doctor" ? "Health record created successfully" : "Report sent to doctor successfully");
       }
-      setShowModal(false); setTimeout(() => setSuccess(""), 3000);
+      setShowModal(false); setFile(null); setTimeout(() => setSuccess(""), 3000);
     } catch (err) { setError(err.response?.data?.error || "Failed to save record"); }
   };
 
@@ -173,12 +190,12 @@ export default function HealthRecords({ doctorPatients }) {
 
   return (
     <div style={{ fontFamily: "'Inter', 'DM Sans', sans-serif" }}>
-      <PageHeader title="Health Records" subtitle="Manage and view patient health records securely."
-        action={user?.role === "doctor" && (
+      <PageHeader title="Health Records" subtitle={user?.role === "doctor" ? "Manage and view patient health records securely." : "View your medical history and send reports to your doctor."}
+        action={(
           <button onClick={() => { setEditingRecord(null); setFormData(EMPTY_FORM); setShowModal(true); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "#10b981", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#059669"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(16, 185, 129, 0.3)"; }} onMouseLeave={e => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.2)"; }}>
             <Plus size={18} />
-            New Record
+            {user?.role === "doctor" ? "New Record" : "Send Report"}
           </button>
         )}
       />
@@ -240,6 +257,17 @@ export default function HealthRecords({ doctorPatients }) {
                       <div style={{ lineHeight: 1.5 }}><strong>Doctor's Note:</strong> {record.notes}</div>
                     </div>
                   )}
+
+                  {(record.fileName || record.fileContentType) && (
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
+                      <a href={`http://localhost:5000/api/health-records/${record._id}/file?token=${localStorage.getItem('token')}`} target="_blank" rel="noopener noreferrer" 
+                        style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "#f1f5f9", color: "#3b82f6", borderRadius: 10, fontSize: 13, fontWeight: 600, textDecoration: "none", transition: "all 0.2s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#e0e7ff"} onMouseLeave={e => e.currentTarget.style.background = "#f1f5f9"}>
+                        <FileText size={16} />
+                        View Attachment: {record.fileName || "Report File"}
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -265,9 +293,9 @@ export default function HealthRecords({ doctorPatients }) {
             <form onSubmit={handleSubmit} style={{ padding: 24 }}>
               {!editingRecord && (
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Select Patient *</label>
-                  {patients.length > 0 ? <PatientSearch patients={patients} value={formData.patientId} onChange={p => setFormData(prev => ({ ...prev, patientId: p?._id || "" }))} />
-                    : <div style={{ padding: "12px 16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, fontSize: 14, color: "#92400e", display: "flex", gap: 8 }}><AlertCircle size={18} /> No patients available.</div>}
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>{user?.role === "doctor" ? "Select Patient *" : "Select Doctor (Optional)"}</label>
+                  {patients.length > 0 ? <EntitySearch entities={patients} value={formData.patientId} onChange={p => setFormData(prev => ({ ...prev, patientId: p?._id || "" }))} placeholder={user?.role === "doctor" ? "Search patient..." : "Search doctor..."} />
+                    : <div style={{ padding: "12px 16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, fontSize: 14, color: "#92400e", display: "flex", gap: 8 }}><AlertCircle size={18} /> No {user?.role === "doctor" ? "patients" : "doctors"} available.</div>}
                 </div>
               )}
               
@@ -296,6 +324,16 @@ export default function HealthRecords({ doctorPatients }) {
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Details / Results *</label>
                 <textarea value={formData.content} onChange={e => setFormData(p => ({ ...p, content: e.target.value }))} placeholder="Enter the main record details..." rows={4} style={{ ...inputCls, resize: "vertical" }} onFocus={onFocus} onBlur={onBlur} required />
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Attach Report (File) *</label>
+                <div style={{ position: "relative" }}>
+                  <input type="file" onChange={e => setFile(e.target.files[0])} style={{ ...inputCls, padding: "10px 16px" }} onFocus={onFocus} onBlur={onBlur} accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" />
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                    <AlertCircle size={14} /> PDF, Images, or DOC (Max 10MB)
+                  </div>
+                </div>
               </div>
               
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>

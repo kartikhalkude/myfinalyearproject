@@ -1,6 +1,6 @@
 const Prescription          = require('../models/Prescription');
 const User                  = require('../models/User');
-const { userSockets, getIo } = require('../socket');
+const { getIo } = require('../socket');
 
 // ─── Get All Prescriptions ────────────────────────────────────────────────────
 
@@ -85,14 +85,12 @@ const createPrescription = async (req, res) => {
       .populate('patientId', 'name email phone')
       .populate('doctorId', 'name specialization email');
 
-    // Notify patient via WebSocket
-    const patientSocketId = userSockets.get(patientId.toString());
-    if (patientSocketId) {
-      getIo().to(patientSocketId).emit('prescription:created', {
-        type: 'created',
-        prescription: populated
-      });
-    }
+    // Notify patient via WebSocket (room handles multiple tabs)
+    getIo().to(`user:${patientId}`).emit('prescription:created', {
+      type: 'created',
+      prescription: populated,
+      initiatorId: req.userId
+    });
 
     res.status(201).json(populated);
   } catch (error) {
@@ -137,13 +135,11 @@ const updatePrescription = async (req, res) => {
       .populate('doctorId', 'name specialization email');
 
     // Notify patient
-    const patientSocketId = userSockets.get(prescription.patientId.toString());
-    if (patientSocketId) {
-      getIo().to(patientSocketId).emit('prescription:updated', {
-        type: 'updated',
-        prescription: populated
-      });
-    }
+    getIo().to(`user:${prescription.patientId}`).emit('prescription:updated', {
+      type: 'updated',
+      prescription: populated,
+      initiatorId: req.userId
+    });
 
     res.json(populated);
   } catch (error) {
@@ -174,13 +170,11 @@ const deletePrescription = async (req, res) => {
     await Prescription.findByIdAndDelete(id);
 
     // Notify patient
-    const patientSocketId = userSockets.get(patientId);
-    if (patientSocketId) {
-      getIo().to(patientSocketId).emit('prescription:deleted', {
-        type: 'deleted',
-        prescriptionId: id
-      });
-    }
+    getIo().to(`user:${patientId}`).emit('prescription:deleted', {
+      type: 'deleted',
+      prescriptionId: id,
+      initiatorId: req.userId
+    });
 
     res.json({ message: 'Prescription deleted successfully' });
   } catch (error) {
@@ -203,17 +197,15 @@ const requestRefill = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const doctorSocketId = userSockets.get(prescription.doctorId.toString());
-    if (doctorSocketId) {
-      const patient = await User.findById(req.userId).select('name');
-      getIo().to(doctorSocketId).emit('prescription:refill-request', {
-        prescriptionId: prescription._id,
-        patientName:    patient?.name,
-        diagnosis:      prescription.diagnosis,
-        medicines:      prescription.medicines,
-        timestamp:      new Date()
-      });
-    }
+    const patient = await User.findById(req.userId).select('name');
+    getIo().to(`user:${prescription.doctorId}`).emit('prescription:refill-request', {
+      prescriptionId: prescription._id,
+      patientName:    patient?.name,
+      diagnosis:      prescription.diagnosis,
+      medicines:      prescription.medicines,
+      timestamp:      new Date(),
+      initiatorId:    req.userId
+    });
 
     res.json({ message: 'Refill request sent to your doctor.' });
   } catch (error) {

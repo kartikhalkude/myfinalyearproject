@@ -10,6 +10,5 @@ export {
   prescriptionsAPI,
   predictionsAPI,
   statsAPI,
-  remindersAPI,
   default,
 } from './apiClient';

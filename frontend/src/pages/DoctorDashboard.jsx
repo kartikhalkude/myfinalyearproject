@@ -5,10 +5,11 @@ import VideoCall from "../components/VideoCall";
 import apiClient from "../services/apiClient";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
+import BrainTumorPrediction from "../components/BrainTumorPrediction";
 import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader } from "../components/UI";
 import { 
   Home, Calendar, CalendarClock, Users, FileText, Pill, ClipboardList, 
-  Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays
+  Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, Brain
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
@@ -25,6 +26,8 @@ function getNavItems(apptCount) {
     { section: "Medical" },
     { id: "prescriptions", label: "Prescriptions", icon: <Pill size={18} /> },
     { id: "health-records", label: "Health Records", icon: <ClipboardList size={18} /> },
+    { section: "AI Screening" },
+    { id: "braintumor", label: "Brain Tumor Check", icon: <Brain size={18} /> },
   ];
 }
 
@@ -568,6 +571,7 @@ export default function DoctorDashboard() {
       case "reports": return <Reports stats={stats} appointments={appointments} />;
       case "prescriptions": return <Prescriptions doctorPatients={doctorPatients} />;
       case "health-records": return <HealthRecords doctorPatients={doctorPatients} />;
+      case "braintumor": return <BrainTumorPrediction />;
       default: return null;
     }
   };

@@ -6,6 +6,7 @@ import apiClient from "../services/apiClient";
 import DiabetesPrediction from "../components/DiabetesPrediction";
 import HeartDiseasePrediction from "../components/HeartDiseasePrediction";
 import PneumoniaPrediction from "../components/PneumoniaPrediction";
+import BrainTumorPrediction from "../components/BrainTumorPrediction";
 import AppointmentBooking from "../components/AppointmentBooking";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
@@ -26,6 +27,7 @@ function getNavItems(apptCount) {
     { id: "diabetes",  label: "Diabetes Check",   icon: <Brain size={18} />,  tag: "AI" },
     { id: "heart",     label: "Heart Check",      icon: <HeartPulse size={18} />, tag: "AI" },
     { id: "pneumonia", label: "Pneumonia Check",  icon: <Stethoscope size={18} />, tag: "AI" },
+    { id: "braintumor",label: "Brain Tumor Check",icon: <Brain size={18} />, tag: "AI" },
     { section: "Appointments" },
     { id: "book",      label: "Book Appointment", icon: <CalendarPlus size={18} /> },
     { id: "history",   label: "My Appointments",  icon: <Calendar size={18} />, badge: apptCount },
@@ -469,6 +471,7 @@ export default function PatientDashboard() {
       case "diabetes":    return <DiabetesPrediction />;
       case "heart":       return <HeartDiseasePrediction />;
       case "pneumonia":   return <PneumoniaPrediction />;
+      case "braintumor":  return <BrainTumorPrediction />;
       case "book":        return <AppointmentBooking onBookingComplete={() => { fetchData(); addToast({ type: "success", title: "Appointment booked", message: "Doctor will confirm within 24 hours.", autoClose: true }); }} />;
       case "history":     return <AppointmentHistory appointments={appointments} onStartCall={startCall} onCancelAppt={cancelAppt} onRefresh={() => fetchData()} />;
       case "health":      return <HealthRecords />;

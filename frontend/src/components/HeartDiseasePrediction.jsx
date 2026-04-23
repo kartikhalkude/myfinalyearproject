@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import apiClient from '../services/apiClient';
 import { SectionCard, PageHeader, Loader } from './UI';
 import { CheckCircle, AlertTriangle, Info, HeartPulse, Download, Trash2 } from "lucide-react";
+import ReportScanner from './ReportScanner';
 
 export default function HeartDiseasePrediction() {
   const [formData, setFormData] = useState({
@@ -35,6 +36,36 @@ export default function HeartDiseasePrediction() {
   };
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const HEART_FIELD_LABELS = {
+    age: 'Age (years)',
+    sex: 'Sex',
+    chestPainType: 'Chest Pain Type',
+    restingBP: 'Resting BP (mm Hg)',
+    cholesterol: 'Cholesterol (mg/dl)',
+    fastingBS: 'Fasting Blood Sugar > 120',
+    restingECG: 'Resting ECG',
+    maxHeartRate: 'Max Heart Rate',
+    exerciseAngina: 'Exercise Angina',
+    oldpeak: 'ST Depression (Oldpeak)',
+    stSlope: 'ST Slope',
+    ca: 'Major Vessels (0-3)',
+    thal: 'Thalassemia',
+  };
+
+  const handleReportExtracted = (extracted) => {
+    setFormData(prev => {
+      const updated = { ...prev };
+      Object.entries(extracted).forEach(([key, value]) => {
+        if (key in updated && value !== undefined && value !== null && value !== '') {
+          updated[key] = String(value);
+        }
+      });
+      return updated;
+    });
+    setPrediction(null);
+    setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -165,6 +196,13 @@ export default function HeartDiseasePrediction() {
       </div>
 
       {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "11px 14px", marginBottom: 16, fontSize: 13.5, color: "#dc2626" }}>{error}</div>}
+
+      {/* Report Scanner */}
+      <ReportScanner
+        type="heart"
+        onExtracted={handleReportExtracted}
+        fieldLabels={HEART_FIELD_LABELS}
+      />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "flex-start" }}>
         <SectionCard>

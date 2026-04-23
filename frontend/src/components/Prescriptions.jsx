@@ -21,13 +21,13 @@ function PatientSearch({ patients, value, onChange }) {
 
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
-      <div 
+      <div
         className={focused || open ? "dm-search-trigger dm-search-trigger-active" : "dm-search-trigger"}
-        style={{ 
-          display: "flex", alignItems: "center", padding: "12px 16px", background: focused || open ? "#fff" : "#f8fafc", 
-          border: "1px solid", borderColor: focused || open ? "#10b981" : "#e2e8f0", borderRadius: 12, cursor: "text", 
-          boxShadow: focused || open ? "0 0 0 4px rgba(16, 185, 129, 0.1)" : "none", transition: "all 0.2s" 
-        }} 
+        style={{
+          display: "flex", alignItems: "center", padding: "12px 16px", background: focused || open ? "#fff" : "#f8fafc",
+          border: "1px solid", borderColor: focused || open ? "#10b981" : "#e2e8f0", borderRadius: 12, cursor: "text",
+          boxShadow: focused || open ? "0 0 0 4px rgba(16, 185, 129, 0.1)" : "none", transition: "all 0.2s"
+        }}
         onClick={() => setOpen(true)}
       >
         <Search size={16} color="#94a3b8" style={{ flexShrink: 0, marginRight: 10 }} />
@@ -123,12 +123,12 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
           extractArr(recRes.data, ["records"]).forEach(r => add(r.patientId));
           setPatients([...map.values()].sort((a, b) => a.name.localeCompare(b.name)));
         }
-      } catch(e) { setError("Failed to load prescriptions."); }
+      } catch (e) { setError("Failed to load prescriptions."); }
       finally { setLoading(false); }
     })();
     const onCreated = data => { const p = data?.prescription || (data?._id ? data : null); if (p) setPrescriptions(prev => prev.some(x => x._id === p._id) ? prev : [p, ...prev]); };
-    const onUpdated = data => { 
-      const p = data?.prescription || (data?._id ? data : null); 
+    const onUpdated = data => {
+      const p = data?.prescription || (data?._id ? data : null);
       if (p) {
         setPrescriptions(prev => prev.map(x => (x._id === p._id ? p : x)));
         setViewing(prev => (prev?._id === p._id ? p : prev));
@@ -153,27 +153,27 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
         setPrescriptions(prev => [res.data, ...prev]);
         setSuccess("Prescription created.");
       }
-      setShowModal(false); 
+      setShowModal(false);
       if (onRefresh) onRefresh();
       setTimeout(() => setSuccess(""), 3000);
-    } catch(err) { setError(err.response?.data?.error || "Operation failed."); }
+    } catch (err) { setError(err.response?.data?.error || "Operation failed."); }
   };
 
   const handleDelete = async id => {
     if (!window.confirm("Delete this prescription? This cannot be undone.")) return;
-    try { 
-      await apiClient.delete(`/prescriptions/${id}`); 
-      setPrescriptions(prev => prev.filter(p => p._id !== id)); 
+    try {
+      await apiClient.delete(`/prescriptions/${id}`);
+      setPrescriptions(prev => prev.filter(p => p._id !== id));
       if (onRefresh) onRefresh();
-      setSuccess("Deleted."); setTimeout(() => setSuccess(""), 3000); 
+      setSuccess("Deleted."); setTimeout(() => setSuccess(""), 3000);
     }
-    catch(err) { setError(err.response?.data?.error || "Delete failed."); }
+    catch (err) { setError(err.response?.data?.error || "Delete failed."); }
   };
 
   const handleRefill = async id => {
     setRefillLoading(p => ({ ...p, [id]: true }));
     try { await apiClient.post(`/prescriptions/${id}/refill`); setSuccess("Refill request sent."); setTimeout(() => setSuccess(""), 3000); }
-    catch(err) { setError(err.response?.data?.error || "Failed to request refill."); }
+    catch (err) { setError(err.response?.data?.error || "Failed to request refill."); }
     finally { setRefillLoading(p => ({ ...p, [id]: false })); }
   };
 
@@ -184,7 +184,7 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
         // Update locally immediately for better UX
         setPrescriptions(prev => prev.map(p => p._id === rx._id ? { ...p, readByPatient: true } : p));
         setViewing(prev => ({ ...prev, readByPatient: true }));
-        
+
         await apiClient.patch(`/prescriptions/${rx._id}/read`);
         // Increased delay to ensure DB aggregation (stats) is fully synchronized
         setTimeout(() => { if (onRefresh) onRefresh(); }, 800);
@@ -231,7 +231,7 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
       <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
         {["all", "active", "expired", "cancelled"].map(s => (
           <button className={filter === s ? "" : "dm-outline-btn"} key={s} onClick={() => setFilter(s)} style={{ padding: "8px 16px", fontSize: 14, fontWeight: filter === s ? 600 : 500, background: filter === s ? "#10b981" : "#fff", color: filter === s ? "#fff" : "#475569", border: filter === s ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}
-            onMouseEnter={e => { if(filter !== s) { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; } }} onMouseLeave={e => { if(filter !== s) { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e2e8f0"; } }}>
+            onMouseEnter={e => { if (filter !== s) { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; } }} onMouseLeave={e => { if (filter !== s) { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e2e8f0"; } }}>
             {s.charAt(0).toUpperCase() + s.slice(1)}
           </button>
         ))}
@@ -245,14 +245,14 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
           {filtered.map((rx, idx) => {
             const st = statusStyle[rx.status] || statusStyle.expired;
             const isNew = user?.role === "patient" && !rx.readByPatient;
-            
+
             return (
-              <div 
-                key={rx._id} 
+              <div
+                key={rx._id}
                 onClick={() => openDetail(rx)}
                 className="dm-rx-row"
-                style={{ 
-                  padding: "16px 20px", display: "flex", alignItems: "center", gap: 20, cursor: "pointer", 
+                style={{
+                  padding: "16px 20px", display: "flex", alignItems: "center", gap: 20, cursor: "pointer",
                   borderBottom: idx === filtered.length - 1 ? "none" : `1px solid ${dark ? "#1e293b" : "#f1f5f9"}`,
                   transition: "background 0.2s", background: isNew ? (dark ? "rgba(34,197,94,0.12)" : "#f0fdf4") : "transparent"
                 }}
@@ -262,7 +262,7 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
                 <div className="dm-icon-chip" style={{ width: 44, height: 44, borderRadius: 12, background: dark ? "#0f172a" : "#f8fafc", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <Pill size={20} color="#10b981" />
                 </div>
-                
+
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                     <div className="dm-soft-text" style={{ fontSize: 15, fontWeight: 600, color: dark ? "#e2e8f0" : "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rx.diagnosis || "General Prescription"}</div>
@@ -277,16 +277,16 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
 
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                   <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: st.bg, color: st.color, border: `1px solid ${st.bg}` }}>{rx.status}</span>
-                  
+
                   {user?.role === "doctor" && (
                     <div style={{ display: "flex", gap: 4 }} onClick={e => e.stopPropagation()}>
                       <button onClick={() => { setEditing(rx); setForm({ patientId: rx.patientId?._id || rx.patientId, diagnosis: rx.diagnosis || "", medicines: rx.medicines || [{ name: "", dosage: "", frequency: "", duration: "" }], advice: rx.advice || "", validUntil: rx.validUntil ? new Date(rx.validUntil).toISOString().split("T")[0] : "" }); setShowModal(true); }}
                         style={{ width: 32, height: 32, background: dark ? "#0f172a" : "#fff", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(rx._id)} 
+                      <button onClick={() => handleDelete(rx._id)}
                         style={{ width: 32, height: 32, background: dark ? "#0f172a" : "#fff", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={14} /></button>
                     </div>
                   )}
-                  
+
                   <ChevronRight size={18} color={dark ? "#64748b" : "#cbd5e1"} />
                 </div>
               </div>
@@ -311,7 +311,7 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
               </div>
               <button onClick={() => setViewing(null)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, cursor: "pointer", color: "#64748b" }}><X size={18} /></button>
             </div>
-            
+
             <div style={{ padding: 24 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
                 <div className="dm-detail-panel" style={{ padding: 12, background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
@@ -353,8 +353,8 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
 
               <div className="dm-detail-panel" style={{ padding: 16, background: "#f8fafc", borderRadius: 16, border: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 12 }}>
                 <User size={18} color="#64748b" />
-                <div style={{ fontSize: 14, color: "#475569" }}>
-                  Prescribed by <strong style={{ color: "#0f172a" }}>{viewing.doctorName || viewing.doctorId?.name || "Dr. Unknown"}</strong>
+                <div style={{ fontSize: 14, color: "#589c65ff" }}>
+                  Prescribed by <strong style={{ color: "#33db5dff" }}>{viewing.doctorName || viewing.doctorId?.name || "Dr. Unknown"}</strong>
                 </div>
               </div>
             </div>
@@ -381,11 +381,11 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
                 <div className="dm-soft-muted" style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>{editing ? "Update prescription details below." : "Provide diagnosis and medication details."}</div>
               </div>
               <button onClick={() => setShowModal(false)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#0f172a" : "#f8fafc", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 10, cursor: "pointer", color: dark ? "#94a3b8" : "#64748b", transition: "all 0.2s" }}
-                onMouseEnter={e=>{e.currentTarget.style.background=dark ? "#1e293b" : "#f1f5f9";e.currentTarget.style.color=dark ? "#f8fafc" : "#0f172a";}} onMouseLeave={e=>{e.currentTarget.style.background=dark ? "#0f172a" : "#f8fafc";e.currentTarget.style.color=dark ? "#94a3b8" : "#64748b";}}>
+                onMouseEnter={e => { e.currentTarget.style.background = dark ? "#1e293b" : "#f1f5f9"; e.currentTarget.style.color = dark ? "#f8fafc" : "#0f172a"; }} onMouseLeave={e => { e.currentTarget.style.background = dark ? "#0f172a" : "#f8fafc"; e.currentTarget.style.color = dark ? "#94a3b8" : "#64748b"; }}>
                 <X size={18} />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} style={{ padding: 24 }}>
               {user?.role === "doctor" && !editing && (
                 <div style={{ marginBottom: 24 }}>
@@ -394,32 +394,32 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
                     : <div style={{ padding: "12px 16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, fontSize: 14, color: "#92400e", display: "flex", gap: 8 }}><AlertCircle size={18} /> No patients available. Patients appear here after booking an appointment.</div>}
                 </div>
               )}
-              
+
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>Diagnosis / Condition</label>
                 <input type="text" value={form.diagnosis} onChange={e => setForm(p => ({ ...p, diagnosis: e.target.value }))} placeholder="e.g. Acute Bronchitis" style={inputCls} onFocus={onFocus} onBlur={onBlur} />
               </div>
-              
+
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                   <label style={{ fontSize: 14, fontWeight: 600, color: dark ? "#f8fafc" : "#0f172a" }}>Medications *</label>
-                  <button type="button" onClick={() => setForm(p => ({ ...p, medicines: [...p.medicines, { name: "", dosage: "", frequency: "", duration: "" }] }))} style={{ fontSize: 13, fontWeight: 600, color: "#10b981", background: "rgba(16, 185, 129, 0.1)", border: "none", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="rgba(16, 185, 129, 0.15)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(16, 185, 129, 0.1)"}>
+                  <button type="button" onClick={() => setForm(p => ({ ...p, medicines: [...p.medicines, { name: "", dosage: "", frequency: "", duration: "" }] }))} style={{ fontSize: 13, fontWeight: 600, color: "#10b981", background: "rgba(16, 185, 129, 0.1)", border: "none", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(16, 185, 129, 0.15)"} onMouseLeave={e => e.currentTarget.style.background = "rgba(16, 185, 129, 0.1)"}>
                     <Plus size={14} /> Add Medicine
                   </button>
                 </div>
-                
+
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {form.medicines.map((med, i) => (
                     <div className="dm-med-card" key={i} style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 20, boxShadow: "0 2px 8px rgba(15,23,42,0.02)" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#94a3b8" : "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 6 }}><Pill size={14} color={dark ? "#94a3b8" : "#94a3b8"} /> Medicine {i + 1}</div>
                         {form.medicines.length > 1 && (
-                          <button type="button" onClick={() => setForm(p => ({ ...p, medicines: p.medicines.filter((_, j) => j !== i) }))} style={{ width: 28, height: 28, background: "#fef2f2", border: "none", borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#fee2e2"} onMouseLeave={e=>e.currentTarget.style.background="#fef2f2"}>
+                          <button type="button" onClick={() => setForm(p => ({ ...p, medicines: p.medicines.filter((_, j) => j !== i) }))} style={{ width: 28, height: 28, background: "#fef2f2", border: "none", borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#fee2e2"} onMouseLeave={e => e.currentTarget.style.background = "#fef2f2"}>
                             <Trash2 size={14} />
                           </button>
                         )}
                       </div>
-                      
+
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                         {[["name", "Medicine Name *", "e.g., Amoxicillin 500mg"], ["dosage", "Dosage", "e.g., 1 tablet"], ["frequency", "Frequency", "e.g., Twice daily"], ["duration", "Duration", "e.g., 7 days"]].map(([key, label, ph]) => (
                           <div key={key}>
@@ -432,7 +432,7 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
                   ))}
                 </div>
               </div>
-              
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>Valid Until</label>
@@ -444,12 +444,12 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
                   <textarea value={form.advice} onChange={e => setForm(p => ({ ...p, advice: e.target.value }))} placeholder="e.g. Take with food, avoid dairy..." rows={3} style={{ ...inputCls, resize: "vertical" }} onFocus={onFocus} onBlur={onBlur} />
                 </div>
               </div>
-              
+
               {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 14, color: "#dc2626", display: "flex", alignItems: "center", gap: 8 }}><AlertCircle size={16} />{error}</div>}
-              
+
               <div style={{ display: "flex", gap: 12, paddingTop: 16, borderTop: `1px solid ${dark ? "#1e293b" : "#f1f5f9"}` }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: "14px", background: dark ? "#0f172a" : "#f8fafc", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 12, fontSize: 15, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background=dark ? "#1e293b" : "#f1f5f9";e.currentTarget.style.borderColor=dark ? "#475569" : "#cbd5e1";}} onMouseLeave={e=>{e.currentTarget.style.background=dark ? "#0f172a" : "#f8fafc";e.currentTarget.style.borderColor=dark ? "#334155" : "#e2e8f0";}}>Cancel</button>
-                <button type="submit" style={{ flex: 2, padding: "14px", background: "#10b981", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)" }} onMouseEnter={e=>{e.currentTarget.style.background="#059669";e.currentTarget.style.boxShadow="0 6px 16px rgba(16, 185, 129, 0.3)";}} onMouseLeave={e=>{e.currentTarget.style.background="#10b981";e.currentTarget.style.boxShadow="0 4px 12px rgba(16, 185, 129, 0.2)";}}>{editing ? "Save Changes" : "Create Prescription"}</button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: "14px", background: dark ? "#0f172a" : "#f8fafc", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 12, fontSize: 15, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e => { e.currentTarget.style.background = dark ? "#1e293b" : "#f1f5f9"; e.currentTarget.style.borderColor = dark ? "#475569" : "#cbd5e1"; }} onMouseLeave={e => { e.currentTarget.style.background = dark ? "#0f172a" : "#f8fafc"; e.currentTarget.style.borderColor = dark ? "#334155" : "#e2e8f0"; }}>Cancel</button>
+                <button type="submit" style={{ flex: 2, padding: "14px", background: "#10b981", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)" }} onMouseEnter={e => { e.currentTarget.style.background = "#059669"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(16, 185, 129, 0.3)"; }} onMouseLeave={e => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.2)"; }}>{editing ? "Save Changes" : "Create Prescription"}</button>
               </div>
             </form>
           </div>

@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import apiClient from "../services/apiClient";
 import { SectionCard, Loader, Badge } from "./UI";
 import { CheckCircle, AlertTriangle, Info, Microscope, Download, Trash2 } from "lucide-react";
+import ReportScanner from './ReportScanner';
 
 const FIELDS = [
   { name: "pregnancies", label: "Pregnancies", placeholder: "0", step: "1", min: "0", hint: "Number of times pregnant" },
@@ -23,6 +24,17 @@ const SAMPLES = {
 
 const EMPTY = { pregnancies: "", glucose: "", bloodPressure: "", skinThickness: "", insulin: "", bmi: "", diabetesPedigreeFunction: "", age: "" };
 
+const FIELD_LABELS = {
+  pregnancies: "Pregnancies",
+  glucose: "Glucose (mg/dL)",
+  bloodPressure: "Blood Pressure (mm Hg)",
+  skinThickness: "Skin Thickness (mm)",
+  insulin: "Insulin (µU/mL)",
+  bmi: "BMI",
+  diabetesPedigreeFunction: "Pedigree Function",
+  age: "Age (years)",
+};
+
 export default function DiabetesPrediction() {
   const [form, setForm] = useState(EMPTY);
   const [prediction, setPrediction] = useState(null);
@@ -31,6 +43,20 @@ export default function DiabetesPrediction() {
   const [history, setHistory] = useState([]);
 
   useEffect(() => { apiClient.get("/predictions").then(r => setHistory(r.data)).catch(() => {}); }, []);
+
+  const handleReportExtracted = (extracted) => {
+    setForm(prev => {
+      const updated = { ...prev };
+      Object.entries(extracted).forEach(([key, value]) => {
+        if (key in updated && value !== undefined && value !== null && value !== '') {
+          updated[key] = String(value);
+        }
+      });
+      return updated;
+    });
+    setPrediction(null);
+    setError('');
+  };
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -146,6 +172,13 @@ export default function DiabetesPrediction() {
       </div>
 
       {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "11px 14px", marginBottom: 16, fontSize: 13.5, color: "#dc2626" }}>{error}</div>}
+
+      {/* Report Scanner */}
+      <ReportScanner
+        type="diabetes"
+        onExtracted={handleReportExtracted}
+        fieldLabels={FIELD_LABELS}
+      />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "flex-start" }}>
         <SectionCard>

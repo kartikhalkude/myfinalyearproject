@@ -11,7 +11,8 @@ const {
   getPneumoniaPredictions,
   predictBrainTumor,
   getBrainTumorPredictions,
-  clearPredictionHistory
+  clearPredictionHistory,
+  extractReportData
 } = require('../controllers/predictionController');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -25,6 +26,7 @@ router.post('/predict-pneumonia',      authMiddleware, upload.single('image'), p
 router.get('/pneumonia-predictions',   authMiddleware, getPneumoniaPredictions);
 router.post('/predict-brain-tumor',    authMiddleware, upload.single('image'), predictBrainTumor);
 router.get('/brain-tumor-predictions', authMiddleware, getBrainTumorPredictions);
+router.post('/extract-report',         authMiddleware, upload.single('report'), extractReportData);
 
 
 module.exports = router;

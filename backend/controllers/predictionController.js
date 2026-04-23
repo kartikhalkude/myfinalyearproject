@@ -11,6 +11,7 @@ const DIABETES_SCRIPT = path.join(ML_DIR, 'predict.py');
 const HEART_SCRIPT    = path.join(ML_DIR, 'heart_predict.py');
 const PNEUMONIA_SCRIPT = path.join(ML_DIR, 'pneumonia_predict.py');
 const BRAIN_TUMOR_SCRIPT = path.join(ML_DIR, 'brain_tumor_predict.py');
+const OCR_SCRIPT      = path.join(ML_DIR, 'ocr_extract.py');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -270,6 +271,54 @@ const clearPredictionHistory = async (req, res) => {
   }
 };
 
+// ─── OCR Report Extraction ───────────────────────────────────────────────────
+
+const OCR_ALLOWED_MIMETYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/bmp', 'image/tiff', 'application/pdf'];
+const OCR_MAX_SIZE = 15 * 1024 * 1024; // 15 MB (PDFs can be larger)
+
+const extractReportData = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No report file uploaded' });
+    }
+
+    if (!OCR_ALLOWED_MIMETYPES.includes(req.file.mimetype)) {
+      return res.status(400).json({
+        error: `Invalid file type. Allowed: PNG, JPEG, WEBP, BMP, TIFF, PDF. Got: ${req.file.mimetype}`
+      });
+    }
+
+    if (req.file.size > OCR_MAX_SIZE) {
+      return res.status(400).json({
+        error: `File too large. Maximum size: 15 MB. Got: ${(req.file.size / 1024 / 1024).toFixed(2)} MB`
+      });
+    }
+
+    const reportType = req.body.type || 'diabetes';
+    if (!['diabetes', 'heart'].includes(reportType)) {
+      return res.status(400).json({ error: 'Invalid report type. Must be "diabetes" or "heart".' });
+    }
+
+    const fileBase64 = req.file.buffer.toString('base64');
+    const inputData = { image: fileBase64, type: reportType, mimetype: req.file.mimetype };
+
+    const result = await runPythonScript(OCR_SCRIPT, inputData);
+
+    if (result.error) {
+      return res.status(422).json({
+        error: result.error,
+        extracted: result.extracted || {},
+        confidence: result.confidence || 0
+      });
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('[extractReportData]', error.message);
+    res.status(500).json({ error: 'Report extraction failed', details: error.message });
+  }
+};
+
 module.exports = { 
   predictDiabetes, 
   getDiabetesPredictions, 
@@ -279,5 +328,6 @@ module.exports = {
   getPneumoniaPredictions,
   predictBrainTumor,
   getBrainTumorPredictions,
-  clearPredictionHistory
+  clearPredictionHistory,
+  extractReportData
 };

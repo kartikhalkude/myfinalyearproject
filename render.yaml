@@ -24,11 +24,11 @@ services:
         value: python3
 
   # --- Frontend Static Site ---
-  - type: static
+  - type: web
     name: dr-assist-frontend
-    env: static
+    runtime: static
     buildCommand: "cd frontend && npm install && npm run build"
-    staticPublishDir: "frontend/dist"
+    publishPath: "frontend/dist"
     envVars:
       - key: VITE_API_URL
         value: https://dr-assist-backend.onrender.com/api # Update after first deploy

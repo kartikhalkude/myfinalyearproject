@@ -165,7 +165,7 @@ print(f'   Per-fold: {[f"{s:.3f}" for s in cv_scores]}')
 
 print('\n5. Fitting on full training set …')
 calibrated.fit(X_train, y_train)
-print('   ✓ Done')
+print('   OK Done')
 
 # ─── 6. Evaluate on held-out test set ────────────────────────────────────────
 
@@ -212,7 +212,7 @@ for case in sanity_cases:
     pred  = int(calibrated.predict(X_s)[0])
     prob  = float(calibrated.predict_proba(X_s)[0][1])
     label = 'Disease' if pred == 1 else 'No Disease'
-    match = '✓' if case['expect'] == 'Any' or case['expect'] == label else '!'
+    match = 'OK' if case['expect'] == 'Any' or case['expect'] == label else '!'
     print(f'   {match} {case["label"][:60]}')
     print(f'     → {label}  ({prob*100:.1f}% disease probability)')
 
@@ -235,7 +235,7 @@ model_data = {
 }
 
 joblib.dump(model_data, MODEL_PATH, compress=3)
-print(f'   ✓ Saved to {MODEL_PATH}')
+print(f'   OK Saved to {MODEL_PATH}')
 
 print('\n' + '=' * 60)
 print('TRAINING COMPLETE')

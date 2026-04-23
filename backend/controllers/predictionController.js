@@ -1,3 +1,4 @@
+const axios = require('axios');
 const { spawn }              = require('child_process');
 const path                   = require('path');
 const DiabetesPrediction     = require('../models/DiabetesPrediction');
@@ -15,10 +16,33 @@ const OCR_SCRIPT      = path.join(ML_DIR, 'ocr_extract.py');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const runPythonScript = (scriptPath, inputData) =>
-  new Promise((resolve, reject) => {
-    const pythonCmd = process.env.PYTHON_CMD || 'python';
-    // NOTE: no cwd override — scripts resolve paths via __file__ internally
+const callHuggingFace = async (endpoint, data) => {
+  const hfUrl = process.env.HF_API_URL; // e.g., https://your-space.hf.space
+  if (!hfUrl) return null;
+
+  try {
+    const response = await axios.post(`${hfUrl}${endpoint}`, data, {
+      timeout: 30000,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`[HF API Error] ${endpoint}:`, error.message);
+    return null; // Fallback to local if HF fails
+  }
+};
+
+const runPythonScript = async (scriptPath, inputData, hfEndpoint = null) => {
+  // 1. Try Hugging Face first if endpoint is provided
+  if (hfEndpoint) {
+    const hfResult = await callHuggingFace(hfEndpoint, inputData);
+    if (hfResult) return hfResult;
+    console.log(`[ML] HF failed or not configured, falling back to local Python for ${hfEndpoint}`);
+  }
+
+  // 2. Local Fallback
+  return new Promise((resolve, reject) => {
+    const pythonCmd = process.env.PYTHON_CMD || 'python3';
     const python = spawn(pythonCmd, [scriptPath]);
 
     let stdout = '';
@@ -56,6 +80,7 @@ const runPythonScript = (scriptPath, inputData) =>
       }
     });
   });
+};
 
 const validateFields = (body, fields) => {
   for (const field of fields) {
@@ -76,7 +101,7 @@ const predictDiabetes = async (req, res) => {
     const missing = validateFields(req.body, DIABETES_FIELDS);
     if (missing) return res.status(400).json({ error: `Missing field: ${missing}` });
 
-    const prediction = await runPythonScript(DIABETES_SCRIPT, req.body);
+    const prediction = await runPythonScript(DIABETES_SCRIPT, req.body, '/predict/diabetes');
     await new DiabetesPrediction({
       userId: req.userId, ...req.body,
       prediction: prediction.prediction, probability: prediction.probability
@@ -109,7 +134,7 @@ const predictHeartDisease = async (req, res) => {
     const missing = validateFields(req.body, HEART_FIELDS);
     if (missing) return res.status(400).json({ error: `Missing field: ${missing}` });
 
-    const prediction = await runPythonScript(HEART_SCRIPT, req.body);
+    const prediction = await runPythonScript(HEART_SCRIPT, req.body, '/predict/heart');
     await new HeartDiseasePrediction({
       userId: req.userId, ...req.body,
       prediction: prediction.prediction, probability: prediction.probability
@@ -160,7 +185,7 @@ const predictPneumonia = async (req, res) => {
     const imageBase64 = req.file.buffer.toString('base64');
     const inputData = { image: imageBase64 };
 
-    const prediction = await runPythonScript(PNEUMONIA_SCRIPT, inputData);
+    const prediction = await runPythonScript(PNEUMONIA_SCRIPT, inputData, '/predict/pneumonia');
 
     // Validate Python output
     if (!prediction.prediction || prediction.probability === undefined) {
@@ -222,7 +247,7 @@ const predictBrainTumor = async (req, res) => {
     const imageBase64 = req.file.buffer.toString('base64');
     const inputData = { image: imageBase64 };
 
-    const prediction = await runPythonScript(BRAIN_TUMOR_SCRIPT, inputData);
+    const prediction = await runPythonScript(BRAIN_TUMOR_SCRIPT, inputData, '/predict/tumor');
 
     await new BrainTumorPrediction({
       userId: req.userId,

@@ -51,9 +51,23 @@ function VideoCall({
   const callStateRef = useRef(callState);
   useEffect(() => { callStateRef.current = callState; }, [callState]);
 
+  // Replace the hardcoded iceServers object at the top of VideoCall.jsx
+
   const iceServers = {
     iceServers: [
-      { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+      {
+        urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"],
+      },
+      {
+        urls: `turn:${import.meta.env.VITE_TURN_SERVER_URL}`,
+        username: import.meta.env.VITE_TURN_SERVER_USERNAME,
+        credential: import.meta.env.VITE_TURN_SERVER_PASSWORD,
+      },
+      {
+        urls: `turns:${import.meta.env.VITE_TURN_SERVER_URL}`, // TLS fallback
+        username: import.meta.env.VITE_TURN_SERVER_USERNAME,
+        credential: import.meta.env.VITE_TURN_SERVER_PASSWORD,
+      },
     ],
   };
 
@@ -445,7 +459,7 @@ function VideoCall({
 
       {/* ── Main Content Area ────────────────────────────────────────── */}
       <div style={{ flex: 1, position: "relative", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        
+
         {/* IDLE / WAITING ROOM */}
         {callState === "idle" && (
           <div style={{ textAlign: "center", maxWidth: 440, padding: 40, animation: "vc-slide-up 0.6s ease" }}>
@@ -466,8 +480,8 @@ function VideoCall({
               {isDoctor ? "Ready to Consult?" : "Welcome to the Clinic"}
             </h2>
             <p style={{ fontSize: 16, color: "#94a3b8", lineHeight: 1.6, marginBottom: 40 }}>
-              {isDoctor 
-                ? `Initiate a secure high-definition video call with ${otherUserName} to begin the appointment.` 
+              {isDoctor
+                ? `Initiate a secure high-definition video call with ${otherUserName} to begin the appointment.`
                 : `Please wait here. Dr. ${otherUserName} will join the consultation shortly. Ensure your camera and mic are ready.`}
             </p>
 
@@ -492,7 +506,7 @@ function VideoCall({
                   <span style={{ fontSize: 15, fontWeight: 600, color: "#f1f5f9" }}>Waiting for Host to Join...</span>
                 </div>
               )}
-              
+
               <button
                 onClick={() => onCallEnd && onCallEnd()}
                 style={{
@@ -584,12 +598,15 @@ function VideoCall({
         {/* ACTIVE CALL */}
         {callState === "active" && (
           <div style={{ position: "absolute", inset: 0, background: "#000" }}>
+            {/* ACTIVE CALL — replace the remote <video> with this */}
             <video
               ref={remoteVideoRef}
-              autoPlay playsInline
+              autoPlay
+              playsInline
+              onClick={e => e.target.play()}          // tap to unblock on mobile
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
-            
+
             {!isVideoOn && (
               <div style={{ position: "absolute", inset: 0, background: "#020617", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
                 <div style={{ width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -636,7 +653,7 @@ function VideoCall({
             </div>
             <h1 style={{ fontSize: 32, fontWeight: 800, color: "#f8fafc", marginBottom: 12 }}>Consultation Ended</h1>
             <p style={{ fontSize: 16, color: "#94a3b8", marginBottom: 32 }}>Your session with {otherUserName} has concluded safely.</p>
-            
+
             <div className="vc-glass" style={{ padding: "24px 32px", borderRadius: 24, display: "inline-flex", flexDirection: "column", gap: 16 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 40 }}>
                 <span style={{ fontSize: 14, color: "#94a3b8" }}>Duration</span>

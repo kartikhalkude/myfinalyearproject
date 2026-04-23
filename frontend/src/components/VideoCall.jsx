@@ -24,20 +24,16 @@ const fetchIceServers = async () => {
   try {
     const appName = import.meta.env.VITE_METERED_APP_NAME;
     const apiKey = import.meta.env.VITE_METERED_API_KEY;
-
-    if (!appName || !apiKey) throw new Error("Metered credentials missing from env");
-
+    if (!appName || !apiKey) throw new Error("Metered credentials missing");
     const res = await fetch(
       `https://${appName}.metered.live/api/v1/turn/credentials?apiKey=${apiKey}`
     );
-
-    if (!res.ok) throw new Error(`Metered API responded with ${res.status}`);
-
+    if (!res.ok) throw new Error(`Metered API ${res.status}`);
     const iceServers = await res.json();
-    console.log("[WebRTC] Fetched ICE servers:", iceServers);
+    console.log("[WebRTC] ICE servers fetched:", iceServers);
     return { iceServers };
   } catch (e) {
-    console.warn("[WebRTC] TURN fetch failed, falling back to STUN only:", e.message);
+    console.warn("[WebRTC] TURN fetch failed, STUN only:", e.message);
     return {
       iceServers: [
         { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
@@ -45,6 +41,32 @@ const fetchIceServers = async () => {
     };
   }
 };
+
+// ─── Module-level ICE candidate buffer ──────────────────────────────────────
+// WHY THIS EXISTS:
+// When a patient accepts a call from a toast notification, they navigate to
+// the call page. During that navigation the doctor is already sending ICE
+// candidates over the WebSocket. Because the VideoCall component isn't mounted
+// yet, those candidates were silently dropped and ICE never completed —
+// causing the permanent black remote screen on the toast path.
+//
+// This buffer captures candidates at module-load time (before any component
+// mounts). When the component mounts it drains the buffer into its own queue.
+const _candidateBuffer = new Map();   // appointmentId -> candidate[]
+const _activeAppointments = new Set(); // appointmentIds with a live component
+
+const _moduleIceHandler = ({ appointmentId, candidate }) => {
+  // Only buffer when no component is actively handling this appointment
+  if (!_activeAppointments.has(appointmentId)) {
+    if (!_candidateBuffer.has(appointmentId)) {
+      _candidateBuffer.set(appointmentId, []);
+    }
+    _candidateBuffer.get(appointmentId).push(candidate);
+  }
+};
+
+// Starts listening the moment this module is imported — before any render
+websocketService.on("call:ice-candidate", _moduleIceHandler);
 
 // ─── Component ───────────────────────────────────────────────────────────────
 function VideoCall({
@@ -80,10 +102,26 @@ function VideoCall({
     callStateRef.current = callState;
   }, [callState]);
 
+  // ─── Register component & drain pre-mount candidate buffer ──────────────
+  useEffect(() => {
+    _activeAppointments.add(appointmentId);
+
+    // Pull in any candidates that arrived while we weren't mounted yet
+    const buffered = _candidateBuffer.get(appointmentId) || [];
+    _candidateBuffer.delete(appointmentId);
+    if (buffered.length > 0) {
+      console.log(`[WebRTC] Draining ${buffered.length} pre-mount ICE candidates`);
+      iceCandidateQueueRef.current.push(...buffered);
+    }
+
+    return () => {
+      _activeAppointments.delete(appointmentId);
+    };
+  }, [appointmentId]);
+
   // ─── Media ────────────────────────────────────────────────────────────────
   const initializeMedia = async () => {
-    if (localStreamRef.current && localStreamRef.current.active)
-      return localStreamRef.current;
+    if (localStreamRef.current?.active) return localStreamRef.current;
     if (mediaInitializationPromiseRef.current)
       return mediaInitializationPromiseRef.current;
 
@@ -110,7 +148,7 @@ function VideoCall({
     return mediaInitializationPromiseRef.current;
   };
 
-  // ─── Peer Connection (fetches TURN credentials each time) ────────────────
+  // ─── Peer Connection ──────────────────────────────────────────────────────
   const createPeerConnection = async (stream) => {
     try {
       const iceConfig = await fetchIceServers();
@@ -124,7 +162,7 @@ function VideoCall({
       }
 
       peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams.length > 0) {
+        if (event.streams?.[0]) {
           const remoteStream = event.streams[0];
           remoteStreamRef.current = remoteStream;
           if (remoteVideoRef.current) {
@@ -132,21 +170,6 @@ function VideoCall({
             remoteVideoRef.current.play().catch(() => { });
           }
         }
-      };
-
-      peerConnection.onconnectionstatechange = () => {
-        console.log("[WebRTC] Connection state:", peerConnection.connectionState);
-        if (
-          peerConnection.connectionState === "failed" ||
-          peerConnection.connectionState === "disconnected"
-        ) {
-          setError("Connection lost");
-          endCall();
-        }
-      };
-
-      peerConnection.oniceconnectionstatechange = () => {
-        console.log("[WebRTC] ICE state:", peerConnection.iceConnectionState);
       };
 
       peerConnection.onicecandidate = (event) => {
@@ -159,6 +182,39 @@ function VideoCall({
         }
       };
 
+      peerConnection.oniceconnectionstatechange = () => {
+        const state = peerConnection.iceConnectionState;
+        console.log("[WebRTC] ICE state:", state);
+
+        if (state === "connected" || state === "completed") {
+          // Ensure video is attached now that media is flowing
+          if (remoteStreamRef.current && remoteVideoRef.current) {
+            if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
+              remoteVideoRef.current.srcObject = remoteStreamRef.current;
+            }
+            remoteVideoRef.current.play().catch(() => { });
+          }
+        }
+
+        if (state === "failed") {
+          setError("Connection failed. Please try again.");
+          endCall();
+        }
+
+        if (state === "disconnected") {
+          setTimeout(() => {
+            if (peerConnectionRef.current?.iceConnectionState === "disconnected") {
+              setError("Connection lost");
+              endCall();
+            }
+          }, 5000);
+        }
+      };
+
+      peerConnection.onconnectionstatechange = () => {
+        console.log("[WebRTC] Peer state:", peerConnection.connectionState);
+      };
+
       return peerConnection;
     } catch (err) {
       setError("Failed to create peer connection: " + err.message);
@@ -168,15 +224,9 @@ function VideoCall({
 
   // ─── ICE Queue ────────────────────────────────────────────────────────────
   const processIceCandidateQueue = async () => {
-    if (
-      !peerConnectionRef.current ||
-      !peerConnectionRef.current.remoteDescription
-    )
-      return;
-    const queue = iceCandidateQueueRef.current;
-    if (queue.length === 0) return;
-    while (queue.length > 0) {
-      const candidate = queue.shift();
+    if (!peerConnectionRef.current?.remoteDescription) return;
+    const queue = iceCandidateQueueRef.current.splice(0); // drain atomically
+    for (const candidate of queue) {
       if (!candidate) continue;
       try {
         await peerConnectionRef.current.addIceCandidate(
@@ -217,34 +267,22 @@ function VideoCall({
     try {
       if (data.appointmentId !== appointmentId) return;
       if (incomingCallProcessedRef.current || peerConnectionRef.current) return;
-      
-      console.log("[VideoCall] Handling incoming call:", data);
       incomingCallProcessedRef.current = true;
 
       const { offer } = data;
-      
-      // If we're accepting from a toast (prop) or already in the waiting room (idle),
-      // we go to "active" immediately. This mounts the video elements so they're
-      // ready when the stream arrives, preventing the "black screen" race condition.
-      const shouldAutoAccept = (incomingCallData && data.appointmentId === incomingCallData.appointmentId) || 
-                              (callStateRef.current === "idle" && !isDoctor);
-
-      if (shouldAutoAccept) {
-        console.log("[VideoCall] Auto-accepting incoming call");
-        setCallState("active");
-        startCallTimer();
-      } else {
-        setCallState("ringing");
-      }
+      const isWaitingInRoom = callStateRef.current === "idle" && !isDoctor;
+      if (!isWaitingInRoom) setCallState("ringing");
 
       const stream = await initializeMedia();
       if (!stream) return;
       const peerConnection = await createPeerConnection(stream);
       if (!peerConnection) return;
 
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(offer)
-      );
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+      // processIceCandidateQueue now includes:
+      //  • pre-mount candidates (drained from _candidateBuffer on mount)
+      //  • any that arrived after mount but before remote description was set
       await processIceCandidateQueue();
 
       const answer = await peerConnection.createAnswer({
@@ -253,16 +291,20 @@ function VideoCall({
       });
       await peerConnection.setLocalDescription(answer);
 
-      console.log("[VideoCall] Sending answer to doctor");
       websocketService.emit("call:answer", { appointmentId, answer });
 
-      // If we were in ringing state, we stay there until the user clicks Accept
-      // or the auto-accept timer (for props) kicks in. 
-      // If we already set to active above, we're done.
+      if (isWaitingInRoom) {
+        setManualIncomingCall(data);
+        setCallState("active");
+        startCallTimer();
+      } else {
+        setTimeout(() => {
+          if (callStateRef.current === "idle")
+            incomingCallProcessedRef.current = false;
+        }, 10000);
+      }
     } catch (err) {
-      console.error("[VideoCall] Error in handleIncomingCall:", err);
       setError("Failed to handle incoming call: " + err.message);
-      incomingCallProcessedRef.current = false;
     }
   };
 
@@ -328,7 +370,7 @@ function VideoCall({
   const cleanup = () => {
     if (callTimerRef.current) clearInterval(callTimerRef.current);
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
     }
     if (peerConnectionRef.current) {
@@ -360,66 +402,46 @@ function VideoCall({
 
   // ─── A/V Toggles ─────────────────────────────────────────────────────────
   const toggleAudio = () => {
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsAudioOn(audioTrack.enabled);
-      }
-    }
+    const track = localStreamRef.current?.getAudioTracks()[0];
+    if (track) { track.enabled = !track.enabled; setIsAudioOn(track.enabled); }
   };
 
   const toggleVideo = () => {
-    if (localStreamRef.current) {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoOn(videoTrack.enabled);
-      }
-    }
+    const track = localStreamRef.current?.getVideoTracks()[0];
+    if (track) { track.enabled = !track.enabled; setIsVideoOn(track.enabled); }
   };
 
   // ─── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const handleIncomingCallWrapper = (data) => handleIncomingCall(data);
-    const handleCallAnsweredWrapper = (data) => handleCallAnswered(data);
-    const handleICECandidateWrapper = (data) => handleICECandidate(data);
-    const handleCallEndedWrapper = () => handleCallEnded();
-    const handleCallRejectedWrapper = () => {
+    const onIncoming = (data) => handleIncomingCall(data);
+    const onAnswered = (data) => handleCallAnswered(data);
+    const onIce = (data) => handleICECandidate(data);
+    const onEnded = () => handleCallEnded();
+    const onRejected = () => {
       setError("Call was declined");
       cleanup();
       setCallState("idle");
     };
 
-    handlersRef.current = {
-      handleIncomingCallWrapper,
-      handleCallAnsweredWrapper,
-      handleICECandidateWrapper,
-      handleCallEndedWrapper,
-      handleCallRejectedWrapper,
-    };
+    handlersRef.current = { onIncoming, onAnswered, onIce, onEnded, onRejected };
 
-    websocketService.on("call:incoming", handleIncomingCallWrapper);
-    websocketService.on("call:answered", handleCallAnsweredWrapper);
-    websocketService.on("call:ice-candidate", handleICECandidateWrapper);
-    websocketService.on("call:ended", handleCallEndedWrapper);
-    websocketService.on("call:rejected", handleCallRejectedWrapper);
+    websocketService.on("call:incoming", onIncoming);
+    websocketService.on("call:answered", onAnswered);
+    websocketService.on("call:ice-candidate", onIce);
+    websocketService.on("call:ended", onEnded);
+    websocketService.on("call:rejected", onRejected);
 
     return () => {
-      websocketService.off("call:incoming", handleIncomingCallWrapper);
-      websocketService.off("call:answered", handleCallAnsweredWrapper);
-      websocketService.off("call:ice-candidate", handleICECandidateWrapper);
-      websocketService.off("call:ended", handleCallEndedWrapper);
-      websocketService.off("call:rejected", handleCallRejectedWrapper);
+      websocketService.off("call:incoming", onIncoming);
+      websocketService.off("call:answered", onAnswered);
+      websocketService.off("call:ice-candidate", onIce);
+      websocketService.off("call:ended", onEnded);
+      websocketService.off("call:rejected", onRejected);
     };
   }, [user.id, appointmentId, otherUserId, isDoctor]);
 
   useEffect(() => {
-    if (
-      incomingCallData &&
-      !incomingCallProcessedRef.current &&
-      !isDoctor
-    ) {
+    if (incomingCallData && !incomingCallProcessedRef.current && !isDoctor) {
       handleIncomingCall(incomingCallData);
     }
   }, [incomingCallData, isDoctor]);
@@ -440,27 +462,24 @@ function VideoCall({
     return () => cleanup();
   }, []);
 
+  // Re-attach streams when callState becomes active.
+  // Needed for toast path: ontrack may fire before the video element is in DOM.
   useEffect(() => {
-    const attach = () => {
-      if (callState === "active") {
-        if (localStreamRef.current && localVideoRef.current) {
-          if (localVideoRef.current.srcObject !== localStreamRef.current) {
-            localVideoRef.current.srcObject = localStreamRef.current;
-            localVideoRef.current.play().catch(() => { });
-          }
-        }
-        if (remoteStreamRef.current && remoteVideoRef.current) {
-          if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
-            remoteVideoRef.current.srcObject = remoteStreamRef.current;
-            remoteVideoRef.current.play().catch(() => { });
-          }
-        }
+    if (callState !== "active") return;
+
+    if (localStreamRef.current && localVideoRef.current) {
+      if (localVideoRef.current.srcObject !== localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current;
       }
-    };
-    attach();
-    // A secondary check after a short delay to handle any missed race conditions
-    const t = setTimeout(attach, 1000);
-    return () => clearTimeout(t);
+      localVideoRef.current.play().catch(() => { });
+    }
+
+    if (remoteStreamRef.current && remoteVideoRef.current) {
+      if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current;
+      }
+      remoteVideoRef.current.play().catch(() => { });
+    }
   }, [callState]);
 
   // ─── Styles ───────────────────────────────────────────────────────────────
@@ -486,19 +505,12 @@ function VideoCall({
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        background: "#020617",
-        color: "#f8fafc",
-        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      background: "#020617", color: "#f8fafc",
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+      display: "flex", flexDirection: "column", overflow: "hidden",
+    }}>
       <style>{`
         @keyframes vc-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @keyframes vc-pulse { 0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); } 70% { box-shadow: 0 0 0 20px rgba(16,185,129,0); } 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } }
@@ -508,11 +520,11 @@ function VideoCall({
         .vc-glass { background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
       `}</style>
 
-      {/* Background */}
+      {/* Background glows */}
       <div style={{ position: "absolute", top: "-10%", left: "-10%", width: "40%", height: "40%", background: "radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)", filter: "blur(60px)", zIndex: 0 }} />
       <div style={{ position: "absolute", bottom: "-10%", right: "-10%", width: "40%", height: "40%", background: "radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%)", filter: "blur(60px)", zIndex: 0 }} />
 
-      {/* Error Notification */}
+      {/* Error */}
       {error && (
         <div style={{
           position: "absolute", top: 32, left: "50%", transform: "translateX(-50%)",
@@ -529,16 +541,13 @@ function VideoCall({
         </div>
       )}
 
-      {/* Top Header HUD */}
-      <div
-        className="vc-glass"
-        style={{
-          position: "absolute", top: 24, left: 24, right: 24, height: 72,
-          borderRadius: 20, zIndex: 50, display: "flex", alignItems: "center",
-          padding: "0 24px", justifyContent: "space-between",
-          visibility: callState === "active" ? "visible" : "hidden",
-        }}
-      >
+      {/* Top HUD */}
+      <div className="vc-glass" style={{
+        position: "absolute", top: 24, left: 24, right: 24, height: 72,
+        borderRadius: 20, zIndex: 50, display: "flex", alignItems: "center",
+        padding: "0 24px", justifyContent: "space-between",
+        visibility: callState === "active" ? "visible" : "hidden",
+      }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Activity size={20} color="#10b981" />
@@ -551,7 +560,6 @@ function VideoCall({
             </div>
           </div>
         </div>
-
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,0.2)", padding: "8px 16px", borderRadius: 12 }}>
             <Clock size={16} color="#94a3b8" />
@@ -566,7 +574,7 @@ function VideoCall({
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main area */}
       <div style={{ flex: 1, position: "relative", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
 
         {/* IDLE */}
@@ -584,7 +592,6 @@ function VideoCall({
                 {otherUserName?.charAt(0)?.toUpperCase() || <Users size={48} />}
               </div>
             </div>
-
             <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12, letterSpacing: "-0.02em" }}>
               {isDoctor ? "Ready to Consult?" : "Welcome to the Clinic"}
             </h2>
@@ -593,7 +600,6 @@ function VideoCall({
                 ? `Initiate a secure high-definition video call with ${otherUserName} to begin the appointment.`
                 : `Please wait here. Dr. ${otherUserName} will join the consultation shortly. Ensure your camera and mic are ready.`}
             </p>
-
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {isDoctor ? (
                 <button
@@ -615,26 +621,19 @@ function VideoCall({
                   <span style={{ fontSize: 15, fontWeight: 600, color: "#f1f5f9" }}>Waiting for Host to Join...</span>
                 </div>
               )}
-
               <button
-                onClick={() => onCallEnd && onCallEnd()}
+                onClick={() => onCallEnd?.()}
                 style={{
                   padding: "16px", background: "rgba(255,255,255,0.05)", color: "#94a3b8",
-                  border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, fontSize: 14,
-                  fontWeight: 600, cursor: "pointer",
+                  border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16, fontSize: 14, fontWeight: 600, cursor: "pointer",
                 }}
               >
                 Exit Waiting Room
               </button>
             </div>
-
             <div style={{ marginTop: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 24, opacity: 0.5 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                <ShieldCheck size={14} /> End-to-End Encrypted
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                <Video size={14} /> HD Quality Enabled
-              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}><ShieldCheck size={14} /> End-to-End Encrypted</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}><Video size={14} /> HD Quality Enabled</div>
             </div>
           </div>
         )}
@@ -655,23 +654,16 @@ function VideoCall({
                 {otherUserName?.charAt(0)?.toUpperCase()}
               </div>
             </div>
-
             <div style={{ fontSize: 14, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 12 }}>
               {isDoctor ? "Calling Patient..." : "Incoming Call..."}
             </div>
             <h1 style={{ fontSize: 36, fontWeight: 800, color: "#f8fafc", marginBottom: 40 }}>{otherUserName}</h1>
-
             <div style={{ display: "flex", gap: 20, justifyContent: "center" }}>
               {!isDoctor ? (
                 <>
                   <button
                     onClick={rejectCall}
-                    style={{
-                      width: 72, height: 72, borderRadius: "50%", background: "#ef4444",
-                      color: "#fff", border: "none", display: "flex", alignItems: "center",
-                      justifyContent: "center", cursor: "pointer",
-                      boxShadow: "0 10px 25px rgba(239,68,68,0.4)", transition: "all 0.2s",
-                    }}
+                    style={{ width: 72, height: 72, borderRadius: "50%", background: "#ef4444", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 10px 25px rgba(239,68,68,0.4)", transition: "all 0.2s" }}
                     onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
                     onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
                   >
@@ -679,12 +671,7 @@ function VideoCall({
                   </button>
                   <button
                     onClick={acceptCall}
-                    style={{
-                      width: 72, height: 72, borderRadius: "50%", background: "#10b981",
-                      color: "#fff", border: "none", display: "flex", alignItems: "center",
-                      justifyContent: "center", cursor: "pointer",
-                      boxShadow: "0 10px 25px rgba(16,185,129,0.4)", transition: "all 0.2s",
-                    }}
+                    style={{ width: 72, height: 72, borderRadius: "50%", background: "#10b981", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 10px 25px rgba(16,185,129,0.4)", transition: "all 0.2s" }}
                     onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
                     onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
                   >
@@ -694,11 +681,7 @@ function VideoCall({
               ) : (
                 <button
                   onClick={endCall}
-                  style={{
-                    padding: "16px 32px", background: "rgba(239,68,68,0.1)", color: "#ef4444",
-                    border: "1px solid rgba(239,68,68,0.2)", borderRadius: 16, fontSize: 16,
-                    fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 12,
-                  }}
+                  style={{ padding: "16px 32px", background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 16, fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}
                 >
                   <PhoneOff size={20} /> Cancel Call
                 </button>
@@ -707,10 +690,10 @@ function VideoCall({
           </div>
         )}
 
-        {/* ACTIVE CALL */}
+        {/* ACTIVE */}
         {callState === "active" && (
           <div style={{ position: "absolute", inset: 0, background: "#000" }}>
-            {/* Remote video — onClick unblocks autoplay on mobile */}
+            {/* Remote video — onClick unblocks autoplay on iOS/Android */}
             <video
               ref={remoteVideoRef}
               autoPlay
@@ -720,51 +703,28 @@ function VideoCall({
             />
 
             {!isVideoOn && (
-              <div style={{
-                position: "absolute", inset: 0, background: "#020617",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexDirection: "column", gap: 20,
-              }}>
+              <div style={{ position: "absolute", inset: 0, background: "#020617", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
                 <div style={{ width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <VideoOff size={48} color="#475569" />
                 </div>
-                <div style={{ fontSize: 18, color: "#94a3b8", fontWeight: 500 }}>
-                  Participant's camera is off
-                </div>
+                <div style={{ fontSize: 18, color: "#94a3b8", fontWeight: 500 }}>Participant's camera is off</div>
               </div>
             )}
 
             {/* Local PIP */}
             <div style={{
-              position: "absolute",
-              bottom: isPipMinimized ? 32 : 120,
-              right: 32,
-              width: isPipMinimized ? 120 : 280,
-              height: isPipMinimized ? 80 : 180,
-              borderRadius: 20, overflow: "hidden",
-              border: "2px solid rgba(255,255,255,0.15)",
+              position: "absolute", bottom: isPipMinimized ? 32 : 120, right: 32,
+              width: isPipMinimized ? 120 : 280, height: isPipMinimized ? 80 : 180,
+              borderRadius: 20, overflow: "hidden", border: "2px solid rgba(255,255,255,0.15)",
               boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
-              transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-              zIndex: 100,
+              transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)", zIndex: 100,
             }}>
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
+              <video ref={localVideoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               <div style={{ position: "absolute", top: 0, inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 40%)" }} />
-              <div style={{ position: "absolute", bottom: 12, left: 12, fontSize: 12, fontWeight: 700, color: "#fff", textShadow: "0 2px 4px rgba(0,0,0,0.5)" }}>
-                You
-              </div>
+              <div style={{ position: "absolute", bottom: 12, left: 12, fontSize: 12, fontWeight: 700, color: "#fff", textShadow: "0 2px 4px rgba(0,0,0,0.5)" }}>You</div>
               <button
                 onClick={() => setIsPipMinimized(!isPipMinimized)}
-                style={{
-                  position: "absolute", top: 8, right: 8, width: 28, height: 28,
-                  borderRadius: 8, background: "rgba(15,23,42,0.8)", border: "none",
-                  color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                }}
+                style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: 8, background: "rgba(15,23,42,0.8)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
                 {isPipMinimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
               </button>
@@ -778,19 +738,12 @@ function VideoCall({
             <div style={{ width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px" }}>
               <PhoneOff size={40} color="#94a3b8" />
             </div>
-            <h1 style={{ fontSize: 32, fontWeight: 800, color: "#f8fafc", marginBottom: 12 }}>
-              Consultation Ended
-            </h1>
-            <p style={{ fontSize: 16, color: "#94a3b8", marginBottom: 32 }}>
-              Your session with {otherUserName} has concluded safely.
-            </p>
-
+            <h1 style={{ fontSize: 32, fontWeight: 800, color: "#f8fafc", marginBottom: 12 }}>Consultation Ended</h1>
+            <p style={{ fontSize: 16, color: "#94a3b8", marginBottom: 32 }}>Your session with {otherUserName} has concluded safely.</p>
             <div className="vc-glass" style={{ padding: "24px 32px", borderRadius: 24, display: "inline-flex", flexDirection: "column", gap: 16 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 40 }}>
                 <span style={{ fontSize: 14, color: "#94a3b8" }}>Duration</span>
-                <span style={{ fontSize: 18, fontWeight: 800, color: "#f8fafc", fontFamily: "monospace" }}>
-                  {formatDuration(callDuration)}
-                </span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: "#f8fafc", fontFamily: "monospace" }}>{formatDuration(callDuration)}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 40 }}>
                 <span style={{ fontSize: 14, color: "#94a3b8" }}>Connection</span>
@@ -799,12 +752,8 @@ function VideoCall({
                 </span>
               </div>
               <button
-                onClick={() => onCallEnd && onCallEnd()}
-                style={{
-                  marginTop: 8, padding: "14px 32px", background: "#f8fafc", color: "#020617",
-                  border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
+                onClick={() => onCallEnd?.()}
+                style={{ marginTop: 8, padding: "14px 32px", background: "#f8fafc", color: "#020617", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
                 onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.02)")}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
               >
@@ -815,7 +764,7 @@ function VideoCall({
         )}
       </div>
 
-      {/* Control Bar */}
+      {/* Control bar */}
       {callState === "active" && (
         <div style={{
           position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)",
@@ -828,13 +777,10 @@ function VideoCall({
           <button onClick={toggleAudio} style={ctrlBtn(isAudioOn, false)} title={isAudioOn ? "Mute" : "Unmute"}>
             {isAudioOn ? <Mic size={22} /> : <MicOff size={22} color="#fff" />}
           </button>
-
           <button onClick={toggleVideo} style={ctrlBtn(isVideoOn, false)} title={isVideoOn ? "Stop Video" : "Start Video"}>
             {isVideoOn ? <Video size={22} /> : <VideoOff size={22} color="#fff" />}
           </button>
-
           <div style={{ width: 1, height: 32, background: "rgba(255,255,255,0.1)", margin: "0 8px" }} />
-
           <button onClick={endCall} style={ctrlBtn(true, true)} title="End Consultation">
             <PhoneOff size={24} />
           </button>

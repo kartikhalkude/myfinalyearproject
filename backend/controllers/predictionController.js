@@ -17,17 +17,26 @@ const OCR_SCRIPT      = path.join(ML_DIR, 'ocr_extract.py');
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const callHuggingFace = async (endpoint, data) => {
-  const hfUrl = process.env.HF_API_URL; // e.g., https://your-space.hf.space
-  if (!hfUrl) return null;
+  const hfUrl = process.env.HF_API_URL;
+  if (!hfUrl) {
+    console.warn("[ML] HF_API_URL not set in .env");
+    return null;
+  }
+
+  const sanitizedUrl = hfUrl.replace(/\/$/, '');
+  const sanitizedEndpoint = endpoint.replace(/^\//, '');
+  const fullUrl = `${sanitizedUrl}/${sanitizedEndpoint}`;
+  console.log(`[ML] Calling Hugging Face: ${fullUrl}`);
 
   try {
-    const response = await axios.post(`${hfUrl}${endpoint}`, data, {
+    const response = await axios.post(fullUrl, data, {
       timeout: 30000,
       headers: { 'Content-Type': 'application/json' }
     });
+    console.log(`[ML] HF Success: ${endpoint}`);
     return response.data;
   } catch (error) {
-    console.error(`[HF API Error] ${endpoint}:`, error.message);
+    console.error(`[ML] HF API Error (${endpoint}):`, error.response?.data || error.message);
     return null; // Fallback to local if HF fails
   }
 };

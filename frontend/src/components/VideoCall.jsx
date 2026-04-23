@@ -217,12 +217,25 @@ function VideoCall({
     try {
       if (data.appointmentId !== appointmentId) return;
       if (incomingCallProcessedRef.current || peerConnectionRef.current) return;
+      
+      console.log("[VideoCall] Handling incoming call:", data);
       incomingCallProcessedRef.current = true;
 
       const { offer } = data;
-      const isWaitingInRoom =
-        callStateRef.current === "idle" && !isDoctor;
-      if (!isWaitingInRoom) setCallState("ringing");
+      
+      // If we're accepting from a toast (prop) or already in the waiting room (idle),
+      // we go to "active" immediately. This mounts the video elements so they're
+      // ready when the stream arrives, preventing the "black screen" race condition.
+      const shouldAutoAccept = (incomingCallData && data.appointmentId === incomingCallData.appointmentId) || 
+                              (callStateRef.current === "idle" && !isDoctor);
+
+      if (shouldAutoAccept) {
+        console.log("[VideoCall] Auto-accepting incoming call");
+        setCallState("active");
+        startCallTimer();
+      } else {
+        setCallState("ringing");
+      }
 
       const stream = await initializeMedia();
       if (!stream) return;
@@ -240,20 +253,16 @@ function VideoCall({
       });
       await peerConnection.setLocalDescription(answer);
 
+      console.log("[VideoCall] Sending answer to doctor");
       websocketService.emit("call:answer", { appointmentId, answer });
 
-      if (isWaitingInRoom) {
-        setManualIncomingCall(data);
-        setCallState("active");
-        startCallTimer();
-      } else {
-        setTimeout(() => {
-          if (callStateRef.current === "idle")
-            incomingCallProcessedRef.current = false;
-        }, 10000);
-      }
+      // If we were in ringing state, we stay there until the user clicks Accept
+      // or the auto-accept timer (for props) kicks in. 
+      // If we already set to active above, we're done.
     } catch (err) {
+      console.error("[VideoCall] Error in handleIncomingCall:", err);
       setError("Failed to handle incoming call: " + err.message);
+      incomingCallProcessedRef.current = false;
     }
   };
 
@@ -432,20 +441,26 @@ function VideoCall({
   }, []);
 
   useEffect(() => {
-    if (callState === "active") {
-      if (localStreamRef.current && localVideoRef.current) {
-        if (localVideoRef.current.srcObject !== localStreamRef.current) {
-          localVideoRef.current.srcObject = localStreamRef.current;
-          localVideoRef.current.play().catch(() => { });
+    const attach = () => {
+      if (callState === "active") {
+        if (localStreamRef.current && localVideoRef.current) {
+          if (localVideoRef.current.srcObject !== localStreamRef.current) {
+            localVideoRef.current.srcObject = localStreamRef.current;
+            localVideoRef.current.play().catch(() => { });
+          }
+        }
+        if (remoteStreamRef.current && remoteVideoRef.current) {
+          if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
+            remoteVideoRef.current.srcObject = remoteStreamRef.current;
+            remoteVideoRef.current.play().catch(() => { });
+          }
         }
       }
-      if (remoteStreamRef.current && remoteVideoRef.current) {
-        if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
-          remoteVideoRef.current.srcObject = remoteStreamRef.current;
-          remoteVideoRef.current.play().catch(() => { });
-        }
-      }
-    }
+    };
+    attach();
+    // A secondary check after a short delay to handle any missed race conditions
+    const t = setTimeout(attach, 1000);
+    return () => clearTimeout(t);
   }, [callState]);
 
   // ─── Styles ───────────────────────────────────────────────────────────────

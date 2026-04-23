@@ -22,6 +22,7 @@ function EntitySearch({ entities, value, onChange, placeholder = "Search..." }) 
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <div 
+        className={focused || open ? "dm-search-trigger dm-search-trigger-active" : "dm-search-trigger"}
         style={{ 
           display: "flex", alignItems: "center", padding: "12px 16px", background: focused || open ? "#fff" : "#f8fafc", 
           border: "1px solid", borderColor: focused || open ? "#10b981" : "#e2e8f0", borderRadius: 12, cursor: "text", 
@@ -31,24 +32,25 @@ function EntitySearch({ entities, value, onChange, placeholder = "Search..." }) 
       >
         <Search size={16} color="#94a3b8" style={{ flexShrink: 0, marginRight: 10 }} />
         {selected && !open ? (
-          <span style={{ flex: 1, fontSize: 14, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span className="dm-soft-text" style={{ flex: 1, fontSize: 14, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             <strong style={{ fontWeight: 600 }}>{selected.name}</strong> <span style={{ color: "#64748b", marginLeft: 4 }}>({selected.email})</span>
           </span>
         ) : (
           <input type="text" placeholder={selected ? `${selected.name} (${selected.email})` : placeholder} value={q} autoFocus={open}
             onChange={e => { setQ(e.target.value); setOpen(true); }} onFocus={() => { setFocused(true); setOpen(true); }} onBlur={() => setFocused(false)}
+            className="dm-soft-text"
             style={{ flex: 1, border: "none", outline: "none", fontSize: 14, fontFamily: "inherit", color: "#0f172a", background: "transparent", padding: 0 }} />
         )}
         {value && <button type="button" onClick={e => { e.stopPropagation(); onChange(null); setQ(""); }} style={{ marginLeft: 8, color: "#94a3b8", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>}
       </div>
       {open && (
-        <div style={{ position: "absolute", zIndex: 50, top: "calc(100% + 8px)", left: 0, right: 0, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, boxShadow: "0 12px 32px rgba(15,23,42,0.1)", maxHeight: 240, overflowY: "auto", padding: 8 }}>
-          {filtered.length === 0 ? <div style={{ padding: "12px", fontSize: 13, color: "#64748b", textAlign: "center" }}>No results found</div> : filtered.map(p => (
+        <div className="dm-search-surface" style={{ position: "absolute", zIndex: 50, top: "calc(100% + 8px)", left: 0, right: 0, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, boxShadow: "0 12px 32px rgba(15,23,42,0.1)", maxHeight: 240, overflowY: "auto", padding: 8 }}>
+          {filtered.length === 0 ? <div className="dm-soft-muted" style={{ padding: "12px", fontSize: 13, color: "#64748b", textAlign: "center" }}>No results found</div> : filtered.map(p => (
             <button key={p._id} type="button" onClick={() => { onChange(p); setOpen(false); setQ(""); }}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", borderRadius: 8, textAlign: "left", transition: "background 0.15s" }}
               onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{p.name?.charAt(0)?.toUpperCase()}</div>
-              <div><div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{p.name}</div><div style={{ fontSize: 12, color: "#64748b" }}>{p.email}</div></div>
+              <div><div className="dm-soft-text" style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{p.name}</div><div className="dm-soft-muted" style={{ fontSize: 12, color: "#64748b" }}>{p.email}</div></div>
             </button>
           ))}
         </div>
@@ -80,6 +82,7 @@ const onBlur = e => { e.target.style.background = "#f8fafc"; e.target.style.bord
 
 export default function HealthRecords({ doctorPatients, onRefresh }) {
   const { user } = useAuth();
+  const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1" || document.body.classList.contains("dm"));
   const [records, setRecords] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +94,20 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
   const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [file, setFile] = useState(null);
+
+  useEffect(() => {
+    const syncDark = () => setDark(localStorage.getItem("dm") === "1" || document.body.classList.contains("dm"));
+    syncDark();
+    const observer = new MutationObserver(syncDark);
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    window.addEventListener("dm-change", syncDark);
+    window.addEventListener("storage", syncDark);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("dm-change", syncDark);
+      window.removeEventListener("storage", syncDark);
+    };
+  }, []);
 
   const extractArray = (data, keys = []) => {
     if (Array.isArray(data)) return data;
@@ -243,13 +260,13 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
         )}
       />
 
-      {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 14, color: "#dc2626", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 8px rgba(220, 38, 38, 0.05)" }}>{error}<button onClick={() => setError("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#fca5a5", display: "flex", alignItems: "center" }}><X size={18} /></button></div>}
-      {success && <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 14, color: "#166534", boxShadow: "0 2px 8px rgba(22, 163, 74, 0.05)" }}>{success}</div>}
+      {error && <div className="dm-error-banner" style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 14, color: "#dc2626", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 8px rgba(220, 38, 38, 0.05)" }}>{error}<button onClick={() => setError("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#fca5a5", display: "flex", alignItems: "center" }}><X size={18} /></button></div>}
+      {success && <div className="dm-success-banner" style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 14, color: "#166534", boxShadow: "0 2px 8px rgba(22, 163, 74, 0.05)" }}>{success}</div>}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
-        <button onClick={() => setFilterType("all")} style={{ padding: "8px 16px", fontSize: 14, fontWeight: filterType === "all" ? 600 : 500, background: filterType === "all" ? "#10b981" : "#fff", color: filterType === "all" ? "#fff" : "#475569", border: filterType === "all" ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e => { if(filterType !== "all") { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; } }} onMouseLeave={e => { if(filterType !== "all") { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e2e8f0"; } }}>All</button>
+        <button className={filterType === "all" ? "" : "dm-outline-btn"} onClick={() => setFilterType("all")} style={{ padding: "8px 16px", fontSize: 14, fontWeight: filterType === "all" ? 600 : 500, background: filterType === "all" ? "#10b981" : "#fff", color: filterType === "all" ? "#fff" : "#475569", border: filterType === "all" ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e => { if(filterType !== "all") { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; } }} onMouseLeave={e => { if(filterType !== "all") { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e2e8f0"; } }}>All</button>
         {RECORD_TYPES.map(rt => (
-          <button key={rt.value} onClick={() => setFilterType(rt.value)} style={{ padding: "8px 16px", fontSize: 14, fontWeight: filterType === rt.value ? 600 : 500, background: filterType === rt.value ? "#10b981" : "#fff", color: filterType === rt.value ? "#fff" : "#475569", border: filterType === rt.value ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 6 }} onMouseEnter={e => { if(filterType !== rt.value) { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; } }} onMouseLeave={e => { if(filterType !== rt.value) { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e2e8f0"; } }}>
+          <button className={filterType === rt.value ? "" : "dm-outline-btn"} key={rt.value} onClick={() => setFilterType(rt.value)} style={{ padding: "8px 16px", fontSize: 14, fontWeight: filterType === rt.value ? 600 : 500, background: filterType === rt.value ? "#10b981" : "#fff", color: filterType === rt.value ? "#fff" : "#475569", border: filterType === rt.value ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 6 }} onMouseEnter={e => { if(filterType !== rt.value) { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; } }} onMouseLeave={e => { if(filterType !== rt.value) { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e2e8f0"; } }}>
             {filterType === rt.value ? <CheckCircle size={14} /> : null} {rt.label}
           </button>
         ))}
@@ -258,7 +275,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
       {loading ? <Loader message="Loading health records..." /> : filteredRecords.length === 0 ? (
         <SectionCard><EmptyState icon={<ClipboardList size={32} color="#94a3b8" />} title="No health records" subtitle={user?.role === "doctor" ? "Create a record for a patient to see it here." : "Your health records will appear here when added by a doctor."} /></SectionCard>
       ) : (
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 12px rgba(15,23,42,0.03)" }}>
+        <div className="dm-list-surface" style={{ background: dark ? "#111827" : "#fff", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 16, overflow: "hidden", boxShadow: dark ? "0 10px 28px rgba(2,6,23,0.35)" : "0 4px 12px rgba(15,23,42,0.03)" }}>
           {filteredRecords.map((record, idx) => {
             const rType = RECORD_TYPES.find(t => t.value === (record.type || record.recordType)) || RECORD_TYPES[5];
             const severityStyle = SEVERITY_COLORS[record.severity || "normal"] || SEVERITY_COLORS.normal;
@@ -268,25 +285,26 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
               <div 
                 key={record._id} 
                 onClick={() => openDetail(record)}
+                className="dm-record-row"
                 style={{ 
                   padding: "16px 20px", display: "flex", alignItems: "center", gap: 20, cursor: "pointer", 
-                  borderBottom: idx === filteredRecords.length - 1 ? "none" : "1px solid #f1f5f9",
-                  transition: "background 0.2s", background: isNew ? "#f0fdf4" : "transparent"
+                  borderBottom: idx === filteredRecords.length - 1 ? "none" : `1px solid ${dark ? "#1e293b" : "#f1f5f9"}`,
+                  transition: "background 0.2s", background: isNew ? (dark ? "rgba(34,197,94,0.12)" : "#f0fdf4") : "transparent"
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = isNew ? "#dcfce7" : "#f8fafc"}
-                onMouseLeave={e => e.currentTarget.style.background = isNew ? "#f0fdf4" : "transparent"}
+                onMouseEnter={e => e.currentTarget.style.background = isNew ? (dark ? "rgba(34,197,94,0.18)" : "#dcfce7") : (dark ? "#0f172a" : "#f8fafc")}
+                onMouseLeave={e => e.currentTarget.style.background = isNew ? (dark ? "rgba(34,197,94,0.12)" : "#f0fdf4") : "transparent"}
               >
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: rType.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: dark ? "#0f172a" : rType.bg, border: dark ? "1px solid #334155" : "none", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   {rType.icon}
                 </div>
                 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.title}</div>
+                    <div className="dm-soft-text" style={{ fontSize: 15, fontWeight: 600, color: dark ? "#e2e8f0" : "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.title}</div>
                     {isNew && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#10b981", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, textTransform: "uppercase" }}><Bell size={10} fill="currentColor" /> New</span>}
                     {user?.role === "doctor" && !record.notes && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#fef9c3", color: "#854d0e", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, textTransform: "uppercase", border: "1px solid #fde68a" }}><AlertCircle size={10} /> Feedback Needed</span>}
                   </div>
-                  <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div className="dm-soft-muted" style={{ fontSize: 13, color: dark ? "#94a3b8" : "#64748b", display: "flex", alignItems: "center", gap: 8 }}>
                     <span>{user?.role === "doctor" ? `Patient: ${record.patientId?.name || "Unknown"}` : `Dr. ${record.doctorId?.name || record.doctorName || "Unknown"}`}</span>
                     <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#cbd5e1" }}></span>
                     <span>{new Date(record.date || record.createdAt).toLocaleDateString()}</span>
@@ -298,12 +316,12 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
                   
                   {user?.role === "doctor" && (
                     <div style={{ display: "flex", gap: 4 }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => openEdit(record)} title="Edit" style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(record._id)} title="Delete" style={{ width: 32, height: 32, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={14} /></button>
+                      <button onClick={() => openEdit(record)} title="Edit" style={{ width: 32, height: 32, background: dark ? "#0f172a" : "#fff", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><Edit2 size={14} /></button>
+                      <button onClick={() => handleDelete(record._id)} title="Delete" style={{ width: 32, height: 32, background: dark ? "#0f172a" : "#fff", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={14} /></button>
                     </div>
                   )}
                   
-                  <ChevronRight size={18} color="#cbd5e1" />
+                  <ChevronRight size={18} color={dark ? "#64748b" : "#cbd5e1"} />
                 </div>
               </div>
             );
@@ -314,15 +332,15 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
       {/* Detail Modal */}
       {viewingRecord && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)", zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "#fff", borderRadius: 24, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(15,23,42,0.2)" }}>
-            <div style={{ padding: "24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
+          <div className="dm-modal-surface" style={{ background: dark ? "#111827" : "#fff", border: dark ? "1px solid #334155" : "none", borderRadius: 24, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: dark ? "0 24px 64px rgba(2,6,23,0.55)" : "0 24px 64px rgba(15,23,42,0.2)" }}>
+            <div className="dm-modal-header" style={{ padding: "24px", borderBottom: `1px solid ${dark ? "#1e293b" : "#f1f5f9"}`, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: dark ? "#111827" : "#fff", zIndex: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981" }}>
                   <FileText size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>Record Details</div>
-                  <div style={{ fontSize: 13, color: "#64748b" }}>{viewingRecord.title}</div>
+                  <div className="dm-page-title" style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>Record Details</div>
+                  <div className="dm-soft-muted" style={{ fontSize: 13, color: "#64748b" }}>{viewingRecord.title}</div>
                 </div>
               </div>
               <button onClick={() => setViewingRecord(null)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, cursor: "pointer", color: "#64748b" }}><X size={18} /></button>
@@ -330,11 +348,11 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
             
             <div style={{ padding: 24 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-                <div style={{ padding: 12, background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
+                <div className="dm-detail-panel" style={{ padding: 12, background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 }}>Date</div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "#1e293b" }}>{new Date(viewingRecord.date || viewingRecord.createdAt).toLocaleDateString("en-US", { dateStyle: "long" })}</div>
+                  <div className="dm-soft-text" style={{ fontSize: 14, fontWeight: 500, color: "#1e293b" }}>{new Date(viewingRecord.date || viewingRecord.createdAt).toLocaleDateString("en-US", { dateStyle: "long" })}</div>
                 </div>
-                <div style={{ padding: 12, background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
+                <div className="dm-detail-panel" style={{ padding: 12, background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 }}>Severity</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: SEVERITY_COLORS[viewingRecord.severity]?.color || "#1e293b" }}>{(viewingRecord.severity || "normal").toUpperCase()}</div>
                 </div>
@@ -342,7 +360,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
 
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", marginBottom: 8 }}>Details & Findings</label>
-                <div style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #f1f5f9", fontSize: 14, color: "#1e293b", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                <div className="dm-detail-panel" style={{ background: "#f8fafc", padding: 16, borderRadius: 16, border: "1px solid #f1f5f9", fontSize: 14, color: "#1e293b", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
                   {viewingRecord.content || viewingRecord.description}
                 </div>
               </div>
@@ -350,7 +368,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
               {viewingRecord.notes && (
                 <div style={{ marginBottom: 24 }}>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#10b981", textTransform: "uppercase", marginBottom: 8 }}>Doctor's Feedback</label>
-                  <div style={{ background: "#f0fdf4", padding: 16, borderRadius: 16, border: "1px solid #86efac", display: "flex", gap: 12 }}>
+                  <div className="dm-feedback-panel" style={{ background: "#f0fdf4", padding: 16, borderRadius: 16, border: "1px solid #86efac", display: "flex", gap: 12 }}>
                     <MessageSquare size={18} color="#10b981" style={{ flexShrink: 0, marginTop: 2 }} />
                     <div style={{ fontSize: 14, color: "#166534", lineHeight: 1.6 }}>{viewingRecord.notes}</div>
                   </div>
@@ -358,7 +376,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
               )}
 
               {(viewingRecord.fileName || viewingRecord.fileContentType) && (
-                <div style={{ marginTop: 8, padding: 16, background: "#eff6ff", borderRadius: 16, border: "1px solid #bfdbfe", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div className="dm-file-panel" style={{ marginTop: 8, padding: 16, background: "#eff6ff", borderRadius: 16, border: "1px solid #bfdbfe", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 8, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6" }}><FileText size={18} /></div>
                     <div style={{ fontSize: 14, fontWeight: 500, color: "#1e40af" }}>{viewingRecord.fileName || "Medical Report"}</div>
@@ -369,7 +387,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
               )}
             </div>
 
-            <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "flex-end" }}>
+            <div className="dm-modal-footer" style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "flex-end" }}>
               <button onClick={() => setViewingRecord(null)} style={{ padding: "10px 24px", background: "#0f172a", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Close Details</button>
             </div>
           </div>
@@ -379,14 +397,14 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
       {/* Modal */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "#fff", borderRadius: 24, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(15,23,42,0.2)" }}>
-            <div style={{ padding: "24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
+          <div className="dm-modal-surface" style={{ background: "#fff", borderRadius: 24, width: "100%", maxWidth: 640, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(15,23,42,0.2)" }}>
+            <div className="dm-modal-header" style={{ padding: "24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
               <div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.01em" }}>{editingRecord ? "Update Health Record" : "New Health Record"}</div>
-                <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>{editingRecord ? "Provide feedback or update record details." : "Add a new record for your patient."}</div>
+                <div className="dm-page-title" style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.01em" }}>{editingRecord ? "Update Health Record" : "New Health Record"}</div>
+                <div className="dm-soft-muted" style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>{editingRecord ? "Provide feedback or update record details." : "Add a new record for your patient."}</div>
               </div>
-              <button onClick={() => setShowModal(false)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, cursor: "pointer", color: "#64748b", transition: "all 0.2s" }}
-                onMouseEnter={e=>{e.currentTarget.style.background="#f1f5f9";e.currentTarget.style.color="#0f172a";}} onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";e.currentTarget.style.color="#64748b";}}>
+              <button onClick={() => setShowModal(false)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: dark ? "#0f172a" : "#f8fafc", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 10, cursor: "pointer", color: dark ? "#94a3b8" : "#64748b", transition: "all 0.2s" }}
+                onMouseEnter={e=>{e.currentTarget.style.background=dark ? "#1e293b" : "#f1f5f9";e.currentTarget.style.color=dark ? "#f8fafc" : "#0f172a";}} onMouseLeave={e=>{e.currentTarget.style.background=dark ? "#0f172a" : "#f8fafc";e.currentTarget.style.color=dark ? "#94a3b8" : "#64748b";}}>
                 <X size={18} />
               </button>
             </div>
@@ -394,26 +412,26 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
             <form onSubmit={handleSubmit} style={{ padding: 24 }}>
               {!editingRecord && (
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>{user?.role === "doctor" ? "Select Patient *" : "Select Doctor (Optional)"}</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>{user?.role === "doctor" ? "Select Patient *" : "Select Doctor (Optional)"}</label>
                   {patients.length > 0 ? <EntitySearch entities={patients} value={formData.patientId} onChange={p => setFormData(prev => ({ ...prev, patientId: p?._id || "" }))} placeholder={user?.role === "doctor" ? "Search patient..." : "Search doctor..."} />
                     : <div style={{ padding: "12px 16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, fontSize: 14, color: "#92400e", display: "flex", gap: 8 }}><AlertCircle size={18} /> No {user?.role === "doctor" ? "patients" : "doctors"} available.</div>}
                 </div>
               )}
               
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Record Title *</label>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>Record Title *</label>
                 <input type="text" value={formData.title} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Annual Blood Work" style={inputCls} onFocus={onFocus} onBlur={onBlur} required />
               </div>
               
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Record Type</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>Record Type</label>
                   <select value={formData.type} onChange={e => setFormData(p => ({ ...p, type: e.target.value }))} style={{ ...inputCls, cursor: "pointer", appearance: "none" }} onFocus={onFocus} onBlur={onBlur}>
                     {RECORD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Severity</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>Severity</label>
                   <select value={formData.severity} onChange={e => setFormData(p => ({ ...p, severity: e.target.value }))} style={{ ...inputCls, cursor: "pointer", appearance: "none" }} onFocus={onFocus} onBlur={onBlur}>
                     <option value="normal">Normal</option>
                     <option value="moderate">Moderate</option>
@@ -423,15 +441,15 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
               </div>
               
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Details / Results *</label>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>Details / Results *</label>
                 <textarea value={formData.content} onChange={e => setFormData(p => ({ ...p, content: e.target.value }))} placeholder="Enter the main record details..." rows={4} style={{ ...inputCls, resize: "vertical" }} onFocus={onFocus} onBlur={onBlur} required />
               </div>
 
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Attach Report (File) *</label>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>Attach Report (File) *</label>
                 <div style={{ position: "relative" }}>
                   <input type="file" onChange={e => setFile(e.target.files[0])} style={{ ...inputCls, padding: "10px 16px" }} onFocus={onFocus} onBlur={onBlur} accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" />
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ fontSize: 12, color: dark ? "#94a3b8" : "#64748b", marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
                     <AlertCircle size={14} /> PDF, Images, or DOC (Max 10MB)
                   </div>
                 </div>
@@ -439,7 +457,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
               
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Date</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>Date</label>
                   <input type="date" value={formData.date} onChange={e => setFormData(p => ({ ...p, date: e.target.value }))} style={inputCls} onFocus={onFocus} onBlur={onBlur} />
                 </div>
                 <div>
@@ -449,15 +467,15 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
                     onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))} 
                     placeholder={user?.role === "doctor" ? "Provide your medical advice or feedback here..." : "Doctor's feedback will appear here."} 
                     rows={2} 
-                    style={{ ...inputCls, borderColor: "#10b981", background: "#f0fdf4" }} 
+                    style={{ ...inputCls, borderColor: "#10b981", background: dark ? "rgba(16,185,129,0.12)" : "#f0fdf4" }} 
                     onFocus={onFocus} onBlur={onBlur} 
                     readOnly={user?.role === "patient"}
                   />
                 </div>
               </div>
               
-              <div style={{ display: "flex", gap: 12, paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#475569", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#f1f5f9";e.currentTarget.style.borderColor="#cbd5e1";}} onMouseLeave={e=>{e.currentTarget.style.background="#f8fafc";e.currentTarget.style.borderColor="#e2e8f0";}}>Cancel</button>
+              <div style={{ display: "flex", gap: 12, paddingTop: 16, borderTop: `1px solid ${dark ? "#1e293b" : "#f1f5f9"}` }}>
+                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: "14px", background: dark ? "#0f172a" : "#f8fafc", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 12, fontSize: 15, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background=dark ? "#1e293b" : "#f1f5f9";e.currentTarget.style.borderColor=dark ? "#475569" : "#cbd5e1";}} onMouseLeave={e=>{e.currentTarget.style.background=dark ? "#0f172a" : "#f8fafc";e.currentTarget.style.borderColor=dark ? "#334155" : "#e2e8f0";}}>Cancel</button>
                 <button type="submit" style={{ flex: 2, padding: "14px", background: "#10b981", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)" }} onMouseEnter={e=>{e.currentTarget.style.background="#059669";e.currentTarget.style.boxShadow="0 6px 16px rgba(16, 185, 129, 0.3)";}} onMouseLeave={e=>{e.currentTarget.style.background="#10b981";e.currentTarget.style.boxShadow="0 4px 12px rgba(16, 185, 129, 0.2)";}}>{editingRecord ? "Save Changes" : "Create Record"}</button>
               </div>
             </form>

@@ -44,12 +44,12 @@ export default function AppointmentBooking({ onBookingComplete }) {
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Book an Appointment</h1>
-        <p style={{ fontSize: 13.5, color: "#64748b" }}>Select a doctor and choose a time that works for you.</p>
+        <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Book an Appointment</h1>
+        <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b" }}>Select a doctor and choose a time that works for you.</p>
       </div>
 
       {success && (
-        <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, padding: "14px 16px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div className="dm-success-banner" style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, padding: "14px 16px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 12 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" style={{ flexShrink: 0, marginTop: 1 }}><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round"/></svg>
           <div>
             <div style={{ fontSize: 14, fontWeight: 500, color: "#166534" }}>Appointment booked</div>
@@ -59,7 +59,7 @@ export default function AppointmentBooking({ onBookingComplete }) {
       )}
 
       {error && (
-        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 14px", marginBottom: 16, fontSize: 13.5, color: "#dc2626", display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="dm-error-banner" style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 14px", marginBottom: 16, fontSize: 13.5, color: "#dc2626", display: "flex", gap: 8, alignItems: "center" }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           {error}
         </div>
@@ -70,9 +70,9 @@ export default function AppointmentBooking({ onBookingComplete }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Doctor select */}
           <SectionCard>
-            <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Choose a doctor</div>
-              <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>{doctors.length} available specialists</div>
+            <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
+              <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Choose a doctor</div>
+              <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>{doctors.length} available specialists</div>
             </div>
             <div style={{ padding: 16 }}>
               {fetching ? <Loader message="Loading doctors..." /> : doctors.length === 0 ? (
@@ -84,14 +84,15 @@ export default function AppointmentBooking({ onBookingComplete }) {
                     const color = avatarColors[i % avatarColors.length];
                     return (
                       <div key={doc._id} onClick={() => setSelected(doc)}
+                        className="dm-select-card"
                         style={{ padding: "14px", border: isSelected ? "2px solid #1db585" : "1.5px solid #f1f5f9", borderRadius: 12, cursor: "pointer", background: isSelected ? "#f0faf7" : "#fff", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 12 }}
                         onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.borderColor = "#d1f3ea"; e.currentTarget.style.background = "#fafffe"; } }}
                         onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.borderColor = "#f1f5f9"; e.currentTarget.style.background = "#fff"; } }}
                       >
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 15, flexShrink: 0 }}>{doc.name.charAt(0)}</div>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13.5, fontWeight: 500, color: isSelected ? "#0a7a57" : "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
-                          <div style={{ fontSize: 12, color: isSelected ? "#1db585" : "#94a3b8", marginTop: 1 }}>{doc.specialization}</div>
+                          <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: isSelected ? "#0a7a57" : "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
+                          <div className="dm-soft-muted" style={{ fontSize: 12, color: isSelected ? "#1db585" : "#94a3b8", marginTop: 1 }}>{doc.specialization}</div>
                         </div>
                         {isSelected && (
                           <div style={{ marginLeft: "auto", width: 18, height: 18, background: "#1db585", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -109,9 +110,9 @@ export default function AppointmentBooking({ onBookingComplete }) {
           {/* Appointment details */}
           {selected && (
             <SectionCard style={{ animation: "fadeIn 0.25s ease" }}>
-              <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
-                <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Appointment details</div>
-                <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>With Dr. {selected.name}</div>
+              <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
+                <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Appointment details</div>
+                <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>With Dr. {selected.name}</div>
               </div>
               <form onSubmit={handleSubmit} style={{ padding: 20 }}>
                 <div style={{ marginBottom: 20 }}>
@@ -162,20 +163,20 @@ export default function AppointmentBooking({ onBookingComplete }) {
             <SectionCard>
               <div style={{ padding: 20 }}>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: 11 }}>Selected doctor</div>
-                <div style={{ textAlign: "center", paddingBottom: 18, borderBottom: "1px solid #f8fafc", marginBottom: 16 }}>
+                <div className="dm-section-header" style={{ textAlign: "center", paddingBottom: 18, borderBottom: "1px solid #f8fafc", marginBottom: 16 }}>
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 22, margin: "0 auto 10px" }}>{selected.name.charAt(0)}</div>
-                  <div style={{ fontSize: 15, fontWeight: 500, color: "#0f172a" }}>{selected.name}</div>
+                  <div className="dm-page-title" style={{ fontSize: 15, fontWeight: 500, color: "#0f172a" }}>{selected.name}</div>
                   <div style={{ fontSize: 13, color: "#1db585", marginTop: 3 }}>{selected.specialization}</div>
-                  {selected.email && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{selected.email}</div>}
+                  {selected.email && <div className="dm-soft-muted" style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{selected.email}</div>}
                 </div>
                 {form.date && form.time && (
-                  <div style={{ background: "#f0faf7", borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Booking summary</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475569", marginBottom: 4 }}>
-                      <span>Date</span><span style={{ fontWeight: 500, color: "#1e293b" }}>{new Date(form.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                  <div className="dm-soft-panel" style={{ background: "#f0faf7", borderRadius: 10, padding: "12px 14px" }}>
+                    <div className="dm-soft-muted" style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Booking summary</div>
+                    <div className="dm-soft-muted" style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475569", marginBottom: 4 }}>
+                      <span>Date</span><span className="dm-soft-text" style={{ fontWeight: 500, color: "#1e293b" }}>{new Date(form.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475569" }}>
-                      <span>Time</span><span style={{ fontWeight: 500, color: "#1e293b" }}>{form.time}</span>
+                    <div className="dm-soft-muted" style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475569" }}>
+                      <span>Time</span><span className="dm-soft-text" style={{ fontWeight: 500, color: "#1e293b" }}>{form.time}</span>
                     </div>
                   </div>
                 )}
@@ -189,7 +190,7 @@ export default function AppointmentBooking({ onBookingComplete }) {
 
           <SectionCard>
             <div style={{ padding: 18 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", marginBottom: 12 }}>Booking guidelines</div>
+              <div className="dm-page-title" style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", marginBottom: 12 }}>Booking guidelines</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
                   "Appointments confirmed within 24 hours",
@@ -198,7 +199,7 @@ export default function AppointmentBooking({ onBookingComplete }) {
                   "Bring valid ID and previous records",
                   "Consultation: 15–30 minutes",
                 ].map((tip, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, color: "#64748b" }}>
+                  <div key={i} className="dm-soft-muted" style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, color: "#64748b" }}>
                     <div style={{ width: 16, height: 16, background: "#f0faf7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#1db585" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                     </div>

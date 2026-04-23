@@ -135,7 +135,7 @@ export default function DiabetesPrediction() {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Diabetes Risk Screening</h1>
+        <h1 className='dm-page-title' style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Diabetes Risk Screening</h1>
         <p style={{ fontSize: 13.5, color: "#64748b" }}>Enter health metrics to get an AI-powered risk assessment. For educational use only.</p>
       </div>
 

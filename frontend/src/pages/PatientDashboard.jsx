@@ -66,18 +66,19 @@ function Toast({ toast, onDismiss, onAction }) {
   const typeColor = { call: "#16a34a", appointment: "#2563eb", success: "#16a34a", error: "#dc2626", prescription: "#7c3aed", record: "#0891b2", info: "#64748b" };
   
   return (
-    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "14px 16px", boxShadow: "0 8px 24px rgba(15,23,42,0.12)", transition: "all 0.25s", opacity: exit ? 0 : 1, transform: exit ? "translateX(24px)" : "translateX(0)", animation: "slideRight 0.25s ease" }}>
+    <div className="dm-toast" style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "14px 16px", boxShadow: "0 8px 24px rgba(15,23,42,0.12)", transition: "all 0.25s", opacity: exit ? 0 : 1, transform: exit ? "translateX(24px)" : "translateX(0)", animation: "slideRight 0.25s ease" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <div style={{ width: 30, height: 30, background: typeColor[toast.type] + "18", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {getIcon()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: "#0f172a" }}>{toast.title}</div>
-          {toast.message && <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 2, lineHeight: 1.45 }}>{toast.message}</div>}
+          <div className="dm-toast-title" style={{ fontSize: 13.5, fontWeight: 500, color: "#0f172a" }}>{toast.title}</div>
+          {toast.message && <div className="dm-toast-message" style={{ fontSize: 12.5, color: "#64748b", marginTop: 2, lineHeight: 1.45 }}>{toast.message}</div>}
           {toast.actions?.length > 0 && (
             <div style={{ display: "flex", gap: 7, marginTop: 9 }}>
               {toast.actions.map((a, i) => (
                 <button key={i} onClick={() => { onAction(toast.id, a.type, a.data); dismiss(); }}
+                  className={a.primary ? "" : "dm-toast-secondary"}
                   style={{ padding: "5px 12px", fontSize: 12.5, fontWeight: 500, background: a.primary ? "#1db585" : "#f8fafc", color: a.primary ? "#fff" : "#475569", border: a.primary ? "none" : "1.5px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>{a.label}</button>
               ))}
             </div>
@@ -102,10 +103,10 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Dashboard</h1>
-          <p style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Here's your health overview at a glance.</p>
+          <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Dashboard</h1>
+          <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Here's your health overview at a glance.</p>
         </div>
-        <button onClick={onRefresh} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 13.5, fontWeight: 500, color: "#475569", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
+        <button className="dm-outline-btn" onClick={onRefresh} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 13.5, fontWeight: 500, color: "#475569", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
           onMouseEnter={e => e.currentTarget.style.borderColor = "#cbd5e1"} onMouseLeave={e => e.currentTarget.style.borderColor = "#e2e8f0"}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeLinecap="round" strokeLinejoin="round"/></svg>
           Refresh
@@ -120,9 +121,9 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {/* Upcoming appointments */}
         <SectionCard>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Upcoming appointments</div>
-            <span style={{ fontSize: 12.5, color: "#94a3b8" }}>{upcoming.length} scheduled</span>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Upcoming appointments</div>
+            <span className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8" }}>{upcoming.length} scheduled</span>
           </div>
           <div style={{ padding: 16 }}>
             {upcoming.length === 0 ? <EmptyState icon={<Calendar size={24} color="#94a3b8" />} title="No upcoming appointments" subtitle="Book a consultation with a specialist." /> : (
@@ -130,12 +131,12 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
                 {upcoming.map(apt => {
                   const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
                   return (
-                    <div key={apt._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
+                    <div className="dm-soft-panel" key={apt._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{apt.doctorName}</div>
+                        <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{apt.doctorName}</div>
                         <span style={{ display: "inline-flex", padding: "2px 9px", fontSize: 11, fontWeight: 600, borderRadius: 999, background: bg, color }}>{apt.status}</span>
                       </div>
-                      <div style={{ fontSize: 12.5, color: "#94a3b8" }}>{new Date(apt.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} at {apt.time}</div>
+                      <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8" }}>{new Date(apt.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} at {apt.time}</div>
                       {apt.status === "confirmed" && (
                         <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
                           <button onClick={() => onStartCall(apt)} style={{ flex: 1, padding: "7px", fontSize: 12.5, fontWeight: 500, background: "#1db585", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Join call</button>
@@ -152,8 +153,8 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
 
         {/* Health tips */}
         <SectionCard>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc" }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Daily health tips</div>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc" }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Daily health tips</div>
           </div>
           <div style={{ padding: 16 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -165,10 +166,10 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
                 [<Smile size={18} color="#f43f5e" />, "Manage stress", "Practice deep breathing or mindfulness for 5 minutes daily."],
               ].map(([icon, title, desc]) => (
                 <div key={title} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  <div style={{ width: 34, height: 34, background: "#f8fafc", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
+                  <div className="dm-muted-panel" style={{ width: 34, height: 34, background: "#f8fafc", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</div>
                   <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{title}</div>
-                    <div style={{ fontSize: 12.5, color: "#94a3b8", lineHeight: 1.45, marginTop: 1 }}>{desc}</div>
+                    <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{title}</div>
+                    <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", lineHeight: 1.45, marginTop: 1 }}>{desc}</div>
                   </div>
                 </div>
               ))}
@@ -188,10 +189,10 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>My Appointments</h1>
-          <p style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>{appointments.length} total appointments in your history.</p>
+          <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>My Appointments</h1>
+          <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>{appointments.length} total appointments in your history.</p>
         </div>
-        <button onClick={onRefresh} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 13.5, fontWeight: 500, color: "#475569", cursor: "pointer", fontFamily: "inherit" }}>
+        <button className="dm-outline-btn" onClick={onRefresh} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 13.5, fontWeight: 500, color: "#475569", cursor: "pointer", fontFamily: "inherit" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeLinecap="round" strokeLinejoin="round"/></svg>
           Refresh
         </button>
@@ -200,7 +201,7 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
         {appointments.length === 0 ? <EmptyState icon={<Calendar size={24} color="#94a3b8" />} title="No appointments yet" subtitle="Start by booking your first consultation." /> : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
-              <thead><tr style={{ background: "#f8fafc" }}>
+              <thead className="dm-table-head"><tr style={{ background: "#f8fafc" }}>
                 {["Doctor", "Date & Time", "Reason", "Status", "Actions"].map(h => (
                   <th key={h} style={{ padding: "11px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9" }}>{h}</th>
                 ))}
@@ -209,22 +210,22 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
                 {appointments.map(apt => {
                   const [bg, color] = statusStyle[apt.status] || statusStyle.pending;
                   return (
-                    <tr key={apt._id} style={{ borderBottom: "1px solid #f8fafc" }}>
-                      <td style={{ padding: "12px 16px" }}>
+                    <tr className="dm-table-row" key={apt._id} style={{ borderBottom: "1px solid #f8fafc" }}>
+                      <td className="dm-table-cell" style={{ padding: "12px 16px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 12, flexShrink: 0 }}>{apt.doctorName?.charAt(0)}</div>
-                          <span style={{ fontWeight: 500, color: "#1e293b" }}>{apt.doctorName}</span>
+                          <span className="dm-soft-text" style={{ fontWeight: 500, color: "#1e293b" }}>{apt.doctorName}</span>
                         </div>
                       </td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <div style={{ fontWeight: 500, color: "#1e293b" }}>{new Date(apt.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
-                        <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>{apt.time}</div>
+                      <td className="dm-table-cell" style={{ padding: "12px 16px" }}>
+                        <div className="dm-soft-text" style={{ fontWeight: 500, color: "#1e293b" }}>{new Date(apt.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                        <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>{apt.time}</div>
                       </td>
-                      <td style={{ padding: "12px 16px", color: "#64748b" }}>{apt.reason || "General consultation"}</td>
-                      <td style={{ padding: "12px 16px" }}>
+                      <td className="dm-table-cell dm-soft-muted" style={{ padding: "12px 16px", color: "#64748b" }}>{apt.reason || "General consultation"}</td>
+                      <td className="dm-table-cell" style={{ padding: "12px 16px" }}>
                         <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: bg, color }}>{apt.status}</span>
                       </td>
-                      <td style={{ padding: "12px 16px" }}>
+                      <td className="dm-table-cell" style={{ padding: "12px 16px" }}>
                         <div style={{ display: "flex", gap: 6 }}>
                           {apt.status === "confirmed" && <>
                             <button onClick={() => onStartCall(apt)} style={{ padding: "5px 12px", fontSize: 12.5, fontWeight: 500, background: "#1db585", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontFamily: "inherit" }}>Join call</button>
@@ -373,7 +374,7 @@ export default function PatientDashboard() {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="dm-page-shell" style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
       {activeCall && <VideoCall {...activeCall} onCallEnd={() => { setActiveCall(null); fetchData(); addToast({ type: "info", title: "Call ended", autoClose: true }); }} />}
       <ToastStack toasts={toasts} onDismiss={dismissToast} onAction={handleToastAction} />
       <Sidebar user={user} navItems={getNavItems(
@@ -381,7 +382,7 @@ export default function PatientDashboard() {
         stats?.unreadHealthRecords || 0,
         stats?.unreadPrescriptions || 0
       )} activeTab={tab} onTabChange={setTab} onLogout={logout} wsConnected={wsConnected} />
-      <div style={{ flex: 1, overflowY: "auto", background: "#f8fafc" }}>
+      <div className="dm-page-content" style={{ flex: 1, overflowY: "auto", background: "#f8fafc" }}>
         <div style={{ padding: 40, maxWidth: 1400 }}>
           {loading ? <Loader message="Loading your dashboard…" /> : renderTab()}
         </div>

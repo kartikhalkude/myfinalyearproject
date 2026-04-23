@@ -58,18 +58,19 @@ function Toast({ toast, onDismiss, onAction }) {
   const typeColor = { call: "#16a34a", appointment: "#2563eb", success: "#16a34a", error: "#dc2626", prescription: "#7c3aed", record: "#0891b2", info: "#64748b" };
   
   return (
-    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "14px 16px", boxShadow: "0 8px 24px rgba(15,23,42,0.12)", transition: "all 0.25s", opacity: exit ? 0 : 1, transform: exit ? "translateX(24px)" : "translateX(0)", animation: "slideRight 0.25s ease" }}>
+    <div className="dm-toast" style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "14px 16px", boxShadow: "0 8px 24px rgba(15,23,42,0.12)", transition: "all 0.25s", opacity: exit ? 0 : 1, transform: exit ? "translateX(24px)" : "translateX(0)", animation: "slideRight 0.25s ease" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
         <div style={{ width: 30, height: 30, background: typeColor[toast.type] + "18", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           {getIcon()}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: "#0f172a" }}>{toast.title}</div>
-          {toast.message && <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 2, lineHeight: 1.45 }}>{toast.message}</div>}
+          <div className="dm-toast-title" style={{ fontSize: 13.5, fontWeight: 500, color: "#0f172a" }}>{toast.title}</div>
+          {toast.message && <div className="dm-toast-message" style={{ fontSize: 12.5, color: "#64748b", marginTop: 2, lineHeight: 1.45 }}>{toast.message}</div>}
           {toast.actions?.length > 0 && (
             <div style={{ display: "flex", gap: 7, marginTop: 9 }}>
               {toast.actions.map((a, i) => (
                 <button key={i} onClick={() => { onAction(toast.id, a.type, a.data); dismiss(); }}
+                  className={a.primary ? "" : "dm-toast-secondary"}
                   style={{ padding: "5px 12px", fontSize: 12.5, fontWeight: 500, background: a.primary ? "#1db585" : "#f8fafc", color: a.primary ? "#fff" : "#475569", border: a.primary ? "none" : "1.5px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>{a.label}</button>
               ))}
             </div>
@@ -95,8 +96,8 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Dashboard Overview</h1>
-          <p style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Welcome back! Here's what's happening today.</p>
+          <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Dashboard Overview</h1>
+          <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Welcome back! Here's what's happening today.</p>
         </div>
         <Btn onClick={onRefresh} variant="outline" size="sm">
           <RefreshCw size={14} /> Refresh
@@ -113,8 +114,8 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {/* Today's Schedule */}
         <SectionCard>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Today's Schedule</div>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Today's Schedule</div>
           </div>
           <div style={{ padding: 16 }}>
             {todayAppointments.length === 0 ? <EmptyState icon={<Calendar size={24} color="#94a3b8" />} title="No appointments today" subtitle="Enjoy your free time." /> : (
@@ -122,11 +123,11 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
                 {todayAppointments.map(apt => {
                   const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
                   return (
-                    <div key={apt._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
+                    <div className="dm-card-row" key={apt._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                         <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{apt.patientName}</div>
-                          <div style={{ fontSize: 12.5, color: "#94a3b8" }}>{apt.time}</div>
+                          <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{apt.patientName}</div>
+                          <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8" }}>{apt.time}</div>
                         </div>
                         <span style={{ display: "inline-flex", padding: "2px 9px", fontSize: 11, fontWeight: 600, borderRadius: 999, background: bg, color }}>{apt.status}</span>
                       </div>
@@ -146,21 +147,21 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
 
         {/* Pending Feedbacks */}
         <SectionCard>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Pending Feedbacks</div>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Pending Feedbacks</div>
             <button onClick={onViewHealth} style={{ fontSize: 12, color: "#1db585", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>View All</button>
           </div>
           <div style={{ padding: 16 }}>
             {pendingFeedbacks.length === 0 ? <EmptyState icon={<ClipboardCheck size={24} color="#94a3b8" />} title="All feedback completed" subtitle="Great job! You're all caught up." /> : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {pendingFeedbacks.map(rec => (
-                  <div key={rec._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
+                  <div className="dm-card-row" key={rec._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{rec.title}</div>
+                      <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{rec.title}</div>
                       <span style={{ fontSize: 11, padding: "2px 8px", background: "#fef9c3", color: "#854d0e", borderRadius: 999, fontWeight: 600 }}>Needs Review</span>
                     </div>
-                    <div style={{ fontSize: 12.5, color: "#64748b" }}>Patient: {rec.patientId?.name || "Patient"}</div>
-                    <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 2 }}>{new Date(rec.createdAt).toLocaleDateString()}</div>
+                    <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#64748b" }}>Patient: {rec.patientId?.name || "Patient"}</div>
+                    <div className="dm-soft-muted" style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 2 }}>{new Date(rec.createdAt).toLocaleDateString()}</div>
                   </div>
                 ))}
               </div>
@@ -183,12 +184,12 @@ function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Appointments</h1>
-          <p style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Manage all your patient consultations.</p>
+          <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Appointments</h1>
+          <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Manage all your patient consultations.</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           {["all", "pending", "confirmed", "completed", "cancelled"].map(s => (
-            <button key={s} onClick={() => setFilter(s)}
+            <button className={filter === s ? "" : "dm-outline-btn"} key={s} onClick={() => setFilter(s)}
               style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: filter === s ? 500 : 400, fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s", border: filter === s ? "none" : "1px solid #e2e8f0", background: filter === s ? "#1db585" : "#fff", color: filter === s ? "#fff" : "#475569" }}
             >
               {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -204,11 +205,11 @@ function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
               {filtered.map(apt => {
                 const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
                 return (
-                  <div key={apt._id} style={{ padding: "16px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+                  <div className="dm-card-row" key={apt._id} style={{ padding: "16px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
                     <div style={{ flex: 1, minWidth: 200 }}>
-                      <div style={{ fontSize: 15, fontWeight: 500, color: "#1e293b" }}>{apt.patientName}</div>
-                      <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{new Date(apt.date).toLocaleDateString()} at {apt.time}</div>
-                      {apt.reason && <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 4 }}>{apt.reason}</div>}
+                      <div className="dm-soft-text" style={{ fontSize: 15, fontWeight: 500, color: "#1e293b" }}>{apt.patientName}</div>
+                      <div className="dm-soft-muted" style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{new Date(apt.date).toLocaleDateString()} at {apt.time}</div>
+                      {apt.reason && <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 4 }}>{apt.reason}</div>}
                     </div>
                     
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
@@ -268,33 +269,33 @@ function PatientList({ appointments, doctorPatients }) {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>My Patients</h1>
-        <p style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>{patientList.length} patients in your directory.</p>
+        <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>My Patients</h1>
+        <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>{patientList.length} patients in your directory.</p>
       </div>
       
       <SectionCard>
         {patientList.length === 0 ? <EmptyState icon={<Users size={24} color="#94a3b8" />} title="No patients yet" subtitle="Patients will appear here after booking." /> : (
           <div style={{ padding: 24, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
             {patientList.map((p, i) => (
-              <div key={i} style={{ padding: 20, background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+              <div className="dm-mini-panel" key={i} style={{ padding: 20, background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
                   <div style={{ width: 44, height: 44, background: "#1db585", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 16 }}>
                     {(p.name || p.patientName)?.charAt(0)}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 500, color: "#0f172a", fontSize: 15 }}>{p.name || p.patientName}</div>
-                    {p.email && <div style={{ fontSize: 13, color: "#64748b" }}>{p.email}</div>}
+                    <div className="dm-page-title" style={{ fontWeight: 500, color: "#0f172a", fontSize: 15 }}>{p.name || p.patientName}</div>
+                    {p.email && <div className="dm-soft-muted" style={{ fontSize: 13, color: "#64748b" }}>{p.email}</div>}
                   </div>
                 </div>
                 
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, color: "#475569" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", background: "#fff", padding: "8px 12px", borderRadius: 8 }}>
+                <div className="dm-soft-muted" style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, color: "#475569" }}>
+                  <div className="dm-card-row" style={{ display: "flex", justifyContent: "space-between", background: "#fff", padding: "8px 12px", borderRadius: 8 }}>
                     <span>Total Visits:</span>
-                    <span style={{ fontWeight: 600 }}>{p.appointmentCount}</span>
+                    <span className="dm-soft-text" style={{ fontWeight: 600 }}>{p.appointmentCount}</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", background: "#fff", padding: "8px 12px", borderRadius: 8 }}>
+                  <div className="dm-card-row" style={{ display: "flex", justifyContent: "space-between", background: "#fff", padding: "8px 12px", borderRadius: 8 }}>
                     <span>Last Visit:</span>
-                    <span style={{ fontWeight: 600 }}>{new Date(p.lastVisit).toLocaleDateString()}</span>
+                    <span className="dm-soft-text" style={{ fontWeight: 600 }}>{new Date(p.lastVisit).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
@@ -315,23 +316,23 @@ function ScheduleView({ appointments }) {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Weekly Schedule</h1>
-        <p style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Your upcoming consultations for the next 7 days.</p>
+        <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Weekly Schedule</h1>
+        <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Your upcoming consultations for the next 7 days.</p>
       </div>
       
       <SectionCard>
         {upcoming.length === 0 ? <EmptyState icon={<CalendarClock size={24} color="#94a3b8" />} title="No upcoming appointments" subtitle="Your schedule is clear." /> : (
           <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
             {upcoming.map(apt => (
-              <div key={apt._id} style={{ display: "flex", alignItems: "center", gap: 16, padding: 20, background: "#f0faf7", borderRadius: 16, border: "1px solid #a3e7d4" }}>
+              <div className="dm-schedule-card" key={apt._id} style={{ display: "flex", alignItems: "center", gap: 16, padding: 20, background: "#f0faf7", borderRadius: 16, border: "1px solid #a3e7d4" }}>
                 <div style={{ width: 70, height: 70, background: "#1db585", borderRadius: 12, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#fff" }}>
                   <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1 }}>{new Date(apt.date).getDate()}</div>
                   <div style={{ fontSize: 12, fontWeight: 500, marginTop: 4 }}>{days[new Date(apt.date).getDay()]}</div>
                 </div>
                 
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 16, fontWeight: 500, color: "#0f172a" }}>{apt.patientName}</div>
-                  <div style={{ fontSize: 13.5, color: "#475569", marginTop: 4 }}>{apt.time} — {apt.reason || "Regular checkup"}</div>
+                  <div className="dm-page-title" style={{ fontSize: 16, fontWeight: 500, color: "#0f172a" }}>{apt.patientName}</div>
+                  <div className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#475569", marginTop: 4 }}>{apt.time} — {apt.reason || "Regular checkup"}</div>
                 </div>
                 
                 <span style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: apt.status === "confirmed" ? "#dcfce7" : "#fef9c3", color: apt.status === "confirmed" ? "#166534" : "#854d0e" }}>
@@ -354,14 +355,14 @@ function Reports({ stats, appointments }) {
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Reports & Analytics</h1>
-        <p style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Practice statistics and consultation metrics.</p>
+        <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Reports & Analytics</h1>
+        <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Practice statistics and consultation metrics.</p>
       </div>
       
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <SectionCard>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc" }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Practice Statistics</div>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc" }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Practice Statistics</div>
           </div>
           <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
             {[
@@ -369,9 +370,9 @@ function Reports({ stats, appointments }) {
               ["Active Patients", stats?.totalPatients || 0],
               ["Completed Consultations", completedApts]
             ].map(([label, val]) => (
-              <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "#f8fafc", borderRadius: 10 }}>
-                <span style={{ fontSize: 13.5, color: "#475569", fontWeight: 500 }}>{label}</span>
-                <span style={{ fontSize: 18, fontWeight: 600, color: "#0f172a" }}>{val}</span>
+              <div className="dm-mini-panel" key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: "#f8fafc", borderRadius: 10 }}>
+                <span className="dm-soft-muted" style={{ fontSize: 13.5, color: "#475569", fontWeight: 500 }}>{label}</span>
+                <span className="dm-page-title" style={{ fontSize: 18, fontWeight: 600, color: "#0f172a" }}>{val}</span>
               </div>
             ))}
           </div>
@@ -605,7 +606,7 @@ export default function DoctorDashboard() {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
+    <div className="dm-page-shell" style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
       <ToastStack toasts={toasts} onDismiss={dismissToast} onAction={handleToastAction} />
 
       {incomingCall && (
@@ -650,7 +651,7 @@ export default function DoctorDashboard() {
         wsConnected={wsConnected} 
       />
       
-      <div style={{ flex: 1, overflowY: "auto", background: "#f8fafc" }}>
+      <div className="dm-page-content" style={{ flex: 1, overflowY: "auto", background: "#f8fafc" }}>
         <div style={{ padding: 40, maxWidth: 1400 }}>
           {loading ? <Loader message="Loading dashboard..." /> : renderContent()}
         </div>

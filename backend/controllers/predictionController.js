@@ -101,7 +101,16 @@ const predictDiabetes = async (req, res) => {
     const missing = validateFields(req.body, DIABETES_FIELDS);
     if (missing) return res.status(400).json({ error: `Missing field: ${missing}` });
 
-    const prediction = await runPythonScript(DIABETES_SCRIPT, req.body, '/predict/diabetes');
+    const result = await runPythonScript(DIABETES_SCRIPT, req.body, '/predict/diabetes');
+    
+    // Standardize response for frontend
+    const prediction = {
+      prediction: result.prediction,
+      probability: result.probability,
+      risk_level: result.risk_level,
+      message: result.message || (result.prediction === 1 ? "High probability of diabetes detected." : "Low probability of diabetes detected.")
+    };
+
     await new DiabetesPrediction({
       userId: req.userId, ...req.body,
       prediction: prediction.prediction, probability: prediction.probability
@@ -134,10 +143,21 @@ const predictHeartDisease = async (req, res) => {
     const missing = validateFields(req.body, HEART_FIELDS);
     if (missing) return res.status(400).json({ error: `Missing field: ${missing}` });
 
-    const prediction = await runPythonScript(HEART_SCRIPT, req.body, '/predict/heart');
+    const result = await runPythonScript(HEART_SCRIPT, req.body, '/predict/heart');
+    
+    // Standardize response for frontend (expects prediction_label, probability_disease, etc.)
+    const prediction = {
+      prediction: result.prediction,
+      prediction_label: result.label,
+      risk_level: result.risk_level,
+      probability_disease: result.probability,
+      probability_no_disease: 1 - result.probability,
+      message: result.message || (result.prediction === 1 ? "Elevated heart disease risk detected." : "Cardiovascular health appears normal.")
+    };
+
     await new HeartDiseasePrediction({
       userId: req.userId, ...req.body,
-      prediction: prediction.prediction, probability: prediction.probability
+      prediction: prediction.prediction, probability: prediction.probability_disease
     }).save();
 
     res.json(prediction);
@@ -185,12 +205,16 @@ const predictPneumonia = async (req, res) => {
     const imageBase64 = req.file.buffer.toString('base64');
     const inputData = { image: imageBase64 };
 
-    const prediction = await runPythonScript(PNEUMONIA_SCRIPT, inputData, '/predict/pneumonia');
+    const result = await runPythonScript(PNEUMONIA_SCRIPT, inputData, '/predict/pneumonia');
 
-    // Validate Python output
-    if (!prediction.prediction || prediction.probability === undefined) {
-      throw new Error('Invalid prediction output from model');
-    }
+    // Standardize response for frontend
+    const prediction = {
+      prediction: result.prediction,
+      probability: result.probability,
+      risk: result.risk_level,
+      message: result.message || (result.prediction === "Pneumonia" ? "Signs of pneumonia detected in the scan." : "Lung scan appears normal."),
+      model_source: result.model_source || "HuggingFace Cloud"
+    };
 
     // Save to database
     await new PneumoniaPrediction({
@@ -201,8 +225,7 @@ const predictPneumonia = async (req, res) => {
       prediction: prediction.prediction,
       probability: prediction.probability,
       risk: prediction.risk,
-      modelSource: prediction.model_source,
-      warning: prediction.warning || null
+      modelSource: prediction.model_source
     }).save();
 
     res.json(prediction);
@@ -247,7 +270,16 @@ const predictBrainTumor = async (req, res) => {
     const imageBase64 = req.file.buffer.toString('base64');
     const inputData = { image: imageBase64 };
 
-    const prediction = await runPythonScript(BRAIN_TUMOR_SCRIPT, inputData, '/predict/tumor');
+    const result = await runPythonScript(BRAIN_TUMOR_SCRIPT, inputData, '/predict/tumor');
+
+    // Standardize response for frontend
+    const prediction = {
+      prediction: result.prediction,
+      probability: result.probability,
+      risk: result.risk || result.risk_level,
+      message: result.message || (result.prediction !== "No Tumor" ? `Potential ${result.prediction} detected.` : "No tumor detected in the MRI."),
+      model_source: result.model_source || "HuggingFace Cloud"
+    };
 
     await new BrainTumorPrediction({
       userId: req.userId,
@@ -257,8 +289,7 @@ const predictBrainTumor = async (req, res) => {
       prediction: prediction.prediction,
       probability: prediction.probability,
       risk: prediction.risk,
-      modelSource: prediction.model_source,
-      warning: prediction.warning || null
+      modelSource: prediction.model_source
     }).save();
 
     res.json(prediction);

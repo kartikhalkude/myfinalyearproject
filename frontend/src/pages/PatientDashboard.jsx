@@ -10,7 +10,7 @@ import AppointmentBooking from "../components/AppointmentBooking";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
 import BrainTumorPrediction from "../components/BrainTumorPrediction";
-import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader } from "../components/UI";
+import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, MobileHeader } from "../components/UI";
 import { 
   Home, Brain, HeartPulse, Stethoscope, CalendarPlus, Calendar, 
   ClipboardList, Pill, Smile, Phone, CheckCircle, XCircle, Info, X, Check, Clock,
@@ -112,13 +112,13 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
           Refresh
         </button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
+      <div className="dm-grid-stats" style={{ marginBottom: 24 }}>
         <StatCard label="Total appointments" value={stats?.totalAppointments || 0} sub="All time" icon={<Calendar size={18} color="#1db585" />} />
         <StatCard label="Upcoming" value={stats?.upcomingAppointments || 0} sub="Scheduled" color="#3b82f6" icon={<CalendarPlus size={18} color="#3b82f6" />} />
         <StatCard label="Health checks" value={stats?.totalPredictions || 0} sub="AI screenings" color="#8b5cf6" icon={<Brain size={18} color="#8b5cf6" />} />
         <StatCard label="New Medical Data" value={(stats?.unreadHealthRecords || 0) + (stats?.unreadPrescriptions || 0)} sub="Unread items" color="#10b981" icon={<MessageSquare size={18} color="#10b981" />} />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div className="dm-grid-two">
         {/* Upcoming appointments */}
         <SectionCard>
           <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -260,6 +260,7 @@ export default function PatientDashboard() {
   const activeCallRef = useRef(null);
   useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
   const [toasts, setToasts] = useState([]);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const apptRef = useRef(appointments);
   useEffect(() => { apptRef.current = appointments; }, [appointments]);
 
@@ -377,13 +378,14 @@ export default function PatientDashboard() {
     <div className="dm-page-shell" style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
       {activeCall && <VideoCall {...activeCall} onCallEnd={() => { setActiveCall(null); fetchData(); addToast({ type: "info", title: "Call ended", autoClose: true }); }} />}
       <ToastStack toasts={toasts} onDismiss={dismissToast} onAction={handleToastAction} />
+      <MobileHeader onMenuClick={() => setMobileNavOpen(true)} user={user} />
       <Sidebar user={user} navItems={getNavItems(
         appointments.filter(a => a.status === "confirmed" || a.status === "pending").length,
         stats?.unreadHealthRecords || 0,
         stats?.unreadPrescriptions || 0
-      )} activeTab={tab} onTabChange={setTab} onLogout={logout} wsConnected={wsConnected} />
-      <div className="dm-page-content" style={{ flex: 1, overflowY: "auto", background: "#f8fafc" }}>
-        <div style={{ padding: 40, maxWidth: 1400 }}>
+      )} activeTab={tab} onTabChange={setTab} onLogout={logout} wsConnected={wsConnected} mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
+      <div className="dm-page-content">
+        <div className="page-inner">
           {loading ? <Loader message="Loading your dashboard…" /> : renderTab()}
         </div>
       </div>

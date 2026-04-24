@@ -180,7 +180,7 @@ export default function DiabetesPrediction() {
         fieldLabels={FIELD_LABELS}
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "flex-start" }}>
+      <div className="dm-grid-analysis">
         <SectionCard>
           <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
             <div>

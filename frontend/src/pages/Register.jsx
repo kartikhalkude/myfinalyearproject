@@ -37,9 +37,9 @@ export default function Register() {
   const onBlur = e => { e.target.style.background = "#f8fafc"; e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc" }}>
+    <div className="dm-auth-layout">
       {/* Left panel - Decorative Branding */}
-      <div style={{ width: "40%", minWidth: 420, position: "relative", background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "48px 56px", overflow: "hidden" }}>
+      <div className="dm-auth-left">
         
         {/* Abstract Background Elements */}
         <div style={{ position: "absolute", top: -100, left: -100, width: 400, height: 400, background: "radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }}></div>
@@ -79,7 +79,7 @@ export default function Register() {
       </div>
 
       {/* Right panel — form */}
-      <div style={{ flex: 1, background: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", padding: "48px 64px", overflowY: "auto" }}>
+      <div className="dm-auth-right" style={{ overflowY: "auto" }}>
         
         {/* Mobile Logo Header */}
         <div style={{ display: "none", alignItems: "center", gap: 10, marginBottom: 32, "@media (maxWidth: 900px)": { display: "flex" } }}>

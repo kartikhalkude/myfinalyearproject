@@ -406,9 +406,9 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: dark ? "rgba(16,185,129,0.12)" : "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981" }}>
                   <FileText size={20} />
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div className="dm-page-title" style={{ fontSize: 18, fontWeight: 700, color: c.titleColor }}>Record Details</div>
-                  <div className="dm-soft-muted" style={{ fontSize: 13, color: c.mutedColor }}>{viewingRecord.title}</div>
+                  <div className="dm-soft-muted" style={{ fontSize: 13, color: c.mutedColor, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{viewingRecord.title}</div>
                 </div>
               </div>
               <button onClick={() => setViewingRecord(null)} style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: c.xBg, border: `1px solid ${c.xBorder}`, borderRadius: 10, cursor: "pointer", color: c.mutedColor }}><X size={18} /></button>
@@ -445,9 +445,9 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
 
               {(viewingRecord.fileName || viewingRecord.fileContentType) && (
                 <div className="dm-file-panel" style={{ marginTop: 8, padding: 16, background: c.fileBg, borderRadius: 16, border: `1px solid ${c.fileBorder}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: dark ? "rgba(255,255,255,0.1)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6" }}><FileText size={18} /></div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: c.fileText }}>{viewingRecord.fileName || "Medical Report"}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: dark ? "rgba(255,255,255,0.1)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6", flexShrink: 0 }}><FileText size={18} /></div>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: c.fileText, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{viewingRecord.fileName || "Medical Report"}</div>
                   </div>
                   <a href={`${API_URL}/health-records/${viewingRecord._id}/file?token=${localStorage.getItem('token')}`} target="_blank" rel="noopener noreferrer"
                     style={{ padding: "8px 16px", background: "#3b82f6", color: "#fff", borderRadius: 10, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>View File</a>

@@ -211,7 +211,7 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
       {success && <div className="dm-success-banner" style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 14, color: "#166534", boxShadow: "0 2px 8px rgba(22, 163, 74, 0.05)" }}>{success}</div>}
 
       {/* Stats Overview */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div className="dm-grid-stats" style={{ marginBottom: 24 }}>
         {[
           ["Total Prescriptions", prescriptions.length, dark ? "#f8fafc" : "#0f172a", <FileText size={20} color={dark ? "#cbd5e1" : "#94a3b8"} />],
           ["Active", prescriptions.filter(p => p.status === "active").length, "#10b981", <CheckCircle size={20} color="#10b981" />],

@@ -30,9 +30,9 @@ export default function Login() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc" }}>
+    <div className="dm-auth-layout">
       {/* Left panel - Decorative Branding */}
-      <div style={{ flex: 1, position: "relative", background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "48px 56px", minHeight: "100vh", overflow: "hidden" }}>
+      <div className="dm-auth-left">
         {/* Abstract Background Elements */}
         <div style={{ position: "absolute", top: -100, right: -100, width: 400, height: 400, background: "radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }}></div>
         <div style={{ position: "absolute", bottom: -50, left: -50, width: 300, height: 300, background: "radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }}></div>
@@ -99,7 +99,7 @@ export default function Login() {
       </div>
 
       {/* Right panel — Form */}
-      <div style={{ width: "45%", minWidth: 480, background: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", padding: "64px", position: "relative" }}>
+      <div className="dm-auth-right">
         
         {/* Mobile Logo Header */}
         <div style={{ display: "none", alignItems: "center", gap: 10, marginBottom: 40, "@media (maxWidth: 900px)": { display: "flex" } }}>

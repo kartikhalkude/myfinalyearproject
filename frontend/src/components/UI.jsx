@@ -359,9 +359,56 @@ function LangDropdown({ dark }) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   MOBILE HEADER
+══════════════════════════════════════════════════════════════════ */
+export function MobileHeader({ onMenuClick, user }) {
+  const avatarColors = ["#1db585", "#3b82f6", "#8b5cf6", "#f59e0b", "#f43f5e"];
+  const aColor = avatarColors[(user?.name?.charCodeAt(0) || 0) % avatarColors.length];
+
+  return (
+    <div className="dm-mobile-header" style={{
+      display: "none",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "12px 16px",
+      background: "#fff",
+      borderBottom: "1px solid #e2e8f0",
+      position: "sticky",
+      top: 0,
+      zIndex: 40
+    }}>
+      <button onClick={onMenuClick} style={{
+        background: "none",
+        border: "none",
+        color: "#0f172a",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 4
+      }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+      </button>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="dm-logo-text" style={{ fontSize: 14, fontWeight: 700, color: "#1db585" }}>Dr.AssistAI</div>
+      </div>
+
+      <div style={{ width: 32, height: 32, borderRadius: "50%", background: aColor, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600 }}>
+        {user?.name?.charAt(0)?.toUpperCase()}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
    SIDEBAR
 ══════════════════════════════════════════════════════════════════ */
-export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsConnected }) {
+export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsConnected, mobileOpen, onMobileClose }) {
   const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1");
   const gtBooted = useRef(false);
 
@@ -382,7 +429,27 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
   const dividerC = dark ? "#1e293b" : "#f1f5f9";
 
   return (
-    <div className="dm-sidebar" style={{ width: 220, background: dark ? "#111827" : "#fff", borderRight: `1px solid ${dividerC}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0, fontFamily: "'DM Sans', sans-serif", transition: "background 0.25s, border-color 0.25s" }}>
+    <>
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <div onClick={onMobileClose} style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(15,23,42,0.4)",
+          backdropFilter: "blur(4px)",
+          zIndex: 140,
+          display: "none"
+        }} className="dm-mobile-backdrop" />
+      )}
+
+      <div className={`dm-sidebar ${mobileOpen ? 'mobile-open' : ''}`} style={{ width: 220, background: dark ? "#111827" : "#fff", borderRight: `1px solid ${dividerC}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0, fontFamily: "'DM Sans', sans-serif", transition: "background 0.25s, border-color 0.25s, transform 0.3s ease" }}>
+
+        {/* Mobile Close Button */}
+        <div className="dm-sidebar-mobile-close" style={{ display: "none", justifyContent: "flex-end", padding: "12px 12px 0" }}>
+          <button onClick={onMobileClose} style={{ background: "none", border: "none", color: dark ? "#94a3b8" : "#64748b", cursor: "pointer" }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
 
       {/* Logo */}
       <div className="dm-divider" style={{ padding: "20px 16px 16px", borderBottom: `1px solid ${dividerC}`, transition: "border-color 0.25s" }}>
@@ -420,7 +487,7 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
           );
           const isActive = activeTab === item.id;
           return (
-            <button key={item.id} onClick={() => onTabChange(item.id)}
+            <button key={item.id} onClick={() => { onTabChange(item.id); if (onMobileClose) onMobileClose(); }}
               className={isActive ? "dm-nav-active" : "dm-nav-default"}
               style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 9, cursor: "pointer", fontSize: 13.5, fontWeight: isActive ? 500 : 400, color: isActive ? (dark ? "#34d399" : "#0a7a57") : (dark ? "#94a3b8" : "#64748b"), border: "none", background: isActive ? (dark ? "#0e3d2c" : "#f0faf7") : "transparent", width: "100%", textAlign: "left", transition: "all 0.15s", marginBottom: 2, fontFamily: "'DM Sans', sans-serif" }}
               onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = dark ? "#1e293b" : "#f8fafc"; e.currentTarget.style.color = dark ? "#e2e8f0" : "#1e293b"; } }}
@@ -465,6 +532,7 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
 
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}} @keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
+    </>
   );
 }
 

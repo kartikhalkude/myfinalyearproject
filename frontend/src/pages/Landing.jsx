@@ -48,7 +48,7 @@ export default function Landing() {
         backdropFilter: scrolled ? "blur(12px)" : "none",
         borderBottom: scrolled ? "1px solid rgba(226, 232, 240, 0.8)" : "1px solid transparent"
       }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="dm-container" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 38, height: 38, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
@@ -81,7 +81,7 @@ export default function Landing() {
       </nav>
 
       {/* Hero */}
-      <section style={{ position: "relative", maxWidth: 1200, margin: "0 auto", padding: "160px 24px 100px", zIndex: 10 }}>
+      <section className="dm-container" style={{ position: "relative", padding: "160px 24px 100px", zIndex: 10 }}>
         {/* Abstract Background Elements inside Hero */}
         <div style={{ position: "absolute", top: -100, right: -100, width: 600, height: 600, background: "radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none", zIndex: -1 }}></div>
         <div style={{ position: "absolute", bottom: -50, left: -100, width: 500, height: 500, background: "radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none", zIndex: -1 }}></div>
@@ -167,14 +167,14 @@ export default function Landing() {
 
       {/* Features section */}
       <section id="features" style={{ background: "#fff", borderTop: "1px solid rgba(226, 232, 240, 0.6)", borderBottom: "1px solid rgba(226, 232, 240, 0.6)", padding: "100px 24px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div className="dm-container">
           <div style={{ textAlign: "center", marginBottom: 64 }}>
             <div style={{ display: "inline-block", fontSize: 12, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, background: "rgba(16, 185, 129, 0.1)", padding: "6px 16px", borderRadius: 999 }}>Features</div>
             <h2 style={{ fontSize: "2.75rem", fontWeight: 700, letterSpacing: "-0.03em", color: "#0f172a", marginBottom: 16 }}>Everything you need for better health</h2>
             <p style={{ fontSize: "1.125rem", color: "#64748b", maxWidth: 540, margin: "0 auto", lineHeight: 1.6 }}>Our platform provides an integrated suite of advanced healthcare tools designed seamlessly for patients and providers.</p>
           </div>
           
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
+          <div className="dm-grid-stats">
             {features.map((f, i) => (
               <div key={i} style={{ background: "#f8fafc", border: "1px solid rgba(226, 232, 240, 0.6)", borderRadius: 24, padding: "32px", transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)", cursor: "default", position: "relative", overflow: "hidden" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.boxShadow = "0 20px 40px -10px rgba(15,23,42,0.08)"; e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.borderColor = "rgba(29, 181, 133, 0.3)"; }}

@@ -260,9 +260,140 @@ h3 { font-size: 1.125rem; }
 }
 
 /* Page layout */
-.page-layout { display: flex; min-height: 100vh; }
-.page-content { flex: 1; overflow-y: auto; }
-.page-inner { padding: 32px; max-width: 1200px; }
+.page-layout { display: flex; min-height: 100vh; width: 100%; position: relative; }
+.page-content { flex: 1; min-width: 0; background: var(--slate-50); }
+.page-inner { 
+  padding: 24px; 
+  max-width: 1400px; 
+  margin: 0 auto; 
+  width: 100%;
+}
+
+/* Container Utility */
+.dm-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  width: 100%;
+}
+
+/* Centered Flex */
+.dm-centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive Grids */
+.dm-grid-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.dm-grid-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+.dm-grid-analysis {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+@media (max-width: 1024px) {
+  .dm-grid-two, .dm-grid-analysis {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .dm-grid-two {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dm-sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 150;
+    transform: translateX(-100%);
+    box-shadow: 20px 0 50px rgba(0,0,0,0.1);
+    display: flex !important;
+  }
+  .dm-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .dm-mobile-header {
+    display: flex !important;
+  }
+  .dm-mobile-backdrop {
+    display: block !important;
+  }
+  .dm-sidebar-mobile-close {
+    display: flex !important;
+  }
+  .dm-page-shell {
+    flex-direction: column;
+  }
+  .page-inner {
+    padding: 16px;
+  }
+  .dm-stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+.dm-auth-layout {
+  min-height: 100vh;
+  display: flex;
+  background: var(--slate-50);
+}
+
+.dm-auth-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 56px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+}
+
+.dm-auth-right {
+  width: 45%;
+  min-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px;
+  background: #fff;
+  position: relative;
+}
+
+@media (max-width: 1024px) {
+  .dm-auth-left {
+    display: none;
+  }
+  .dm-auth-right {
+    width: 100%;
+    min-width: 0;
+    padding: 32px 24px;
+  }
+}
+
+.dm-auth-card {
+  width: 100%;
+  max-width: 440px;
+}
 
 /* Progress ring animation for toasts */
 .progress-bar { height: 3px; border-radius: 999px; background: var(--brand-200); overflow: hidden; margin-top: 10px; }

@@ -5,7 +5,7 @@ import VideoCall from "../components/VideoCall";
 import apiClient from "../services/apiClient";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
-import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader } from "../components/UI";
+import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader, MobileHeader } from "../components/UI";
 import { 
   Home, Calendar, CalendarClock, Users, FileText, Pill, ClipboardList, 
   Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, MessageSquare,
@@ -103,7 +103,7 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
           <RefreshCw size={14} /> Refresh
         </Btn>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 24 }}>
+      <div className="dm-grid-stats" style={{ marginBottom: 24 }}>
         <StatCard label="Today's Appointments" value={stats?.todayAppointments || 0} icon={<CalendarDays size={18} color="#1db585" />} color="#1db585" />
         <StatCard label="Total Patients" value={stats?.totalPatients || 0} icon={<Users size={18} color="#3b82f6" />} color="#3b82f6" />
         <StatCard label="Pending Feedback" value={stats?.pendingFeedback || 0} icon={<ClipboardList size={18} color="#eab308" />} color="#eab308" />
@@ -111,7 +111,7 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
         <StatCard label="Feedback Given" value={stats?.feedbackProvided || 0} icon={<MessageSquare size={18} color="#10b981" />} color="#10b981" />
       </div>
       
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div className="dm-grid-two">
         {/* Today's Schedule */}
         <SectionCard>
           <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -359,7 +359,7 @@ function Reports({ stats, appointments }) {
         <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Practice statistics and consultation metrics.</p>
       </div>
       
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div className="dm-grid-two">
         <SectionCard>
           <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc" }}>
             <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Practice Statistics</div>
@@ -396,6 +396,7 @@ export default function DoctorDashboard() {
   const activeCallRef = useRef(null);
   useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
   const [incomingCall, setIncomingCall] = useState(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((t) => {
@@ -639,6 +640,7 @@ export default function DoctorDashboard() {
         />
       )}
 
+      <MobileHeader onMenuClick={() => setMobileNavOpen(true)} user={user} />
       <Sidebar 
         user={user} 
         navItems={getNavItems(
@@ -649,10 +651,12 @@ export default function DoctorDashboard() {
         onTabChange={setActiveTab} 
         onLogout={logout} 
         wsConnected={wsConnected} 
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
       />
       
-      <div className="dm-page-content" style={{ flex: 1, overflowY: "auto", background: "#f8fafc" }}>
-        <div style={{ padding: 40, maxWidth: 1400 }}>
+      <div className="dm-page-content">
+        <div className="page-inner">
           {loading ? <Loader message="Loading dashboard..." /> : renderContent()}
         </div>
       </div>

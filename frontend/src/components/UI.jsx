@@ -362,7 +362,7 @@ function LangDropdown({ dark }) {
    MOBILE HEADER
 ══════════════════════════════════════════════════════════════════ */
 export function MobileHeader({ onMenuClick, user }) {
-  const [dark, setDark] = useState(() => document.body.classList.contains('dm'));
+  const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1");
   
   useEffect(() => {
     const sync = () => setDark(document.body.classList.contains('dm'));
@@ -450,7 +450,7 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
         }} className="dm-mobile-backdrop" />
       )}
 
-      <div className={`dm-sidebar ${mobileOpen ? 'mobile-open' : ''}`} style={{ width: 220, background: dark ? "#111827" : "#fff", borderRight: `1px solid ${dividerC}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0, fontFamily: "'DM Sans', sans-serif", transition: "background 0.25s, border-color 0.25s, transform 0.3s ease" }}>
+      <div className={`dm-sidebar ${mobileOpen ? 'mobile-open' : ''}`} style={{ width: 220, background: dark ? "#111827" : "#fff", borderRight: `1px solid ${dividerC}`, display: "flex", flexDirection: "column", height: "100dvh", position: "sticky", top: 0, flexShrink: 0, fontFamily: "'DM Sans', sans-serif", transition: "background 0.25s, border-color 0.25s, transform 0.3s ease", overflow: "hidden" }}>
 
         {/* Mobile Close Button */}
         <div className="dm-sidebar-mobile-close" style={{ display: "none", justifyContent: "flex-end", padding: "12px 12px 0" }}>
@@ -510,7 +510,7 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
       </nav>
 
       {/* Footer */}
-      <div className="dm-divider" style={{ padding: "12px 10px", borderTop: `1px solid ${dividerC}`, display: "flex", flexDirection: "column", gap: 8, transition: "border-color 0.25s" }}>
+      <div className="dm-divider" style={{ padding: "12px 10px", borderTop: `1px solid ${dividerC}`, display: "flex", flexDirection: "column", gap: 8, transition: "border-color 0.25s", flexShrink: 0 }}>
 
         {/* Dark mode toggle */}
         <button className="dm-toggle-btn" onClick={toggleDark}

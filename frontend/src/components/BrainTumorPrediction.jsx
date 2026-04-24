@@ -113,9 +113,9 @@ export default function BrainTumorPrediction() {
     doc.text(`${prediction.probability}%`, 60, 80);
     
     doc.text(`Risk Level:`, 20, 90);
-    const riskRGB = prediction.risk === 'Normal' ? [22, 163, 74] : [220, 38, 38];
+    const riskRGB = hasTumor ? [220, 38, 38] : [22, 163, 74];
     doc.setTextColor(riskRGB[0], riskRGB[1], riskRGB[2]);
-    doc.text(prediction.risk, 60, 90);
+    doc.text(prediction.risk || (hasTumor ? "High Risk" : "Normal"), 60, 90);
     doc.setTextColor(15, 23, 42);
     
     // Add MRI Image if available
@@ -160,7 +160,7 @@ export default function BrainTumorPrediction() {
     doc.save(`Brain_Tumor_Report_${new Date().getTime()}.pdf`);
   };
 
-  const hasTumor = prediction?.prediction !== 'No Tumor';
+  const hasTumor = prediction?.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(prediction.prediction);
   const riskColor = prediction ? (hasTumor ? "red" : "green") : "slate";
   const riskBg = { red: "#fff1f2", green: "#f0fdf4", slate: "#f8fafc" };
   const riskBorder = { red: "#fda4af", green: "#86efac", slate: "#e2e8f0" };
@@ -333,7 +333,7 @@ export default function BrainTumorPrediction() {
                   <tr className="dm-table-row" key={i} style={{ borderBottom: "1px solid #f8fafc" }}>
                     <td className="dm-table-cell dm-soft-muted" style={{ padding: "11px 16px", color: "#475569" }}>{new Date(r.createdAt).toLocaleDateString()}</td>
                     <td style={{ padding: "11px 16px" }}>
-                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: r.prediction !== 'No Tumor' ? "#fee2e2" : "#dcfce7", color: r.prediction !== 'No Tumor' ? "#991b1b" : "#166534" }}>{r.prediction}</span>
+                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: (r.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(r.prediction)) ? "#fee2e2" : "#dcfce7", color: (r.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(r.prediction)) ? "#991b1b" : "#166534" }}>{r.prediction}</span>
                     </td>
                     <td className="dm-table-cell dm-soft-text" style={{ padding: "11px 16px", color: "#1e293b", fontWeight: 500 }}>{r.probability}%</td>
                     <td className="dm-table-cell dm-soft-muted" style={{ padding: "11px 16px", color: "#64748b" }}>{r.risk}</td>

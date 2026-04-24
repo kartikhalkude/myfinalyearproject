@@ -656,7 +656,7 @@ export default function DoctorDashboard() {
       />
       
       <div className="dm-page-content">
-        <div className="page-inner">
+        <div className="dm-page-inner">
           {loading ? <Loader message="Loading dashboard..." /> : renderContent()}
         </div>
       </div>

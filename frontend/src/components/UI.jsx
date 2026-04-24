@@ -362,6 +362,14 @@ function LangDropdown({ dark }) {
    MOBILE HEADER
 ══════════════════════════════════════════════════════════════════ */
 export function MobileHeader({ onMenuClick, user }) {
+  const [dark, setDark] = useState(() => document.body.classList.contains('dm'));
+  
+  useEffect(() => {
+    const sync = () => setDark(document.body.classList.contains('dm'));
+    window.addEventListener('dm-change', sync);
+    return () => window.removeEventListener('dm-change', sync);
+  }, []);
+
   const avatarColors = ["#1db585", "#3b82f6", "#8b5cf6", "#f59e0b", "#f43f5e"];
   const aColor = avatarColors[(user?.name?.charCodeAt(0) || 0) % avatarColors.length];
 
@@ -371,8 +379,8 @@ export function MobileHeader({ onMenuClick, user }) {
       alignItems: "center",
       justifyContent: "space-between",
       padding: "12px 16px",
-      background: "#fff",
-      borderBottom: "1px solid #e2e8f0",
+      background: dark ? "#111827" : "#fff",
+      borderBottom: `1px solid ${dark ? "#1e293b" : "#e2e8f0"}`,
       position: "sticky",
       top: 0,
       zIndex: 40
@@ -380,7 +388,7 @@ export function MobileHeader({ onMenuClick, user }) {
       <button onClick={onMenuClick} style={{
         background: "none",
         border: "none",
-        color: "#0f172a",
+        color: dark ? "#f1f5f9" : "#0f172a",
         cursor: "pointer",
         display: "flex",
         alignItems: "center",

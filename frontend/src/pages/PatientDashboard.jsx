@@ -385,7 +385,7 @@ export default function PatientDashboard() {
         stats?.unreadPrescriptions || 0
       )} activeTab={tab} onTabChange={setTab} onLogout={logout} wsConnected={wsConnected} mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
       <div className="dm-page-content">
-        <div className="page-inner">
+        <div className="dm-page-inner">
           {loading ? <Loader message="Loading your dashboard…" /> : renderTab()}
         </div>
       </div>

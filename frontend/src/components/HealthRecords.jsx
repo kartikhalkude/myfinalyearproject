@@ -81,7 +81,7 @@ const onFocus = e => { e.target.style.background = "#fff"; e.target.style.border
 const onBlur = e => { e.target.style.background = "#f8fafc"; e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; };
 
 export default function HealthRecords({ doctorPatients, onRefresh }) {
-  const { user } = useAuth();
+  const { user, API_URL } = useAuth();
   const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1" || document.body.classList.contains("dm"));
   const [records, setRecords] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -449,7 +449,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
                     <div style={{ width: 36, height: 36, borderRadius: 8, background: dark ? "rgba(255,255,255,0.1)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6" }}><FileText size={18} /></div>
                     <div style={{ fontSize: 14, fontWeight: 500, color: c.fileText }}>{viewingRecord.fileName || "Medical Report"}</div>
                   </div>
-                  <a href={`http://localhost:5000/api/health-records/${viewingRecord._id}/file?token=${localStorage.getItem('token')}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`${API_URL}/health-records/${viewingRecord._id}/file?token=${localStorage.getItem('token')}`} target="_blank" rel="noopener noreferrer"
                     style={{ padding: "8px 16px", background: "#3b82f6", color: "#fff", borderRadius: 10, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>View File</a>
                 </div>
               )}

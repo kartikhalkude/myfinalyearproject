@@ -155,7 +155,7 @@ export default function PneumoniaPrediction() {
     setError('');
   };
 
-  const isPneumonia = prediction?.prediction === 'PNEUMONIA';
+  const isPneumonia = prediction?.prediction?.toUpperCase() === 'PNEUMONIA';
   const riskColor = prediction ? (isPneumonia ? "red" : "green") : "slate";
   const riskBg = { red: "#fff1f2", green: "#f0fdf4", slate: "#f8fafc" };
   const riskBorder = { red: "#fda4af", green: "#86efac", slate: "#e2e8f0" };
@@ -311,7 +311,7 @@ export default function PneumoniaPrediction() {
                   <tr className="dm-table-row" key={i} style={{ borderBottom: "1px solid #f8fafc" }}>
                     <td className="dm-table-cell dm-soft-muted" style={{ padding: "11px 16px", color: "#475569" }}>{new Date(r.createdAt).toLocaleDateString()}</td>
                     <td style={{ padding: "11px 16px" }}>
-                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: r.prediction === 'PNEUMONIA' ? "#fee2e2" : "#dcfce7", color: r.prediction === 'PNEUMONIA' ? "#991b1b" : "#166534" }}>{r.prediction}</span>
+                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: r.prediction?.toUpperCase() === 'PNEUMONIA' ? "#fee2e2" : "#dcfce7", color: r.prediction?.toUpperCase() === 'PNEUMONIA' ? "#991b1b" : "#166534" }}>{r.prediction}</span>
                     </td>
                     <td className="dm-table-cell dm-soft-text" style={{ padding: "11px 16px", color: "#1e293b", fontWeight: 500 }}>{r.probability}%</td>
                     <td className="dm-table-cell dm-soft-muted" style={{ padding: "11px 16px", color: "#64748b" }}>{r.risk}</td>

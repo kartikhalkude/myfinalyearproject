@@ -220,8 +220,8 @@ const predictPneumonia = async (req, res) => {
     const prediction = {
       prediction: result.prediction,
       probability: result.probability,
-      risk: result.risk_level,
-      message: result.message || (result.prediction === "Pneumonia" ? "Signs of pneumonia detected in the scan." : "Lung scan appears normal."),
+      risk: result.risk || result.risk_level,
+      message: result.message || (result.prediction?.toUpperCase() === "PNEUMONIA" ? "Signs of pneumonia detected in the scan." : "Lung scan appears normal."),
       model_source: result.model_source || "HuggingFace Cloud"
     };
 

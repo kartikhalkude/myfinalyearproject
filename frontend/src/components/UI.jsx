@@ -381,9 +381,11 @@ export function MobileHeader({ onMenuClick, user }) {
       padding: "12px 16px",
       background: dark ? "#111827" : "#fff",
       borderBottom: `1px solid ${dark ? "#1e293b" : "#e2e8f0"}`,
-      position: "sticky",
+      position: "fixed",
       top: 0,
-      zIndex: 40
+      left: 0,
+      right: 0,
+      zIndex: 145
     }}>
       <button onClick={onMenuClick} style={{
         background: "none",
@@ -450,7 +452,20 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
         }} className="dm-mobile-backdrop" />
       )}
 
-      <div className={`dm-sidebar ${mobileOpen ? 'mobile-open' : ''}`} style={{ width: 220, background: dark ? "#111827" : "#fff", borderRight: `1px solid ${dividerC}`, display: "flex", flexDirection: "column", height: "100dvh", position: "sticky", top: 0, flexShrink: 0, fontFamily: "'DM Sans', sans-serif", transition: "background 0.25s, border-color 0.25s, transform 0.3s ease", overflow: "hidden" }}>
+      <div className={`dm-sidebar ${mobileOpen ? 'mobile-open' : ''}`} style={{ 
+        width: 220, 
+        background: dark ? "#111827" : "#fff", 
+        borderRight: `1px solid ${dividerC}`, 
+        display: "grid", 
+        gridTemplateRows: "auto auto 1fr auto",
+        height: "100dvh", 
+        position: "sticky", 
+        top: 0, 
+        flexShrink: 0, 
+        fontFamily: "'DM Sans', sans-serif", 
+        transition: "background 0.25s, border-color 0.25s, transform 0.3s ease", 
+        overflow: "hidden" 
+      }}>
 
         {/* Mobile Close Button */}
         <div className="dm-sidebar-mobile-close" style={{ display: "none", justifyContent: "flex-end", padding: "12px 12px 0" }}>
@@ -488,7 +503,7 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, overflowY: "auto", padding: "16px 10px" }}>
+      <nav style={{ minHeight: 0, overflowY: "auto", padding: "16px 10px" }} className="dm-hide-scrollbar">
         {navItems.map((item, i) => {
           if (item.section) return (
             <div key={i} className="dm-section-label" style={{ fontSize: 10, fontWeight: 600, color: dark ? "#334155" : "#cbd5e1", textTransform: "uppercase", letterSpacing: "0.07em", padding: "0 6px", marginBottom: 6, marginTop: i === 0 ? 0 : 18, transition: "color 0.25s" }}>{item.section}</div>
@@ -610,5 +625,47 @@ export function Loader({ message="Loading..." }) {
       <div style={{width:36,height:36,border:"3px solid #f1f5f9",borderTop:"3px solid #1db585",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
       <span style={{fontSize:14,color:"#94a3b8"}}>{message}</span>
     </div>
+  );
+}
+
+export function Modal({ isOpen, onClose, title, children, footer }) {
+  if (!isOpen) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", animation: "fadeIn 0.2s ease" }} />
+      <div className="dm-modal-surface" style={{ position: "relative", width: "100%", maxWidth: 500, background: "#fff", borderRadius: 24, boxShadow: "0 20px 40px rgba(0,0,0,0.1)", overflow: "hidden", animation: "modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)" }}>
+        <div className="dm-modal-header" style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: 0 }}>{title}</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", display: "flex", padding: 4 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          </button>
+        </div>
+        <div style={{ padding: 24 }}>{children}</div>
+        {footer && <div className="dm-modal-footer" style={{ padding: "16px 24px", background: "#f8fafc", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "flex-end", gap: 12 }}>{footer}</div>}
+      </div>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+      `}</style>
+    </div>
+  );
+}
+
+export function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", cancelText = "Cancel", variant = "danger" }) {
+  if (!isOpen) return null;
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      footer={
+        <>
+          <Btn variant="outline" onClick={onClose}>{cancelText}</Btn>
+          <Btn variant={variant} onClick={() => { onConfirm(); onClose(); }}>{confirmText}</Btn>
+        </>
+      }
+    >
+      <div style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6 }}>{message}</div>
+    </Modal>
   );
 }

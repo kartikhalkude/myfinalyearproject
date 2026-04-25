@@ -5,6 +5,22 @@ import { SectionCard, PageHeader, Loader } from './UI';
 import { CheckCircle, AlertTriangle, Info, HeartPulse, Download, Trash2 } from "lucide-react";
 import ReportScanner from './ReportScanner';
 
+const HEART_FIELD_LABELS = {
+  age: 'Age (years)',
+  sex: 'Sex',
+  chestPainType: 'Chest Pain Type',
+  restingBP: 'Resting BP (mm Hg)',
+  cholesterol: 'Cholesterol (mg/dl)',
+  fastingBS: 'Fasting Blood Sugar > 120',
+  restingECG: 'Resting ECG',
+  maxHeartRate: 'Max Heart Rate',
+  exerciseAngina: 'Exercise Angina',
+  oldpeak: 'ST Depression (Oldpeak)',
+  stSlope: 'ST Slope',
+  ca: 'Major Vessels (0-3)',
+  thal: 'Thalassemia',
+};
+
 export default function HeartDiseasePrediction() {
   const [formData, setFormData] = useState({
     age: '', sex: '1', chestPainType: '0', restingBP: '', cholesterol: '',
@@ -36,22 +52,6 @@ export default function HeartDiseasePrediction() {
   };
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  const HEART_FIELD_LABELS = {
-    age: 'Age (years)',
-    sex: 'Sex',
-    chestPainType: 'Chest Pain Type',
-    restingBP: 'Resting BP (mm Hg)',
-    cholesterol: 'Cholesterol (mg/dl)',
-    fastingBS: 'Fasting Blood Sugar > 120',
-    restingECG: 'Resting ECG',
-    maxHeartRate: 'Max Heart Rate',
-    exerciseAngina: 'Exercise Angina',
-    oldpeak: 'ST Depression (Oldpeak)',
-    stSlope: 'ST Slope',
-    ca: 'Major Vessels (0-3)',
-    thal: 'Thalassemia',
-  };
 
   const handleReportExtracted = (extracted) => {
     setFormData(prev => {
@@ -186,13 +186,13 @@ export default function HeartDiseasePrediction() {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 className='dm-page-title' style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Heart Disease Risk Prediction</h1>
+        <h1 className='dm-page-title' style={{ fontSize: "1.375rem", fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Heart Disease Risk Prediction</h1>
         <p style={{ fontSize: 13.5, color: "#64748b" }}>Enter health metrics to get an AI-powered risk assessment. For educational use only.</p>
       </div>
 
-      <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13 }}>
+      <div style={{ background: document.body.classList.contains("dm") ? "rgba(217, 119, 6, 0.1)" : "#fffbeb", border: `1px solid ${document.body.classList.contains("dm") ? "#d97706" : "#fde68a"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13 }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span style={{ color: "#92400e" }}><strong>For educational/demonstration purposes only.</strong> Do NOT use for actual medical decisions. Always consult qualified healthcare professionals.</span>
+        <span style={{ color: document.body.classList.contains("dm") ? "#fbbf24" : "#92400e" }}><strong>For educational/demonstration purposes only.</strong> Do NOT use for actual medical decisions. Always consult qualified healthcare professionals.</span>
       </div>
 
       {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "11px 14px", marginBottom: 16, fontSize: 13.5, color: "#dc2626" }}>{error}</div>}
@@ -206,9 +206,9 @@ export default function HeartDiseasePrediction() {
 
       <div className="dm-grid-analysis">
         <SectionCard>
-          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ padding: "18px 20px", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}`, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Health metrics</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a" }}>Health metrics</div>
               <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>All fields are required</div>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -224,7 +224,7 @@ export default function HeartDiseasePrediction() {
             </div>
           </div>
           <form onSubmit={handleSubmit} style={{ padding: 20 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
               {[
                 { label: "Age (years)", name: "age", type: "number", min: "1", max: "120", placeholder: "e.g., 55" },
                 { label: "Sex", name: "sex", type: "select", options: [{ v: "1", l: "Male" }, { v: "0", l: "Female" }] },
@@ -241,22 +241,26 @@ export default function HeartDiseasePrediction() {
                 { label: "Thalassemia", name: "thal", type: "select", options: [{ v: "0", l: "Unknown" }, { v: "1", l: "Normal" }, { v: "2", l: "Fixed Defect" }, { v: "3", l: "Reversible Defect" }] }
               ].map(f => (
                 <div key={f.name}>
-                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 500, color: "#475569", marginBottom: 4 }}>{f.label}</label>
+                  <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: document.body.classList.contains("dm") ? "#94a3b8" : "#475569", marginBottom: 4 }}>{f.label}</label>
                   {f.type === "select" ? (
-                    <select name={f.name} value={formData[f.name]} onChange={handleChange} required style={{ ...inputStyle, appearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 11px center", paddingRight: 32 }} onFocus={onFocus} onBlur={onBlur}>
-                      {f.options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+                    <select name={f.name} value={formData[f.name]} onChange={handleChange} required 
+                      style={{ width: "100%", padding: "9px 11px", fontSize: 13.5, fontFamily: "inherit", color: document.body.classList.contains("dm") ? "#f1f5f9" : "#1e293b", background: document.body.classList.contains("dm") ? "#0f172a" : "#fff", border: `1.5px solid ${document.body.classList.contains("dm") ? "#334155" : "#e2e8f0"}`, borderRadius: 9, outline: "none", boxSizing: "border-box", transition: "border-color 0.15s", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='${document.body.classList.contains("dm") ? "%2394a3b8" : "%23475569"}' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 11px center", paddingRight: 32 }} 
+                      onFocus={onFocus} onBlur={e => { e.target.style.borderColor = document.body.classList.contains("dm") ? "#334155" : "#e2e8f0"; e.target.style.boxShadow = "none"; }}>
+                      {f.options.map(o => <option key={o.v} value={o.v} style={{ background: document.body.classList.contains("dm") ? "#0f172a" : "#fff", color: document.body.classList.contains("dm") ? "#f1f5f9" : "#1e293b" }}>{o.l}</option>)}
                     </select>
                   ) : (
-                    <input type="number" name={f.name} value={formData[f.name]} onChange={handleChange} placeholder={f.placeholder} step={f.step} min={f.min} max={f.max} required style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                    <input type="number" name={f.name} value={formData[f.name]} onChange={handleChange} placeholder={f.placeholder} step={f.step} min={f.min} max={f.max} required 
+                      style={{ width: "100%", padding: "9px 11px", fontSize: 13.5, fontFamily: "inherit", color: document.body.classList.contains("dm") ? "#f1f5f9" : "#1e293b", background: document.body.classList.contains("dm") ? "#0f172a" : "#fff", border: `1.5px solid ${document.body.classList.contains("dm") ? "#334155" : "#e2e8f0"}`, borderRadius: 9, outline: "none", boxSizing: "border-box", transition: "border-color 0.15s" }} 
+                      onFocus={onFocus} onBlur={e => { e.target.style.borderColor = document.body.classList.contains("dm") ? "#334155" : "#e2e8f0"; e.target.style.boxShadow = "none"; }} />
                   )}
                 </div>
               ))}
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-              <button type="submit" disabled={loading} style={{ flex: 1, padding: "11px", background: loading ? "#94a3b8" : "#1db585", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <button type="submit" disabled={loading} style={{ flex: 2, padding: "11px", background: loading ? "#475569" : "#1db585", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#fff", cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s" }} onMouseEnter={e => { if(!loading) e.currentTarget.style.background = "#0e9a6e"; }} onMouseLeave={e => { if(!loading) e.currentTarget.style.background = "#1db585"; }}>
                 {loading ? <><div style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }}></div>Analyzing...</> : "Run prediction"}
               </button>
-              <button type="button" onClick={resetForm} style={{ padding: "11px 20px", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#64748b", cursor: "pointer", fontFamily: "inherit" }}>Reset</button>
+              <button type="button" onClick={resetForm} style={{ flex: 1, padding: "11px 20px", background: document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc", border: `1.5px solid ${document.body.classList.contains("dm") ? "#334155" : "#e2e8f0"}`, borderRadius: 10, fontSize: 14, fontWeight: 500, color: document.body.classList.contains("dm") ? "#94a3b8" : "#64748b", cursor: "pointer", fontFamily: "inherit" }}>Reset</button>
             </div>
           </form>
         </SectionCard>
@@ -275,18 +279,18 @@ export default function HeartDiseasePrediction() {
                   <div style={{ fontSize: 14, fontWeight: 500, color: riskText[riskColor], marginTop: 2 }}>{prediction.risk_level} Risk</div>
                   <div style={{ fontSize: 13, color: riskText[riskColor], opacity: 0.8, marginTop: 6, lineHeight: 1.5 }}>{prediction.message}</div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f8fafc", borderRadius: 10, marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, color: "#64748b" }}>Disease Probability</span>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{(prediction.probability_disease * 100).toFixed(1)}%</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: document.body.classList.contains("dm") ? "rgba(15,23,42,0.5)" : "#f8fafc", borderRadius: 10, marginBottom: 8, border: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "transparent"}` }}>
+                  <span style={{ fontSize: 13, color: "#94a3b8" }}>Disease Probability</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a" }}>{(prediction.probability_disease * 100).toFixed(1)}%</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f8fafc", borderRadius: 10 }}>
-                  <span style={{ fontSize: 13, color: "#64748b" }}>No Disease Probability</span>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{(prediction.probability_no_disease * 100).toFixed(1)}%</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: document.body.classList.contains("dm") ? "rgba(15,23,42,0.5)" : "#f8fafc", borderRadius: 10, border: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "transparent"}` }}>
+                  <span style={{ fontSize: 13, color: "#94a3b8" }}>No Disease Probability</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a" }}>{(prediction.probability_no_disease * 100).toFixed(1)}%</span>
                 </div>
 
                 <button 
                   onClick={downloadReport}
-                  style={{ width: "100%", marginTop: 16, padding: "10px", background: "#0f172a", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                  style={{ width: "100%", marginTop: 16, padding: "10px", background: "#1db585", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
                   <Download size={16} />
                   Download Medical Report
@@ -306,10 +310,10 @@ export default function HeartDiseasePrediction() {
           {/* Quick reference */}
           <SectionCard>
             <div style={{ padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", marginBottom: 12 }}>Reference ranges</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a", marginBottom: 12 }}>Reference ranges</div>
               {[["Resting BP", "120/80 mm Hg (normal)"], ["Cholesterol", "< 200 mg/dl (desirable)"], ["Fasting BS", "< 100 mg/dl (normal)"], ["Max Heart Rate", "220 - age (estimated max)"]].map(([k, v]) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#64748b", paddingBottom: 7, marginBottom: 7, borderBottom: "1px solid #f8fafc" }}>
-                  <span style={{ fontWeight: 500, color: "#475569" }}>{k}</span><span>{v}</span>
+                <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#94a3b8", paddingBottom: 7, marginBottom: 7, borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}` }}>
+                  <span style={{ fontWeight: 600, color: document.body.classList.contains("dm") ? "#cbd5e1" : "#475569" }}>{k}</span><span>{v}</span>
                 </div>
               ))}
             </div>
@@ -320,9 +324,9 @@ export default function HeartDiseasePrediction() {
       {/* History */}
       {history.length > 0 && (
         <SectionCard style={{ marginTop: 24 }}>
-          <div style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ padding: "18px 20px", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Prediction history</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a" }}>Prediction history</div>
               <div style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>Last {history.length} assessments</div>
             </div>
             <button onClick={handleClearHistory} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#991b1b", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#fee2e2"}} onMouseLeave={e=>{e.currentTarget.style.background="#fef2f2"}}>
@@ -332,19 +336,19 @@ export default function HeartDiseasePrediction() {
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead><tr style={{ background: "#f8fafc" }}>
+              <thead><tr style={{ background: document.body.classList.contains("dm") ? "rgba(15,23,42,0.5)" : "#f8fafc" }}>
                 {["Date", "Result", "Probability", "Age", "BP", "Cholesterol"].map(h => (
-                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9" }}>{h}</th>
+                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f1f5f9"}` }}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>
-                {history.map((r, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #f8fafc" }}>
-                    <td style={{ padding: "11px 16px", color: "#475569" }}>{new Date(r.createdAt).toLocaleDateString()}</td>
+                {history.slice(0, 10).map((r, i) => (
+                  <tr key={i} style={{ borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}` }}>
+                    <td style={{ padding: "11px 16px", color: document.body.classList.contains("dm") ? "#94a3b8" : "#475569" }}>{new Date(r.createdAt).toLocaleDateString()}</td>
                     <td style={{ padding: "11px 16px" }}>
-                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: r.prediction === 1 ? "#fee2e2" : "#dcfce7", color: r.prediction === 1 ? "#991b1b" : "#166534" }}>{r.prediction === 1 ? "Disease" : "No Disease"}</span>
+                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: r.prediction === 1 ? (document.body.classList.contains("dm") ? "rgba(220, 38, 38, 0.15)" : "#fee2e2") : (document.body.classList.contains("dm") ? "rgba(22, 163, 74, 0.15)" : "#dcfce7"), color: r.prediction === 1 ? (document.body.classList.contains("dm") ? "#ef4444" : "#991b1b") : (document.body.classList.contains("dm") ? "#10b981" : "#166534"), border: document.body.classList.contains("dm") ? `1px solid ${r.prediction === 1 ? "#ef4444" : "#10b981"}` : "none" }}>{r.prediction === 1 ? "Disease" : "No Disease"}</span>
                     </td>
-                    <td style={{ padding: "11px 16px", color: "#1e293b", fontWeight: 500 }}>{(r.probability * 100).toFixed(1)}%</td>
+                    <td style={{ padding: "11px 16px", color: document.body.classList.contains("dm") ? "#f1f5f9" : "#1e293b", fontWeight: 600 }}>{(r.probability * 100).toFixed(1)}%</td>
                     <td style={{ padding: "11px 16px", color: "#64748b" }}>{r.age}</td>
                     <td style={{ padding: "11px 16px", color: "#64748b" }}>{r.restingBP}</td>
                     <td style={{ padding: "11px 16px", color: "#64748b" }}>{r.cholesterol}</td>

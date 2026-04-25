@@ -70,6 +70,15 @@ export const authAPI = {
       throw error.response?.data || { error: 'Update failed' };
     }
   },
+  
+  forgotPassword: async (email) => {
+    try {
+      const response = await apiClient.post('/auth/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Request failed' };
+    }
+  },
 };
 
 // ─── Appointments API ────────────────────────────────────────────────────────

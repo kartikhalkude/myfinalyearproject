@@ -153,10 +153,6 @@ const updatePrescription = async (req, res) => {
 
 const deletePrescription = async (req, res) => {
   try {
-    if (req.userRole !== 'doctor') {
-      return res.status(403).json({ error: 'Only doctors can delete prescriptions' });
-    }
-
     const { id } = req.params;
     const prescription = await Prescription.findById(id);
 
@@ -164,7 +160,15 @@ const deletePrescription = async (req, res) => {
       return res.status(404).json({ error: 'Prescription not found' });
     }
 
-    if (prescription.doctorId.toString() !== req.userId) {
+    if (req.userRole === 'doctor') {
+      if (prescription.doctorId.toString() !== req.userId) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+    } else if (req.userRole === 'patient') {
+      if (prescription.patientId.toString() !== req.userId) {
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
+    } else {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 

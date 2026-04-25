@@ -19,8 +19,12 @@ export default function AppointmentBooking({ onBookingComplete }) {
   }, []);
 
   const minDate = () => {
-    const d = new Date(); d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0];
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   };
 
   const handleSubmit = async e => {
@@ -41,7 +45,7 @@ export default function AppointmentBooking({ onBookingComplete }) {
   const avatarColors = ["#1db585","#3b82f6","#8b5cf6","#f59e0b","#f43f5e","#14b8a6"];
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ fontFamily: "'DM Sans', sans-serif", width: "100%", overflowX: "hidden" }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>Book an Appointment</h1>
@@ -65,33 +69,33 @@ export default function AppointmentBooking({ onBookingComplete }) {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "flex-start" }}>
+      <div className="dm-grid-analysis">
         {/* Main */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Doctor select */}
+          {/* Doctor select */}
           <SectionCard>
-            <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
-              <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Choose a doctor</div>
+            <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}` }}>
+              <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: document.body.classList.contains("dm") ? "#f8fafc" : "#0f172a" }}>Choose a doctor</div>
               <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>{doctors.length} available specialists</div>
             </div>
             <div style={{ padding: 16 }}>
               {fetching ? <Loader message="Loading doctors..." /> : doctors.length === 0 ? (
                 <EmptyState icon={<Stethoscope size={24} color="#94a3b8" />} title="No doctors available" subtitle="Please check back later." />
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
                   {doctors.map((doc, i) => {
                     const isSelected = selected?._id === doc._id;
+                    const isDark = document.body.classList.contains("dm");
                     const color = avatarColors[i % avatarColors.length];
                     return (
-                      <div key={doc._id} onClick={() => setSelected(doc)}
+                      <div key={doc._id} onClick={() => { setSelected(doc); setError(""); }}
                         className="dm-select-card"
-                        style={{ padding: "14px", border: isSelected ? "2px solid #1db585" : "1.5px solid #f1f5f9", borderRadius: 12, cursor: "pointer", background: isSelected ? "#f0faf7" : "#fff", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 12 }}
-                        onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.borderColor = "#d1f3ea"; e.currentTarget.style.background = "#fafffe"; } }}
-                        onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.borderColor = "#f1f5f9"; e.currentTarget.style.background = "#fff"; } }}
+                        style={{ padding: "14px", border: isSelected ? "2px solid #1db585" : `1.5px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 12, cursor: "pointer", background: isSelected ? (isDark ? "rgba(29, 181, 133, 0.1)" : "#f0faf7") : (isDark ? "#111827" : "#fff"), transition: "all 0.15s", display: "flex", alignItems: "center", gap: 12 }}
                       >
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 15, flexShrink: 0 }}>{doc.name.charAt(0)}</div>
                         <div style={{ minWidth: 0 }}>
-                          <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: isSelected ? "#0a7a57" : "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
+                          <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: isSelected ? "#1db585" : (isDark ? "#e2e8f0" : "#1e293b"), overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
                           <div className="dm-soft-muted" style={{ fontSize: 12, color: isSelected ? "#1db585" : "#94a3b8", marginTop: 1 }}>{doc.specialization}</div>
                         </div>
                         {isSelected && (
@@ -110,29 +114,28 @@ export default function AppointmentBooking({ onBookingComplete }) {
           {/* Appointment details */}
           {selected && (
             <SectionCard style={{ animation: "fadeIn 0.25s ease" }}>
-              <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc" }}>
-                <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Appointment details</div>
+              <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}` }}>
+                <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: document.body.classList.contains("dm") ? "#f8fafc" : "#0f172a" }}>Appointment details</div>
                 <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 2 }}>With Dr. {selected.name}</div>
               </div>
               <form onSubmit={handleSubmit} style={{ padding: 20 }}>
                 <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>Date *</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: document.body.classList.contains("dm") ? "#94a3b8" : "#475569", marginBottom: 6 }}>Date *</label>
                   <input type="date" value={form.date} min={minDate()} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} required
-                    style={{ padding: "9px 12px", fontSize: 14, fontFamily: "inherit", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, outline: "none", width: "100%", boxSizing: "border-box" }}
-                    onFocus={e => { e.target.style.borderColor = "#1db585"; e.target.style.boxShadow = "0 0 0 3px rgba(29,181,133,0.1)"; }}
-                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
+                    style={{ padding: "9px 12px", fontSize: 14, fontFamily: "inherit", color: document.body.classList.contains("dm") ? "#e2e8f0" : "#1e293b", background: document.body.classList.contains("dm") ? "#0f172a" : "#fff", border: `1.5px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#e2e8f0"}`, borderRadius: 10, outline: "none", width: "100%", boxSizing: "border-box" }}
                   />
-                  <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 5 }}>Appointments can be booked from tomorrow onwards.</p>
+                  <p style={{ fontSize: 12, color: "#64748b", marginTop: 5 }}>Appointments can be booked from tomorrow onwards.</p>
                 </div>
 
                 <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 8 }}>Time slot *</label>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: document.body.classList.contains("dm") ? "#94a3b8" : "#475569", marginBottom: 8 }}>Time slot *</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))", gap: 6 }}>
                     {TIME_SLOTS.map(slot => {
                       const isSelected = form.time === slot;
+                      const isDark = document.body.classList.contains("dm");
                       return (
                         <button key={slot} type="button" onClick={() => setForm(p => ({ ...p, time: slot }))}
-                          style={{ padding: "8px 4px", fontSize: 13, fontFamily: "inherit", fontWeight: isSelected ? 500 : 400, textAlign: "center", border: isSelected ? "2px solid #1db585" : "1.5px solid #e2e8f0", borderRadius: 9, cursor: "pointer", background: isSelected ? "#f0faf7" : "#fff", color: isSelected ? "#0a7a57" : "#475569", transition: "all 0.15s" }}>
+                          style={{ padding: "8px 2px", fontSize: 12, fontFamily: "inherit", fontWeight: isSelected ? 600 : 400, textAlign: "center", border: isSelected ? "2px solid #1db585" : `1.5px solid ${isDark ? "#1e293b" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", background: isSelected ? (isDark ? "rgba(29, 181, 133, 0.1)" : "#f0faf7") : (isDark ? "#0f172a" : "#fff"), color: isSelected ? "#1db585" : (isDark ? "#64748b" : "#475569"), transition: "all 0.15s" }}>
                           {slot}
                         </button>
                       );
@@ -141,11 +144,9 @@ export default function AppointmentBooking({ onBookingComplete }) {
                 </div>
 
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "#475569", marginBottom: 6 }}>Reason for visit <span style={{ fontWeight: 400, color: "#94a3b8" }}>(optional)</span></label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: document.body.classList.contains("dm") ? "#94a3b8" : "#475569", marginBottom: 6 }}>Reason for visit <span style={{ fontWeight: 400, color: "#64748b" }}>(optional)</span></label>
                   <textarea value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} rows={3} placeholder="Describe your symptoms or reason for this consultation..."
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 14, fontFamily: "inherit", color: "#1e293b", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.5 }}
-                    onFocus={e => { e.target.style.borderColor = "#1db585"; e.target.style.boxShadow = "0 0 0 3px rgba(29,181,133,0.1)"; }}
-                    onBlur={e => { e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 14, fontFamily: "inherit", color: document.body.classList.contains("dm") ? "#e2e8f0" : "#1e293b", background: document.body.classList.contains("dm") ? "#0f172a" : "#fff", border: `1.5px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#e2e8f0"}`, borderRadius: 10, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.5 }}
                   />
                 </div>
 
@@ -162,21 +163,21 @@ export default function AppointmentBooking({ onBookingComplete }) {
           {selected ? (
             <SectionCard>
               <div style={{ padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: 11 }}>Selected doctor</div>
-                <div className="dm-section-header" style={{ textAlign: "center", paddingBottom: 18, borderBottom: "1px solid #f8fafc", marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 500, color: "#64748b", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.04em" }}>Selected doctor</div>
+                <div className="dm-section-header" style={{ textAlign: "center", paddingBottom: 18, borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}`, marginBottom: 16 }}>
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 22, margin: "0 auto 10px" }}>{selected.name.charAt(0)}</div>
-                  <div className="dm-page-title" style={{ fontSize: 15, fontWeight: 500, color: "#0f172a" }}>{selected.name}</div>
+                  <div className="dm-page-title" style={{ fontSize: 15, fontWeight: 500, color: document.body.classList.contains("dm") ? "#f8fafc" : "#0f172a" }}>{selected.name}</div>
                   <div style={{ fontSize: 13, color: "#1db585", marginTop: 3 }}>{selected.specialization}</div>
-                  {selected.email && <div className="dm-soft-muted" style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{selected.email}</div>}
+                  {selected.email && <div className="dm-soft-muted" style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{selected.email}</div>}
                 </div>
                 {form.date && form.time && (
-                  <div className="dm-soft-panel" style={{ background: "#f0faf7", borderRadius: 10, padding: "12px 14px" }}>
+                  <div className="dm-soft-panel" style={{ background: document.body.classList.contains("dm") ? "rgba(29, 181, 133, 0.1)" : "#f0faf7", borderRadius: 10, padding: "12px 14px" }}>
                     <div className="dm-soft-muted" style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Booking summary</div>
-                    <div className="dm-soft-muted" style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475569", marginBottom: 4 }}>
-                      <span>Date</span><span className="dm-soft-text" style={{ fontWeight: 500, color: "#1e293b" }}>{new Date(form.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                    <div className="dm-soft-muted" style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#94a3b8", marginBottom: 4 }}>
+                      <span>Date</span><span className="dm-soft-text" style={{ fontWeight: 600, color: document.body.classList.contains("dm") ? "#f8fafc" : "#1e293b" }}>{new Date(form.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                     </div>
-                    <div className="dm-soft-muted" style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475569" }}>
-                      <span>Time</span><span className="dm-soft-text" style={{ fontWeight: 500, color: "#1e293b" }}>{form.time}</span>
+                    <div className="dm-soft-muted" style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#94a3b8" }}>
+                      <span>Time</span><span className="dm-soft-text" style={{ fontWeight: 600, color: document.body.classList.contains("dm") ? "#f8fafc" : "#1e293b" }}>{form.time}</span>
                     </div>
                   </div>
                 )}
@@ -190,7 +191,7 @@ export default function AppointmentBooking({ onBookingComplete }) {
 
           <SectionCard>
             <div style={{ padding: 18 }}>
-              <div className="dm-page-title" style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", marginBottom: 12 }}>Booking guidelines</div>
+              <div className="dm-page-title" style={{ fontSize: 13, fontWeight: 500, color: document.body.classList.contains("dm") ? "#f8fafc" : "#0f172a", marginBottom: 12 }}>Booking guidelines</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
                   "Appointments confirmed within 24 hours",
@@ -200,7 +201,7 @@ export default function AppointmentBooking({ onBookingComplete }) {
                   "Consultation: 15–30 minutes",
                 ].map((tip, i) => (
                   <div key={i} className="dm-soft-muted" style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, color: "#64748b" }}>
-                    <div style={{ width: 16, height: 16, background: "#f0faf7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                    <div style={{ width: 16, height: 16, background: document.body.classList.contains("dm") ? "rgba(29, 181, 133, 0.15)" : "#f0faf7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#1db585" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                     </div>
                     {tip}

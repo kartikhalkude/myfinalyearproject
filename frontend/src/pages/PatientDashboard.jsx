@@ -10,7 +10,7 @@ import AppointmentBooking from "../components/AppointmentBooking";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
 import BrainTumorPrediction from "../components/BrainTumorPrediction";
-import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, MobileHeader } from "../components/UI";
+import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, MobileHeader, ConfirmModal } from "../components/UI";
 import { 
   Home, Brain, HeartPulse, Stethoscope, CalendarPlus, Calendar, 
   ClipboardList, Pill, Smile, Phone, CheckCircle, XCircle, Info, X, Check, Clock,
@@ -130,17 +130,21 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {upcoming.map(apt => {
                   const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
+                  const isDark = document.body.classList.contains("dm");
                   return (
-                    <div className="dm-soft-panel" key={apt._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{apt.doctorName}</div>
-                        <span style={{ display: "inline-flex", padding: "2px 9px", fontSize: 11, fontWeight: 600, borderRadius: 999, background: bg, color }}>{apt.status}</span>
+                    <div className="dm-appointment-preview" key={apt._id} style={{ padding: "14px", border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 14, background: isDark ? "#111827" : "#f8fafc" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a" }}>{apt.doctorName}</div>
+                        <span style={{ display: "inline-flex", padding: "2px 8px", fontSize: 10, fontWeight: 700, borderRadius: 999, background: isDark ? (apt.status === 'confirmed' ? 'rgba(29, 181, 133, 0.15)' : 'rgba(30, 41, 59, 0.5)') : bg, color: isDark ? (apt.status === 'confirmed' ? '#1db585' : '#94a3b8') : color, border: isDark ? `1px solid ${apt.status === 'confirmed' ? '#1db585' : '#334155'}` : 'none', textTransform: "uppercase" }}>{apt.status}</span>
                       </div>
-                      <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8" }}>{new Date(apt.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} at {apt.time}</div>
+                      <div className="dm-soft-muted" style={{ fontSize: 12, color: isDark ? "#94a3b8" : "#64748b", display: "flex", gap: 10 }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Calendar size={12} /> {new Date(apt.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Clock size={12} /> {apt.time}</span>
+                      </div>
                       {apt.status === "confirmed" && (
-                        <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
-                          <button onClick={() => onStartCall(apt)} style={{ flex: 1, padding: "7px", fontSize: 12.5, fontWeight: 500, background: "#1db585", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Join call</button>
-                          <button onClick={() => onCancelAppt(apt._id)} style={{ padding: "7px 12px", fontSize: 12.5, background: "#fff", color: "#ef4444", border: "1.5px solid #fca5a5", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                          <button onClick={() => onStartCall(apt)} style={{ flex: 2, padding: "8px", fontSize: 12.5, fontWeight: 600, background: "#1db585", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Join call</button>
+                          <button onClick={() => onCancelAppt(apt._id)} style={{ flex: 1, padding: "8px", fontSize: 12.5, background: isDark ? "#1e293b" : "#fff", color: "#ef4444", border: `1px solid ${isDark ? "#334155" : "#fca5a5"}`, borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
                         </div>
                       )}
                     </div>
@@ -189,56 +193,60 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>My Appointments</h1>
+          <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a", letterSpacing: "-0.01em" }}>My Appointments</h1>
           <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>{appointments.length} total appointments in your history.</p>
         </div>
-        <button className="dm-outline-btn" onClick={onRefresh} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 13.5, fontWeight: 500, color: "#475569", cursor: "pointer", fontFamily: "inherit" }}>
+        <button className="dm-outline-btn" onClick={onRefresh} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", background: document.body.classList.contains("dm") ? "#1e293b" : "#fff", border: `1.5px solid ${document.body.classList.contains("dm") ? "#334155" : "#e2e8f0"}`, borderRadius: 10, fontSize: 13.5, fontWeight: 500, color: document.body.classList.contains("dm") ? "#94a3b8" : "#475569", cursor: "pointer", fontFamily: "inherit" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeLinecap="round" strokeLinejoin="round"/></svg>
           Refresh
         </button>
       </div>
       <SectionCard>
         {appointments.length === 0 ? <EmptyState icon={<Calendar size={24} color="#94a3b8" />} title="No appointments yet" subtitle="Start by booking your first consultation." /> : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
-              <thead className="dm-table-head"><tr style={{ background: "#f8fafc" }}>
-                {["Doctor", "Date & Time", "Reason", "Status", "Actions"].map(h => (
-                  <th key={h} style={{ padding: "11px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9" }}>{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {appointments.map(apt => {
-                  const [bg, color] = statusStyle[apt.status] || statusStyle.pending;
-                  return (
-                    <tr className="dm-table-row" key={apt._id} style={{ borderBottom: "1px solid #f8fafc" }}>
-                      <td className="dm-table-cell" style={{ padding: "12px 16px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 12, flexShrink: 0 }}>{apt.doctorName?.charAt(0)}</div>
-                          <span className="dm-soft-text" style={{ fontWeight: 500, color: "#1e293b" }}>{apt.doctorName}</span>
+          <div style={{ padding: "8px 16px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {appointments.map(apt => {
+                const [bg, color] = statusStyle[apt.status] || statusStyle.pending;
+                const isDark = document.body.classList.contains("dm");
+                return (
+                  <div className="dm-appointment-card" key={apt._id} style={{ padding: "16px", background: isDark ? "#111827" : "#f8fafc", border: `1px solid ${isDark ? "#1e293b" : "#e2e8f0"}`, borderRadius: 16, display: "flex", flexDirection: "column", gap: 16, position: "relative" }}>
+                    {/* Status Badge - Pinned to top right */}
+                    <div style={{ position: "absolute", top: 16, right: 16 }}>
+                      <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 10, fontWeight: 700, borderRadius: 999, background: isDark ? (apt.status === 'confirmed' ? 'rgba(29, 181, 133, 0.15)' : 'rgba(30, 41, 59, 0.5)') : bg, color: isDark ? (apt.status === 'confirmed' ? '#1db585' : '#94a3b8') : color, border: isDark ? `1px solid ${apt.status === 'confirmed' ? '#1db585' : '#334155'}` : 'none', textTransform: "uppercase", letterSpacing: "0.02em" }}>{apt.status}</span>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0, paddingRight: 80 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 12, flexShrink: 0 }}>{apt.doctorName?.charAt(0)}</div>
+                        <div className="dm-soft-text" style={{ fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{apt.doctorName}</div>
+                      </div>
+                      
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 16px", fontSize: 12.5, color: isDark ? "#94a3b8" : "#64748b" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Calendar size={14} /> {new Date(apt.date).toLocaleDateString()}</span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Clock size={14} /> {apt.time}</span>
+                      </div>
+                      {apt.reason && (
+                        <div className="dm-soft-muted" style={{ fontSize: 12.5, color: isDark ? "#94a3b8" : "#64748b", marginTop: 10, fontStyle: "italic", lineHeight: 1.4 }}>
+                          <span style={{ opacity: 0.7 }}>Reason:</span> {apt.reason}
                         </div>
-                      </td>
-                      <td className="dm-table-cell" style={{ padding: "12px 16px" }}>
-                        <div className="dm-soft-text" style={{ fontWeight: 500, color: "#1e293b" }}>{new Date(apt.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
-                        <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>{apt.time}</div>
-                      </td>
-                      <td className="dm-table-cell dm-soft-muted" style={{ padding: "12px 16px", color: "#64748b" }}>{apt.reason || "General consultation"}</td>
-                      <td className="dm-table-cell" style={{ padding: "12px 16px" }}>
-                        <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: bg, color }}>{apt.status}</span>
-                      </td>
-                      <td className="dm-table-cell" style={{ padding: "12px 16px" }}>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          {apt.status === "confirmed" && <>
-                            <button onClick={() => onStartCall(apt)} style={{ padding: "5px 12px", fontSize: 12.5, fontWeight: 500, background: "#1db585", color: "#fff", border: "none", borderRadius: 7, cursor: "pointer", fontFamily: "inherit" }}>Join call</button>
-                            <button onClick={() => onCancelAppt(apt._id)} style={{ padding: "5px 12px", fontSize: 12.5, background: "#fff", color: "#ef4444", border: "1.5px solid #fca5a5", borderRadius: 7, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
-                          </>}
-                          {apt.status === "pending" && <button onClick={() => onCancelAppt(apt._id)} style={{ padding: "5px 12px", fontSize: 12.5, background: "#fff", color: "#ef4444", border: "1.5px solid #fca5a5", borderRadius: 7, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                      {apt.status === "confirmed" && (
+                        <>
+                          <button onClick={() => onStartCall(apt)} style={{ flex: 2, padding: "10px", fontSize: 13, fontWeight: 700, background: "#1db585", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", transition: "transform 0.1s" }} onMouseDown={e => e.currentTarget.style.transform = "scale(0.98)"} onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}>Join call</button>
+                          <button onClick={() => onCancelAppt(apt._id)} style={{ flex: 1, padding: "10px", fontSize: 13, fontWeight: 500, background: isDark ? "#1e293b" : "#fff", color: "#ef4444", border: `1px solid ${isDark ? "#334155" : "#fca5a5"}`, borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                        </>
+                      )}
+                      {(apt.status === "pending") && (
+                        <button onClick={() => onCancelAppt(apt._id)} style={{ flex: 1, padding: "10px", fontSize: 13, fontWeight: 500, background: isDark ? "#1e293b" : "#fff", color: "#ef4444", border: `1px solid ${isDark ? "#334155" : "#fca5a5"}`, borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}>Cancel Request</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </SectionCard>
@@ -261,13 +269,19 @@ export default function PatientDashboard() {
   useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
   const [toasts, setToasts] = useState([]);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState({ open: false, id: null });
+  const isMounted = useRef(true);
+  useEffect(() => { return () => { isMounted.current = false; }; }, []);
+
   const apptRef = useRef(appointments);
   useEffect(() => { apptRef.current = appointments; }, [appointments]);
 
   const addToast = useCallback(t => {
-    const id = Date.now();
+    const id = typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
     setToasts(p => [...p, { id, ...t }]);
-    if (t.autoClose) setTimeout(() => setToasts(p => p.filter(x => x.id !== id)), 5000);
+    if (t.autoClose) setTimeout(() => {
+      if (isMounted.current) setToasts(p => p.filter(x => x.id !== id));
+    }, 5000);
   }, []);
   const dismissToast = useCallback(id => setToasts(p => p.filter(x => x.id !== id)), []);
   const handleToastAction = useCallback((id, type, data) => {
@@ -352,8 +366,17 @@ export default function PatientDashboard() {
     setActiveCall(callObj);
   };
   const cancelAppt = async id => {
-    if (!window.confirm("Cancel this appointment?")) return;
-    try { await apiClient.patch(`/appointments/${id}`, { status: "cancelled" }); fetchData(); addToast({ type: "success", title: "Appointment cancelled", autoClose: true }); }
+    setConfirmCancel({ open: true, id });
+  };
+
+  const handleConfirmCancel = async () => {
+    const id = confirmCancel.id;
+    if (!id) return;
+    try { 
+      await apiClient.patch(`/appointments/${id}`, { status: "cancelled" }); 
+      fetchData(); 
+      addToast({ type: "success", title: "Appointment cancelled", autoClose: true }); 
+    }
     catch { addToast({ type: "error", title: "Failed to cancel", autoClose: true }); }
   };
 
@@ -378,6 +401,14 @@ export default function PatientDashboard() {
     <div className="dm-page-shell" style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
       {activeCall && <VideoCall {...activeCall} onCallEnd={() => { setActiveCall(null); fetchData(); addToast({ type: "info", title: "Call ended", autoClose: true }); }} />}
       <ToastStack toasts={toasts} onDismiss={dismissToast} onAction={handleToastAction} />
+      <ConfirmModal 
+        isOpen={confirmCancel.open} 
+        onClose={() => setConfirmCancel({ open: false, id: null })}
+        onConfirm={handleConfirmCancel}
+        title="Cancel Appointment"
+        message="Are you sure you want to cancel this appointment? This action cannot be undone."
+        confirmText="Yes, Cancel"
+      />
       <MobileHeader onMenuClick={() => setMobileNavOpen(true)} user={user} />
       <Sidebar user={user} navItems={getNavItems(
         appointments.filter(a => a.status === "confirmed" || a.status === "pending").length,

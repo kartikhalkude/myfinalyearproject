@@ -19,38 +19,39 @@ function EntitySearch({ entities, value, onChange, placeholder = "Search..." }) 
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const isDark = document.body.classList.contains("dm");
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <div
         className={focused || open ? "dm-search-trigger dm-search-trigger-active" : "dm-search-trigger"}
         style={{
-          display: "flex", alignItems: "center", padding: "12px 16px", background: focused || open ? "#fff" : "#f8fafc",
-          border: "1px solid", borderColor: focused || open ? "#10b981" : "#e2e8f0", borderRadius: 12, cursor: "text",
+          display: "flex", alignItems: "center", padding: "12px 16px", background: focused || open ? (isDark ? "#0f172a" : "#fff") : (isDark ? "#111827" : "#f8fafc"),
+          border: "1px solid", borderColor: focused || open ? "#10b981" : (isDark ? "#1e293b" : "#e2e8f0"), borderRadius: 12, cursor: "text",
           boxShadow: focused || open ? "0 0 0 4px rgba(16, 185, 129, 0.1)" : "none", transition: "all 0.2s"
         }}
         onClick={() => setOpen(true)}
       >
         <Search size={16} color="#94a3b8" style={{ flexShrink: 0, marginRight: 10 }} />
         {selected && !open ? (
-          <span className="dm-soft-text" style={{ flex: 1, fontSize: 14, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span className="dm-soft-text" style={{ flex: 1, fontSize: 14, color: isDark ? "#f1f5f9" : "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             <strong style={{ fontWeight: 600 }}>{selected.name}</strong> <span style={{ color: "#64748b", marginLeft: 4 }}>({selected.email})</span>
           </span>
         ) : (
           <input type="text" placeholder={selected ? `${selected.name} (${selected.email})` : placeholder} value={q} autoFocus={open}
             onChange={e => { setQ(e.target.value); setOpen(true); }} onFocus={() => { setFocused(true); setOpen(true); }} onBlur={() => setFocused(false)}
             className="dm-soft-text"
-            style={{ flex: 1, border: "none", outline: "none", fontSize: 14, fontFamily: "inherit", color: "#0f172a", background: "transparent", padding: 0 }} />
+            style={{ flex: 1, border: "none", outline: "none", fontSize: 14, fontFamily: "inherit", color: isDark ? "#f1f5f9" : "#0f172a", background: "transparent", padding: 0 }} />
         )}
         {value && <button type="button" onClick={e => { e.stopPropagation(); onChange(null); setQ(""); }} style={{ marginLeft: 8, color: "#94a3b8", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>}
       </div>
       {open && (
-        <div className="dm-search-surface" style={{ position: "absolute", zIndex: 50, top: "calc(100% + 8px)", left: 0, right: 0, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, boxShadow: "0 12px 32px rgba(15,23,42,0.1)", maxHeight: 240, overflowY: "auto", padding: 8 }}>
+        <div className="dm-search-surface" style={{ position: "absolute", zIndex: 50, top: "calc(100% + 8px)", left: 0, right: 0, background: isDark ? "#111827" : "#fff", border: `1px solid ${isDark ? "#1e293b" : "#e2e8f0"}`, borderRadius: 12, boxShadow: "0 12px 32px rgba(15,23,42,0.1)", maxHeight: 240, overflowY: "auto", padding: 8 }}>
           {filtered.length === 0 ? <div className="dm-soft-muted" style={{ padding: "12px", fontSize: 13, color: "#64748b", textAlign: "center" }}>No results found</div> : filtered.map(p => (
             <button key={p._id} type="button" onClick={() => { onChange(p); setOpen(false); setQ(""); }}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", borderRadius: 8, textAlign: "left", transition: "background 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.background = "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              onMouseEnter={e => e.currentTarget.style.background = isDark ? "#0f172a" : "#f1f5f9"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{p.name?.charAt(0)?.toUpperCase()}</div>
-              <div><div className="dm-soft-text" style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{p.name}</div><div className="dm-soft-muted" style={{ fontSize: 12, color: "#64748b" }}>{p.email}</div></div>
+              <div><div className="dm-soft-text" style={{ fontSize: 14, fontWeight: 600, color: isDark ? "#f1f5f9" : "#0f172a" }}>{p.name}</div><div className="dm-soft-muted" style={{ fontSize: 12, color: "#64748b" }}>{p.email}</div></div>
             </button>
           ))}
         </div>
@@ -331,10 +332,10 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
       {error && <div className="dm-error-banner" style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 14, color: "#dc2626", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 8px rgba(220, 38, 38, 0.05)" }}>{error}<button onClick={() => setError("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#fca5a5", display: "flex", alignItems: "center" }}><X size={18} /></button></div>}
       {success && <div className="dm-success-banner" style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 14, color: "#166534", boxShadow: "0 2px 8px rgba(22, 163, 74, 0.05)" }}>{success}</div>}
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
-        <button className={filterType === "all" ? "" : "dm-outline-btn"} onClick={() => setFilterType("all")} style={{ padding: "8px 16px", fontSize: 14, fontWeight: filterType === "all" ? 600 : 500, background: filterType === "all" ? "#10b981" : "#fff", color: filterType === "all" ? "#fff" : "#475569", border: filterType === "all" ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e => { if (filterType !== "all") { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; } }} onMouseLeave={e => { if (filterType !== "all") { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e2e8f0"; } }}>All</button>
+      <div className="dm-hide-scrollbar" style={{ display: "flex", overflowX: "auto", gap: 8, marginBottom: 24, paddingBottom: 4, whiteSpace: "nowrap" }}>
+        <button className={filterType === "all" ? "" : "dm-outline-btn"} onClick={() => setFilterType("all")} style={{ flexShrink: 0, padding: "8px 16px", fontSize: 13, fontWeight: filterType === "all" ? 600 : 500, background: filterType === "all" ? "#10b981" : "#fff", color: filterType === "all" ? "#fff" : "#475569", border: filterType === "all" ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}>All</button>
         {RECORD_TYPES.map(rt => (
-          <button className={filterType === rt.value ? "" : "dm-outline-btn"} key={rt.value} onClick={() => setFilterType(rt.value)} style={{ padding: "8px 16px", fontSize: 14, fontWeight: filterType === rt.value ? 600 : 500, background: filterType === rt.value ? "#10b981" : "#fff", color: filterType === rt.value ? "#fff" : "#475569", border: filterType === rt.value ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 6 }} onMouseEnter={e => { if (filterType !== rt.value) { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#cbd5e1"; } }} onMouseLeave={e => { if (filterType !== rt.value) { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#e2e8f0"; } }}>
+          <button className={filterType === rt.value ? "" : "dm-outline-btn"} key={rt.value} onClick={() => setFilterType(rt.value)} style={{ flexShrink: 0, padding: "8px 16px", fontSize: 13, fontWeight: filterType === rt.value ? 600 : 500, background: filterType === rt.value ? "#10b981" : "#fff", color: filterType === rt.value ? "#fff" : "#475569", border: filterType === rt.value ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 6 }}>
             {filterType === rt.value ? <CheckCircle size={14} /> : null} {rt.label}
           </button>
         ))}
@@ -355,41 +356,37 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
                 onClick={() => openDetail(record)}
                 className="dm-record-row"
                 style={{
-                  padding: "16px 20px", display: "flex", alignItems: "center", gap: 20, cursor: "pointer",
+                  padding: "16px 20px", display: "flex", alignItems: "flex-start", gap: 16, cursor: "pointer",
                   borderBottom: idx === filteredRecords.length - 1 ? "none" : `1px solid ${dark ? "#1e293b" : "#f1f5f9"}`,
                   transition: "background 0.2s", background: isNew ? (dark ? "rgba(34,197,94,0.12)" : "#f0fdf4") : "transparent"
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = isNew ? (dark ? "rgba(34,197,94,0.18)" : "#dcfce7") : (dark ? "#0f172a" : "#f8fafc")}
-                onMouseLeave={e => e.currentTarget.style.background = isNew ? (dark ? "rgba(34,197,94,0.12)" : "#f0fdf4") : "transparent"}
               >
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: dark ? "#0f172a" : rType.bg, border: dark ? "1px solid #334155" : "none", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: dark ? "#0f172a" : rType.bg, border: dark ? "1px solid #334155" : "none", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
                   {rType.icon}
                 </div>
-
+ 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                    <div className="dm-soft-text" style={{ fontSize: 15, fontWeight: 600, color: dark ? "#e2e8f0" : "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.title}</div>
-                    {isNew && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#10b981", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, textTransform: "uppercase" }}><Bell size={10} fill="currentColor" /> New</span>}
-                    {user?.role === "doctor" && !record.notes && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#fef9c3", color: "#854d0e", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6, textTransform: "uppercase", border: "1px solid #fde68a" }}><AlertCircle size={10} /> Feedback Needed</span>}
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <div className="dm-soft-text" style={{ fontSize: 14, fontWeight: 700, color: dark ? "#e2e8f0" : "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{record.title}</div>
+                    {isNew && <span style={{ display: "flex", alignItems: "center", gap: 4, background: "#10b981", color: "#fff", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, textTransform: "uppercase" }}>New</span>}
+                    <span style={{ padding: "2px 8px", fontSize: 10, fontWeight: 700, borderRadius: 999, background: sColors[record.severity || "normal"].bg, color: sColors[record.severity || "normal"].color, border: `1px solid ${sColors[record.severity || "normal"].border}`, textTransform: "capitalize" }}>{record.severity || "normal"}</span>
                   </div>
-                  <div className="dm-soft-muted" style={{ fontSize: 13, color: dark ? "#94a3b8" : "#64748b", display: "flex", alignItems: "center", gap: 8 }}>
-                    <span>{user?.role === "doctor" ? `Patient: ${record.patientId?.name || "Unknown"}` : `Dr. ${record.doctorId?.name || record.doctorName || "Unknown"}`}</span>
-                    <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#cbd5e1" }}></span>
-                    <span>{new Date(record.date || record.createdAt).toLocaleDateString()}</span>
+                  
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 12px", fontSize: 12 }}>
+                    <span style={{ color: dark ? "#94a3b8" : "#64748b", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 180 }}>
+                      {user?.role === "doctor" ? `Pat: ${record.patientId?.name || "Unknown"}` : `Dr. ${record.doctorId?.name || record.doctorName || "Unknown"}`}
+                    </span>
+                    <span style={{ color: dark ? "#475569" : "#cbd5e1", fontSize: 10 }}>•</span>
+                    <span style={{ color: dark ? "#64748b" : "#94a3b8", whiteSpace: "nowrap" }}>{new Date(record.date || record.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: sColors[record.severity || "normal"].bg, color: sColors[record.severity || "normal"].color, border: `1px solid ${sColors[record.severity || "normal"].border}` }}>{record.severity || "normal"}</span>
-
-                  {user?.role === "doctor" && (
-                    <div style={{ display: "flex", gap: 4 }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => openEdit(record)} title="Edit" style={{ width: 32, height: 32, background: dark ? "#0f172a" : "#fff", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><Edit2 size={14} /></button>
-                      <button onClick={() => handleDelete(record._id)} title="Delete" style={{ width: 32, height: 32, background: dark ? "#0f172a" : "#fff", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={14} /></button>
-                    </div>
-                  )}
-
-                  <ChevronRight size={18} color={dark ? "#64748b" : "#cbd5e1"} />
+ 
+                <div style={{ display: "flex", alignItems: "center", gap: 8, alignSelf: "center", flexShrink: 0 }}>
+                  <div style={{ display: "flex", gap: 4 }} onClick={e => e.stopPropagation()}>
+                    {user?.role === "doctor" && <button onClick={() => openEdit(record)} title="Edit" style={{ width: 30, height: 30, background: dark ? "#1e293b" : "#fff", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center" }}><Edit2 size={13} /></button>}
+                    <button onClick={() => handleDelete(record._id)} title="Delete" style={{ width: 30, height: 30, background: dark ? "#1e293b" : "#fff", border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center" }}><Trash2 size={13} /></button>
+                  </div>
+                  <ChevronRight size={16} color={dark ? "#334155" : "#cbd5e1"} />
                 </div>
               </div>
             );
@@ -514,19 +511,19 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
               </div>
 
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: c.textColor, marginBottom: 8 }}>Attach Report (File) *</label>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: c.textColor, marginBottom: 8 }}>Attach Report (File) <span style={{ fontWeight: 400, color: c.mutedColor }}>(Optional)</span></label>
                 <div style={{ position: "relative" }}>
-                  <input type="file" onChange={e => setFile(e.target.files[0])} style={{ ...inputCls, padding: "10px 16px" }} onFocus={onFocus} onBlur={onBlur} accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" />
+                  <input type="file" onChange={e => setFile(e.target.files[0])} style={dynamicInputCls} onFocus={onFocusDynamic} onBlur={onBlurDynamic} accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" />
                   <div style={{ fontSize: 12, color: dark ? "#94a3b8" : "#64748b", marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
                     <AlertCircle size={14} /> PDF, Images, or DOC (Max 10MB)
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 24 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: dark ? "#cbd5e1" : "#334155", marginBottom: 8 }}>Date</label>
-                  <input type="date" value={formData.date} onChange={e => setFormData(p => ({ ...p, date: e.target.value }))} style={inputCls} onFocus={onFocus} onBlur={onBlur} />
+                  <input type="date" value={formData.date} onChange={e => setFormData(p => ({ ...p, date: e.target.value }))} style={dynamicInputCls} onFocus={onFocusDynamic} onBlur={onBlurDynamic} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#10b981", marginBottom: 8 }}>Doctor's Feedback / Remarks</label>
@@ -535,8 +532,8 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
                     onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
                     placeholder={user?.role === "doctor" ? "Provide your medical advice or feedback here..." : "Doctor's feedback will appear here."}
                     rows={2}
-                    style={{ ...inputCls, borderColor: "#10b981", background: dark ? "rgba(16,185,129,0.12)" : "#f0fdf4" }}
-                    onFocus={onFocus} onBlur={onBlur}
+                    style={{ ...dynamicInputCls, borderColor: "#10b981", background: dark ? "rgba(16,185,129,0.12)" : "#f0fdf4" }}
+                    onFocus={onFocusDynamic} onBlur={onBlurDynamic}
                     readOnly={user?.role === "patient"}
                   />
                 </div>

@@ -76,4 +76,15 @@ const updateProfile = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getMe, updateProfile };
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'No account found with this email' });
+    res.json({ message: 'Password reset link sent to ' + email });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to process request', details: error.message });
+  }
+};
+
+module.exports = { register, login, getMe, updateProfile, forgotPassword };

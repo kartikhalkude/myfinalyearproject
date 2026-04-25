@@ -360,7 +360,9 @@ function VideoCall({
     if (callTimerRef.current) clearInterval(callTimerRef.current);
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
-    peerConnectionRef.current?.close();
+    if (peerConnectionRef.current && peerConnectionRef.current.signalingState !== 'closed') {
+      peerConnectionRef.current.close();
+    }
     peerConnectionRef.current = null;
     incomingCallProcessedRef.current = false;
   };
@@ -494,23 +496,35 @@ function VideoCall({
         )}
 
         {/* Local PIP */}
-        <div style={{
-          position: "absolute", bottom: isPipMinimized ? 32 : 120, right: 32,
-          width: isPipMinimized ? 120 : 280, height: isPipMinimized ? 80 : 180,
-          borderRadius: 20, overflow: "hidden", border: "2px solid rgba(255,255,255,.15)",
-          boxShadow: "0 20px 40px rgba(0,0,0,.6)",
-          transition: "all .4s cubic-bezier(.4,0,.2,1)", zIndex: 100,
-        }}>
-          <video ref={localVideoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          <div style={{ position: "absolute", top: 0, inset: 0, background: "linear-gradient(to top,rgba(0,0,0,.4) 0%,transparent 40%)" }} />
-          <div style={{ position: "absolute", bottom: 12, left: 12, fontSize: 12, fontWeight: 700, color: "#fff", textShadow: "0 2px 4px rgba(0,0,0,.5)" }}>You</div>
-          <button
-            onClick={() => setIsPipMinimized(!isPipMinimized)}
-            style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: 8, background: "rgba(15,23,42,.8)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-          >
-            {isPipMinimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
-          </button>
-        </div>
+        {(() => {
+          const pipW = Math.min(280, window.innerWidth * 0.45);
+          const pipH = Math.round(pipW * (9/16));
+          const miniW = 120;
+          const miniH = 80;
+          
+          return (
+            <div style={{
+              position: "absolute", 
+              bottom: isPipMinimized ? 32 : (window.innerWidth < 768 ? pipH + 80 : 120), 
+              right: window.innerWidth < 768 ? 16 : 32,
+              width: isPipMinimized ? miniW : pipW, 
+              height: isPipMinimized ? miniH : pipH,
+              borderRadius: 20, overflow: "hidden", border: "2px solid rgba(255,255,255,.15)",
+              boxShadow: "0 20px 40px rgba(0,0,0,.6)",
+              transition: "all .4s cubic-bezier(.4,0,.2,1)", zIndex: 100,
+            }}>
+              <video ref={localVideoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <div style={{ position: "absolute", top: 0, inset: 0, background: "linear-gradient(to top,rgba(0,0,0,.4) 0%,transparent 40%)" }} />
+              <div style={{ position: "absolute", bottom: 12, left: 12, fontSize: 12, fontWeight: 700, color: "#fff", textShadow: "0 2px 4px rgba(0,0,0,.5)" }}>You</div>
+              <button
+                onClick={() => setIsPipMinimized(!isPipMinimized)}
+                style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: 8, background: "rgba(15,23,42,.8)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                {isPipMinimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Error */}

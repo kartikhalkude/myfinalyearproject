@@ -101,6 +101,7 @@ export default function ReportScanner({
 
       const data = res.data;
       setResult(data);
+      setError('');
 
       if (
         data.extracted &&
@@ -163,16 +164,16 @@ export default function ReportScanner({
     subtitleColor: '#94a3b8',
 
     dropBorder: dark ? '#334155' : '#e2e8f0',
-    dropBorderActive: dark ? '#818cf8' : '#6366f1',
+    dropBorderActive: dark ? '#3ecba0' : '#1db585',
     dropBg: dark ? '#0f172a' : '#fafbfc',
     dropBgActive: dark
-      ? 'rgba(99,102,241,0.08)'
-      : 'rgba(99,102,241,0.04)',
+      ? 'rgba(29,181,133,0.08)'
+      : 'rgba(29,181,133,0.04)',
 
     dropText: dark ? '#e2e8f0' : '#334155',
     dropMuted: dark ? '#64748b' : '#94a3b8',
     dropHint: dark ? '#475569' : '#cbd5e1',
-    accentLink: dark ? '#818cf8' : '#6366f1',
+    accentLink: dark ? '#3ecba0' : '#1db585',
 
     fileBg: dark ? '#1a2236' : '#f8fafc',
     fileBorder: dark ? '#2d3e55' : '#e2e8f0',
@@ -182,8 +183,8 @@ export default function ReportScanner({
     xColor: dark ? '#64748b' : '#94a3b8',
 
     scanBtnBg: dark
-      ? 'linear-gradient(135deg, #818cf8, #6366f1)'
-      : 'linear-gradient(135deg, #6366f1, #4f46e5)',
+      ? 'linear-gradient(135deg, #3ecba0, #1db585)'
+      : 'linear-gradient(135deg, #1db585, #0e9a6e)',
 
     successBg: dark ? 'rgba(34,197,94,0.14)' : '#f0fdf4',
     successBorder: dark
@@ -315,7 +316,7 @@ export default function ReportScanner({
 
             <Upload
               size={28}
-              color={dark ? '#818cf8' : '#6366f1'}
+              color={dark ? '#3ecba0' : '#1db585'}
             />
 
             <div
@@ -430,47 +431,56 @@ export default function ReportScanner({
             }}
           >
             {/* Extraction Status */}
-            <div
-              style={{
-                padding: '12px 16px',
-                background: error ? c.errorBg : c.successBg,
-                border: `1px solid ${error ? c.errorBorder : c.successBorder
-                  }`,
-                borderRadius: 12,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                marginBottom: 16
-              }}
-            >
-              {error ? (
-                <AlertTriangle size={20} color={c.errorText} />
-              ) : (
-                <CheckCircle size={20} color={c.successText} />
-              )}
-              <div style={{ flex: 1 }}>
+            {(() => {
+              const isPartial = error && result;
+              const isError = error && !result;
+              const isSuccess = !error && result;
+              
+              const statusBg = isError ? c.errorBg : isPartial ? '#fffbeb' : c.successBg;
+              const statusBorder = isError ? c.errorBorder : isPartial ? '#fde68a' : c.successBorder;
+              const statusText = isError ? c.errorText : isPartial ? '#92400e' : c.successText;
+              const StatusIcon = isError ? AlertTriangle : isPartial ? AlertTriangle : CheckCircle;
+              const statusTitle = isError ? 'Extraction Failed' : isPartial ? 'Extraction Incomplete' : 'Extraction Successful';
+
+              return (
                 <div
                   style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: error ? c.errorText : c.successText
+                    padding: '12px 16px',
+                    background: statusBg,
+                    border: `1px solid ${statusBorder}`,
+                    borderRadius: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    marginBottom: 16
                   }}
                 >
-                  {error ? 'Extraction Incomplete' : 'Extraction Successful'}
-                </div>
-                {!error && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: c.successText,
-                      opacity: 0.8
-                    }}
-                  >
-                    Confidence: {confidenceLabel} ({Math.round(result.confidence * 100)}%)
+                  <StatusIcon size={20} color={statusText} />
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: statusText
+                      }}
+                    >
+                      {statusTitle}
+                    </div>
+                    {result && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: statusText,
+                          opacity: 0.8
+                        }}
+                      >
+                        {isPartial ? error : `Confidence: ${confidenceLabel} (${Math.round(result.confidence * 100)}%)`}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+              );
+            })()}
 
             {/* Extracted Metrics Table */}
             {result.extracted && Object.keys(result.extracted).length > 0 && (

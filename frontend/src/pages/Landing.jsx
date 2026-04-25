@@ -4,6 +4,7 @@ import { Video, Brain, Calendar, Pill, Folder, ArrowRight, ShieldCheck, Activity
 
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,21 +36,26 @@ export default function Landing() {
 
   return (
     <div style={{ fontFamily: "'Inter', 'DM Sans', sans-serif", background: "#f8fafc", color: "#0f172a", minHeight: "100vh", overflowX: "hidden" }}>
-      {/* Background ambient glow */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "800px", background: "radial-gradient(circle at 50% -20%, rgba(29, 181, 133, 0.15) 0%, rgba(248, 250, 252, 0) 70%)", zIndex: 0, pointerEvents: "none" }} />
-      <div style={{ position: "absolute", top: "200px", right: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle at center, rgba(56, 189, 248, 0.1) 0%, rgba(248, 250, 252, 0) 60%)", zIndex: 0, pointerEvents: "none" }} />
+      {/* Background ambient glows contained */}
+      <div style={{ position: "fixed", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "800px", background: "radial-gradient(circle at 50% -20%, rgba(29, 181, 133, 0.15) 0%, rgba(248, 250, 252, 0) 70%)" }} />
+        <div style={{ position: "absolute", top: "200px", right: "-100px", width: "500px", height: "500px", background: "radial-gradient(circle at center, rgba(56, 189, 248, 0.1) 0%, rgba(248, 250, 252, 0) 60%)" }} />
+        {/* Additional glows from hero */}
+        <div style={{ position: "absolute", top: 100, right: -100, width: 600, height: 600, background: "radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(40px)" }}></div>
+        <div style={{ position: "absolute", top: 600, left: -100, width: 500, height: 500, background: "radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(40px)" }}></div>
+      </div>
 
       {/* Nav */}
       <nav style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        padding: scrolled ? "12px 0" : "24px 0",
+        padding: scrolled ? "12px 0" : "20px 0",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        background: scrolled ? "rgba(255, 255, 255, 0.85)" : "transparent",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
+        background: scrolled ? "rgba(255, 255, 255, 0.9)" : "transparent",
+        backdropFilter: scrolled ? "blur(16px)" : "none",
         borderBottom: scrolled ? "1px solid rgba(226, 232, 240, 0.8)" : "1px solid transparent"
       }}>
-        <div className="dm-container" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="dm-container" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             <div style={{ width: 38, height: 38, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
                 <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round"/>
@@ -58,35 +64,54 @@ export default function Landing() {
             <span style={{ fontWeight: 700, fontSize: 18, color: "#0f172a", letterSpacing: "-0.02em" }}>Dr.AssistAI</span>
           </div>
 
-          <div style={{ display: "none", "@media (minWidth: 768px)": { display: "flex" }, gap: 32, fontSize: 14, fontWeight: 500, color: "#64748b" }}>
+          <div className="landing-nav-links">
             {["Features", "How it works", "Doctors", "Contact"].map(l => (
-              <a key={l} href={`#${l.toLowerCase().replace(" ", "-")}`} style={{ textDecoration: "none", color: "inherit", transition: "color 0.2s" }}
+              <a key={l} href={`#${l.toLowerCase().replace(" ", "-")}`} style={{ textDecoration: "none", color: "#64748b", transition: "color 0.2s", fontSize: 14, fontWeight: 500 }}
                 onMouseEnter={e => e.target.style.color = "#0f172a"}
                 onMouseLeave={e => e.target.style.color = "#64748b"}
               >{l}</a>
             ))}
           </div>
 
-          <div style={{ display: "flex", gap: 12 }}>
-            <button onClick={() => navigate("/login")} style={{ padding: "10px 20px", background: "transparent", border: "1px solid rgba(226, 232, 240, 0.8)", borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#334155", transition: "all 0.2s", fontFamily: "inherit" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#94a3b8"; e.currentTarget.style.color = "#0f172a"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(226, 232, 240, 0.8)"; e.currentTarget.style.color = "#334155"; }}
-            >Sign in</button>
-            <button onClick={() => navigate("/register")} style={{ padding: "10px 24px", background: "#0f172a", border: "1px solid #0f172a", borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#fff", transition: "all 0.2s", fontFamily: "inherit", boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#1e293b"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(15, 23, 42, 0.2)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#0f172a"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(15, 23, 42, 0.15)"; }}
-            >Get started</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div className="landing-desktop-btns" style={{ display: "flex", gap: 12 }}>
+              <button onClick={() => navigate("/login")} style={{ padding: "10px 20px", background: "transparent", border: "1px solid rgba(226, 232, 240, 0.8)", borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#334155", transition: "all 0.2s", fontFamily: "inherit" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#94a3b8"; e.currentTarget.style.color = "#0f172a"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(226, 232, 240, 0.8)"; e.currentTarget.style.color = "#334155"; }}
+              >Sign in</button>
+              <button onClick={() => navigate("/register")} style={{ padding: "10px 24px", background: "#0f172a", border: "1px solid #0f172a", borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: "pointer", color: "#fff", transition: "all 0.2s", fontFamily: "inherit", boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#1e293b"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(15, 23, 42, 0.2)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#0f172a"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(15, 23, 42, 0.15)"; }}
+              >Get started</button>
+            </div>
+            
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="landing-mobile-toggle" style={{ display: "none", background: "none", border: "none", color: "#0f172a", cursor: "pointer", padding: 4 }}>
+              {mobileMenuOpen ? (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+              )}
+            </button>
           </div>
         </div>
+        
+        {/* Mobile Menu Panel */}
+        {mobileMenuOpen && (
+          <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "24px", display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}>
+            {["Features", "How it works", "Doctors", "Contact"].map(l => (
+              <a key={l} href={`#${l.toLowerCase().replace(" ", "-")}`} onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: "none", color: "#475569", fontSize: 16, fontWeight: 500 }}>{l}</a>
+            ))}
+            <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+              <button onClick={() => navigate("/login")} style={{ flex: 1, padding: "12px", background: "transparent", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#334155" }}>Sign in</button>
+              <button onClick={() => navigate("/register")} style={{ flex: 1, padding: "12px", background: "#0f172a", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 600, color: "#fff" }}>Get started</button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero */}
       <section className="dm-container" style={{ position: "relative", padding: "160px 24px 100px", zIndex: 10 }}>
-        {/* Abstract Background Elements inside Hero */}
-        <div style={{ position: "absolute", top: -100, right: -100, width: 600, height: 600, background: "radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none", zIndex: -1 }}></div>
-        <div style={{ position: "absolute", bottom: -50, left: -100, width: 500, height: 500, background: "radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%)", borderRadius: "50%", filter: "blur(40px)", pointerEvents: "none", zIndex: -1 }}></div>
-        
-        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 64, alignItems: "center" }}>
+        <div className="hero-grid">
           <div style={{ position: "relative", zIndex: 2 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(29, 181, 133, 0.1)", border: "1px solid rgba(29, 181, 133, 0.2)", borderRadius: 999, padding: "6px 16px", fontSize: 13, fontWeight: 600, color: "#059669", marginBottom: 32 }}>
               <span style={{ position: "relative", display: "flex", width: 8, height: 8 }}>
@@ -96,7 +121,7 @@ export default function Landing() {
               Next-Gen AI Healthcare
             </div>
             
-            <h1 style={{ fontSize: "4.5rem", fontWeight: 700, lineHeight: 1.05, letterSpacing: "-0.04em", color: "#0f172a", marginBottom: 24 }}>
+            <h1 style={{ fontSize: "clamp(2.5rem, 8vw, 4.5rem)", fontWeight: 700, lineHeight: 1.05, letterSpacing: "-0.04em", color: "#0f172a", marginBottom: 24 }}>
               Your health,<br />
               <span style={{ background: "linear-gradient(135deg, #059669 0%, #10b981 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>intelligently managed</span>
             </h1>
@@ -119,10 +144,10 @@ export default function Landing() {
               >Explore platform</button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, padding: "24px 0", borderTop: "1px solid rgba(226, 232, 240, 0.6)" }}>
+            <div className="hero-stats-grid" style={{ marginTop: 64 }}>
               {stats.map(s => (
-                <div key={s.label}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <div key={s.label} className="hero-stat-item">
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }} className="hero-stat-header">
                     {s.icon}
                     <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em" }}>{s.value}</div>
                   </div>
@@ -137,28 +162,28 @@ export default function Landing() {
             <div style={{ position: "absolute", top: "10%", left: "-10%", width: "120%", height: "80%", background: "radial-gradient(ellipse at center, rgba(16, 185, 129, 0.15) 0%, rgba(248, 250, 252, 0) 70%)", zIndex: -1, filter: "blur(40px)" }} />
             
             <div style={{ background: "#fff", borderRadius: "50%", padding: 12, boxShadow: "0 24px 50px -12px rgba(15, 23, 42, 0.15)", border: "1px solid rgba(226, 232, 240, 0.8)", position: "relative", transform: "perspective(1000px) rotateY(-5deg) rotateX(2deg)", transformStyle: "preserve-3d", aspectRatio: "1/1", width: "100%", maxWidth: 460, margin: "0 auto" }}>
-              <img src="/assets/doctorimage2.jpeg" alt="Doctor" style={{ width: "100%", height: "100%", borderRadius: "50%", display: "block", objectFit: "cover", filter: "brightness(1.05) contrast(1.02)" }} />
+              <img src="/assets/doctorimage2.jpeg" alt="Professional female doctor smiling in a clinic" style={{ width: "100%", height: "100%", borderRadius: "50%", display: "block", objectFit: "cover", filter: "brightness(1.05) contrast(1.02)" }} />
             </div>
 
             {/* Floating element 1 */}
-            <div style={{ position: "absolute", top: "15%", right: "-5%", background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(16px)", border: "1px solid rgba(255, 255, 255, 0.8)", borderRadius: 20, padding: "16px", boxShadow: "0 16px 32px -8px rgba(15, 23, 42, 0.15)", display: "flex", alignItems: "center", gap: 14, animation: "float 6s ease-in-out infinite", zIndex: 10 }}>
-              <div style={{ width: 44, height: 44, background: "#dcfce7", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <ShieldCheck size={24} color="#16a34a" />
+            <div className="landing-floating" style={{ position: "absolute", top: "15%", right: "-2%", background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(16px)", border: "1px solid rgba(255, 255, 255, 0.8)", borderRadius: 20, padding: "12px 16px", boxShadow: "0 16px 32px -8px rgba(15, 23, 42, 0.15)", display: "flex", alignItems: "center", gap: 12, animation: "float 6s ease-in-out infinite", zIndex: 10 }}>
+              <div style={{ width: 36, height: 36, background: "#dcfce7", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <ShieldCheck size={20} color="#16a34a" />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Verified Doctors</div>
-                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>Top 1% Specialists</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Verified Doctors</div>
+                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>Top Specialists</div>
               </div>
             </div>
 
             {/* Floating element 2 */}
-            <div style={{ position: "absolute", bottom: "15%", left: "-10%", background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(16px)", border: "1px solid rgba(255, 255, 255, 0.8)", borderRadius: 20, padding: "16px", boxShadow: "0 16px 32px -8px rgba(15, 23, 42, 0.15)", display: "flex", alignItems: "center", gap: 14, animation: "float 8s ease-in-out infinite reverse", zIndex: 10 }}>
-              <div style={{ width: 44, height: 44, background: "#f0f9ff", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <CheckCircle size={24} color="#0284c7" />
+            <div className="landing-floating" style={{ position: "absolute", bottom: "15%", left: "-2%", background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(16px)", border: "1px solid rgba(255, 255, 255, 0.8)", borderRadius: 20, padding: "12px 16px", boxShadow: "0 16px 32px -8px rgba(15, 23, 42, 0.15)", display: "flex", alignItems: "center", gap: 12, animation: "float 8s ease-in-out infinite reverse", zIndex: 10 }}>
+              <div style={{ width: 36, height: 36, background: "#f0f9ff", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <CheckCircle size={20} color="#0284c7" />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>AI Diagnosed</div>
-                <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>High accuracy ML</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>AI Diagnosed</div>
+                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>98% Accuracy</div>
               </div>
             </div>
           </div>
@@ -199,9 +224,9 @@ export default function Landing() {
             <div style={{ display: "inline-block", fontSize: 12, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, background: "rgba(16, 185, 129, 0.1)", padding: "6px 16px", borderRadius: 999 }}>Workflow</div>
             <h2 style={{ fontSize: "2.75rem", fontWeight: 700, letterSpacing: "-0.03em", color: "#0f172a" }}>Up and running in minutes</h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 40, position: "relative" }}>
+          <div className="how-it-works-grid">
             {/* Connecting line */}
-            <div style={{ position: "absolute", top: 32, left: "15%", right: "15%", height: 2, background: "linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.5) 50%, rgba(16, 185, 129, 0.1) 100%)", zIndex: 0 }} />
+            <div className="how-it-works-line" />
             
             {steps.map((s, i) => (
               <div key={i} style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
@@ -255,6 +280,40 @@ export default function Landing() {
       <style>{`
         @keyframes float { 0% { transform: translateY(0) translateZ(30px); } 50% { transform: translateY(-10px) translateZ(30px); } 100% { transform: translateY(0) translateZ(30px); } }
         @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+        
+        .hero-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+          .landing-nav-links { display: none !important; }
+        }
+
+        @media (max-width: 640px) {
+          .landing-desktop-btns { display: none !important; }
+          .landing-mobile-toggle { display: block !important; }
+          .landing-floating { display: none !important; }
+          
+          .hero-stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 24px 16px !important;
+            max-width: 340px;
+            margin: 48px auto 0 !important;
+          }
+          .hero-stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 8px;
+          }
+          .hero-stat-header {
+            justify-content: center;
+            margin-bottom: 4px !important;
+          }
+        }
       `}</style>
     </div>
   );

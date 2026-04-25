@@ -220,8 +220,8 @@ const deleteHealthRecord = async (req, res) => {
         return res.status(403).json({ error: 'Unauthorized' });
       }
     } else if (req.userRole === 'patient') {
-      if (record.patientId.toString() !== req.userId || record.doctorId) {
-        return res.status(403).json({ error: 'Patients can only delete their own self-created records' });
+      if (record.patientId.toString() !== req.userId) {
+        return res.status(403).json({ error: 'Unauthorized' });
       }
     } else {
       return res.status(403).json({ error: 'Unauthorized' });

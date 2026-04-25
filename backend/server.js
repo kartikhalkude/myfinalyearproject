@@ -1,20 +1,19 @@
-const express  = require('express');
-const http     = require('http');
-const cors     = require('cors');
+const express = require('express');
+const http = require('http');
+const cors = require('cors');
 require('dotenv').config();
 
-const connectDB     = require('./config/db');
+const connectDB = require('./config/db');
 const { initSocket } = require('./socket');
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-const authRoutes          = require('./routes/auth');
-const doctorRoutes        = require('./routes/doctors');
-const appointmentRoutes   = require('./routes/appointments');
-const predictionRoutes    = require('./routes/predictions');
-const healthRecordRoutes  = require('./routes/healthRecords');
-const prescriptionRoutes  = require('./routes/prescriptions');
-
-const statsRoutes         = require('./routes/stats');
+const authRoutes = require('./routes/auth');
+const doctorRoutes = require('./routes/doctors');
+const appointmentRoutes = require('./routes/appointments');
+const predictionRoutes = require('./routes/predictions');
+const healthRecordRoutes = require('./routes/healthRecords');
+const prescriptionRoutes = require('./routes/prescriptions');
+const statsRoutes = require('./routes/stats');
 
 // ─── CORS origins ─────────────────────────────────────────────────────────────
 const parseClientUrl = () => {
@@ -24,13 +23,14 @@ const parseClientUrl = () => {
 const allowedOrigins = parseClientUrl();
 
 // ─── App setup ────────────────────────────────────────────────────────────────
-const app    = express();
+const app = express();
 const server = http.createServer(app);
 
 app.use(cors({
-  origin:         allowedOrigins,
-  credentials:    true,
-  methods:        ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  origin: allowedOrigins,
+  credentials: true,
+  // FIX: Added 'PUT' — authController uses PUT /profile, missing caused CORS preflight failures
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
@@ -45,14 +45,13 @@ connectDB();
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));
 
-app.use('/api/auth',           authRoutes);
-app.use('/api/doctors',        doctorRoutes);
-app.use('/api/appointments',   appointmentRoutes);
-app.use('/api',                predictionRoutes);   // keeps /api/predict-diabetes etc.
+app.use('/api/auth', authRoutes);
+app.use('/api/doctors', doctorRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api', predictionRoutes);
 app.use('/api/health-records', healthRecordRoutes);
-app.use('/api/prescriptions',  prescriptionRoutes);
-
-app.use('/api/stats',          statsRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/stats', statsRoutes);
 
 // ─── Global error handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
@@ -70,12 +69,10 @@ server.listen(PORT, () => {
 
 // ─── Unhandled error handlers ─────────────────────────────────────────────────
 process.on('uncaughtException', (err) => {
-  // Don't exit on write EOF or socket errors - just log them
   if (err.code === 'EOF' || err.syscall === 'write') {
     console.warn('⚠️ Socket write error (client disconnected):', err.code);
   } else {
     console.error('❌ Uncaught Exception:', err);
-    // Only exit for critical errors, not socket-related ones
     if (!err.message.includes('ECONNRESET') && !err.message.includes('EOF')) {
       process.exit(1);
     }

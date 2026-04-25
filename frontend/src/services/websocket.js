@@ -77,6 +77,7 @@ class WebSocketService {
   _attachPersistentListeners() {
     Object.keys(this._socketListeners).forEach((event) => {
       this._socketListeners[event].forEach((callback) => {
+        this.socket.off(event, callback); // Ensure uniqueness
         this.socket.on(event, callback);
       });
     });

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Stethoscope, User, Activity, ShieldCheck, HeartPulse, ArrowRight } from "lucide-react";
+import { Stethoscope, User, Activity, ShieldCheck, HeartPulse, Mail, CheckCircle2 } from "lucide-react";
+import { Modal, Btn } from "../components/UI";
+import { authAPI } from "../services/apiClient";
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -9,6 +11,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // Forgot password states
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotError, setForgotError] = useState("");
 
   const handleChange = e => { setFormData(p => ({ ...p, [e.target.name]: e.target.value })); setError(""); };
 
@@ -27,6 +36,21 @@ export default function Login() {
   const fillDemo = (type) => {
     if (type === "doctor") setFormData({ email: "doctor@test.com", password: "doctor123" });
     else setFormData({ email: "patient@test.com", password: "patient123" });
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotLoading(true);
+    
+    try {
+      await authAPI.forgotPassword(forgotEmail);
+      setForgotSuccess(true);
+    } catch (err) {
+      setForgotError(err.error || "Failed to process request. Please try again.");
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   return (
@@ -101,15 +125,15 @@ export default function Login() {
       {/* Right panel — Form */}
       <div className="dm-auth-right">
         
-        {/* Mobile Logo Header */}
-        <div style={{ display: "none", alignItems: "center", gap: 10, marginBottom: 40, "@media (maxWidth: 900px)": { display: "flex" } }}>
-          <div style={{ width: 32, height: 32, background: "#10b981", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </div>
-          <span style={{ color: "#0f172a", fontWeight: 700, fontSize: 16 }}>Dr.AssistAI</span>
-        </div>
-
         <div style={{ maxWidth: 400, margin: "0 auto", width: "100%" }}>
+          {/* Mobile Logo Header */}
+          <div className="dm-auth-mobile-header">
+            <div style={{ width: 32, height: 32, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(16, 185, 129, 0.2)" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <span style={{ color: "#0f172a", fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em" }}>Dr.AssistAI</span>
+          </div>
+
           <div style={{ marginBottom: 40 }}>
             <h2 style={{ fontSize: "2rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.03em", marginBottom: 8 }}>Welcome back</h2>
             <p style={{ fontSize: "1rem", color: "#64748b" }}>Please enter your details to sign in.</p>
@@ -137,7 +161,7 @@ export default function Login() {
             <div style={{ marginBottom: 32 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Password</label>
-                <a href="#" style={{ fontSize: 13, fontWeight: 500, color: "#10b981", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={e=>e.target.style.color="#059669"} onMouseLeave={e=>e.target.style.color="#10b981"}>Forgot password?</a>
+                <button type="button" onClick={() => setShowForgotModal(true)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#10b981", transition: "color 0.2s" }} onMouseEnter={e=>e.target.style.color="#059669"} onMouseLeave={e=>e.target.style.color="#10b981"}>Forgot password?</button>
               </div>
               <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" required disabled={loading}
                 style={{ width: "100%", padding: "12px 16px", fontSize: 15, fontFamily: "inherit", color: "#0f172a", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, outline: "none", transition: "all 0.2s", boxSizing: "border-box" }}
@@ -181,7 +205,65 @@ export default function Login() {
         </div>
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      {/* Forgot Password Modal */}
+      <Modal isOpen={showForgotModal} onClose={() => { setShowForgotModal(false); setForgotSuccess(false); setForgotEmail(""); setForgotError(""); }} title="Reset Password">
+        {!forgotSuccess ? (
+          <form onSubmit={handleForgotSubmit}>
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ width: 56, height: 56, background: "#f0fdf4", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <ShieldCheck size={28} color="#10b981" />
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Password Recovery</h3>
+              <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.5 }}>Enter your email address and we'll send you a link to reset your password.</p>
+            </div>
+
+            {forgotError && (
+              <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#dc2626", marginBottom: 20, display: "flex", gap: 8, alignItems: "center" }}>
+                <Activity size={14} />
+                <span>{forgotError}</span>
+              </div>
+            )}
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Email Address</label>
+              <div style={{ position: "relative" }}>
+                <Mail size={16} color="#94a3b8" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
+                <input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="name@example.com" required disabled={forgotLoading}
+                  style={{ width: "100%", padding: "12px 16px 12px 42px", fontSize: 15, fontFamily: "inherit", color: "#0f172a", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, outline: "none", transition: "all 0.2s", boxSizing: "border-box" }}
+                  onFocus={e => { e.target.style.background = "#fff"; e.target.style.borderColor = "#10b981"; e.target.style.boxShadow = "0 0 0 4px rgba(16, 185, 129, 0.1)"; }}
+                  onBlur={e => { e.target.style.background = "#f8fafc"; e.target.style.borderColor = "#e2e8f0"; e.target.style.boxShadow = "none"; }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <Btn onClick={() => setShowForgotModal(false)} variant="outline" style={{ flex: 1 }} disabled={forgotLoading}>Cancel</Btn>
+              <Btn type="submit" loading={forgotLoading} style={{ flex: 1, justifyContent: "center" }}>Send Link</Btn>
+            </div>
+          </form>
+        ) : (
+          <div style={{ textAlign: "center", padding: "12px 0" }}>
+            <div style={{ width: 64, height: 64, background: "#f0fdf4", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <CheckCircle2 size={32} color="#10b981" />
+            </div>
+            <h3 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>Check your email</h3>
+            <p style={{ fontSize: 15, color: "#64748b", lineHeight: 1.6, marginBottom: 24 }}>
+              We've sent a password reset link to <br /><strong style={{ color: "#0f172a" }}>{forgotEmail}</strong>.
+            </p>
+            <Btn onClick={() => { setShowForgotModal(false); setForgotSuccess(false); setForgotEmail(""); }} style={{ width: "100%", justifyContent: "center" }}>
+              Back to Sign in
+            </Btn>
+          </div>
+        )}
+      </Modal>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .dm-auth-mobile-header { display: none; align-items: center; gap: 10px; margin-bottom: 40px; }
+        @media (max-width: 1024px) {
+          .dm-auth-mobile-header { display: flex; }
+        }
+      `}</style>
     </div>
   );
 }

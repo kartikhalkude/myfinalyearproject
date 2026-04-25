@@ -76,91 +76,97 @@ export default function BrainTumorPrediction() {
     setError('');
   };
 
+  const hasTumor = prediction?.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(prediction.prediction);
+
   const downloadReport = () => {
     if (!prediction) return;
-    const doc = new jsPDF();
-    
-    // Header
-    doc.setFontSize(22);
-    doc.setTextColor(15, 23, 42); // slate-900
-    doc.text("MEDICAL SCREENING REPORT", 105, 20, { align: "center" });
-    
-    doc.setFontSize(16);
-    doc.setTextColor(124, 58, 237); // violet-600
-    doc.text("Brain Tumor AI Analysis", 105, 30, { align: "center" });
-    
-    doc.setDrawColor(226, 232, 240);
-    doc.line(20, 35, 190, 35);
-    
-    // Patient Info
-    doc.setFontSize(11);
-    doc.setTextColor(100, 116, 139); // slate-500
-    doc.text(`Date: ${new Date().toLocaleString()}`, 20, 45);
-    doc.text(`Report ID: BT-${new Date().getTime().toString().slice(-6)}`, 140, 45);
-    
-    // Assessment Section
-    doc.setFontSize(14);
-    doc.setTextColor(15, 23, 42);
-    doc.text("ASSESSMENT SUMMARY", 20, 60);
-    
-    doc.setFontSize(12);
-    doc.text(`Primary Finding:`, 20, 70);
-    doc.setFont("helvetica", "bold");
-    doc.text(prediction.prediction, 60, 70);
-    doc.setFont("helvetica", "normal");
-    
-    doc.text(`Confidence Score:`, 20, 80);
-    doc.text(`${prediction.probability}%`, 60, 80);
-    
-    doc.text(`Risk Level:`, 20, 90);
-    const riskRGB = hasTumor ? [220, 38, 38] : [22, 163, 74];
-    doc.setTextColor(riskRGB[0], riskRGB[1], riskRGB[2]);
-    doc.text(prediction.risk || (hasTumor ? "High Risk" : "Normal"), 60, 90);
-    doc.setTextColor(15, 23, 42);
-    
-    // Add MRI Image if available
-    if (preview) {
-      try {
-        // Find best fit for image
-        const imgWidth = 80;
-        const imgHeight = 80;
-        doc.addImage(preview, 'JPEG', 110, 60, imgWidth, imgHeight);
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text("Analyzed MRI Scan", 150, 145, { align: "center" });
-      } catch (e) {
-        console.error("Failed to add image to PDF:", e);
+    try {
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(22);
+      doc.setTextColor(15, 23, 42); // slate-900
+      doc.text("MEDICAL SCREENING REPORT", 105, 20, { align: "center" });
+      
+      doc.setFontSize(16);
+      doc.setTextColor(124, 58, 237); // violet-600
+      doc.text("Brain Tumor AI Analysis", 105, 30, { align: "center" });
+      
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 35, 190, 35);
+      
+      // Patient Info
+      doc.setFontSize(11);
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.text(`Date: ${new Date().toLocaleString()}`, 20, 45);
+      doc.text(`Report ID: BT-${new Date().getTime().toString().slice(-6)}`, 140, 45);
+      
+      // Assessment Section
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text("ASSESSMENT SUMMARY", 20, 60);
+      
+      doc.setFontSize(12);
+      doc.text(`Primary Finding:`, 20, 70);
+      doc.setFont("helvetica", "bold");
+      doc.text(prediction.prediction, 60, 70);
+      doc.setFont("helvetica", "normal");
+      
+      doc.text(`Confidence Score:`, 20, 80);
+      doc.text(`${prediction.probability}%`, 60, 80);
+      
+      doc.text(`Risk Level:`, 20, 90);
+      const riskRGB = hasTumor ? [220, 38, 38] : [22, 163, 74];
+      doc.setTextColor(riskRGB[0], riskRGB[1], riskRGB[2]);
+      doc.text(prediction.risk || (hasTumor ? "High Risk" : "Normal"), 60, 90);
+      doc.setTextColor(15, 23, 42);
+      
+      // Add MRI Image if available
+      if (preview) {
+        try {
+          // Find best fit for image
+          const imgWidth = 80;
+          const imgHeight = 80;
+          doc.addImage(preview, 'JPEG', 110, 60, imgWidth, imgHeight);
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text("Analyzed MRI Scan", 150, 145, { align: "center" });
+        } catch (e) {
+          console.error("Failed to add image to PDF:", e);
+        }
       }
+      
+      // Detailed Probabilities
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text("DETAILED PROBABILITIES", 20, 110);
+      let y = 120;
+      doc.setFontSize(11);
+      Object.entries(prediction.probabilities || {}).forEach(([label, prob]) => {
+        doc.text(`${label}:`, 30, y);
+        doc.text(`${prob}%`, 100, y);
+        y += 10;
+      });
+      
+      // Disclaimer
+      doc.setDrawColor(254, 243, 199);
+      doc.setFillColor(255, 251, 235);
+      doc.rect(20, y + 10, 170, 30, "FD");
+      
+      doc.setFontSize(10);
+      doc.setTextColor(146, 64, 14);
+      doc.text("IMPORTANT DISCLAIMER:", 25, y + 20);
+      doc.setFontSize(9);
+      doc.text("This AI-generated report is for preliminary screening purposes only and should not be used as a", 25, y + 25);
+      doc.text("final medical diagnosis. Please consult a qualified Neurologist for a definitive clinical assessment.", 25, y + 30);
+      
+      doc.save(`Brain_Tumor_Report_${new Date().getTime()}.pdf`);
+    } catch (err) {
+      console.error("PDF Generation Error:", err);
+      alert("Failed to generate PDF report. Please try again.");
     }
-    
-    // Detailed Probabilities
-    doc.setFontSize(14);
-    doc.setTextColor(15, 23, 42);
-    doc.text("DETAILED PROBABILITIES", 20, 110);
-    let y = 120;
-    doc.setFontSize(11);
-    Object.entries(prediction.probabilities || {}).forEach(([label, prob]) => {
-      doc.text(`${label}:`, 30, y);
-      doc.text(`${prob}%`, 100, y);
-      y += 10;
-    });
-    
-    // Disclaimer
-    doc.setDrawColor(254, 243, 199);
-    doc.setFillColor(255, 251, 235);
-    doc.rect(20, y + 10, 170, 30, "FD");
-    
-    doc.setFontSize(10);
-    doc.setTextColor(146, 64, 14);
-    doc.text("IMPORTANT DISCLAIMER:", 25, y + 20);
-    doc.setFontSize(9);
-    doc.text("This AI-generated report is for preliminary screening purposes only and should not be used as a", 25, y + 25);
-    doc.text("final medical diagnosis. Please consult a qualified Neurologist for a definitive clinical assessment.", 25, y + 30);
-    
-    doc.save(`Brain_Tumor_Report_${new Date().getTime()}.pdf`);
   };
 
-  const hasTumor = prediction?.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(prediction.prediction);
   const riskColor = prediction ? (hasTumor ? "red" : "green") : "slate";
   const riskBg = { red: "#fff1f2", green: "#f0fdf4", slate: "#f8fafc" };
   const riskBorder = { red: "#fda4af", green: "#86efac", slate: "#e2e8f0" };
@@ -173,37 +179,37 @@ export default function BrainTumorPrediction() {
         <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b" }}>Upload a brain MRI image to get an AI-powered likelihood assessment.</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16, marginBottom: 24 }}>
         {[
-          { label: "Glioma", icon: <Brain size={18} />, color: "#ef4444", bg: "#fef2f2" },
-          { label: "Meningioma", icon: <Microscope size={18} />, color: "#f59e0b", bg: "#fffbeb" },
-          { label: "Pituitary", icon: <Activity size={18} />, color: "#8b5cf6", bg: "#f5f3ff" },
-          { label: "Normal", icon: <ShieldCheck size={18} />, color: "#10b981", bg: "#f0fdf4" }
+          { label: "Glioma", icon: <Brain size={18} />, color: "#ef4444", bg: document.body.classList.contains("dm") ? "rgba(239, 68, 68, 0.15)" : "#fef2f2" },
+          { label: "Meningioma", icon: <Microscope size={18} />, color: "#f59e0b", bg: document.body.classList.contains("dm") ? "rgba(245, 158, 11, 0.15)" : "#fffbeb" },
+          { label: "Pituitary", icon: <Activity size={18} />, color: "#8b5cf6", bg: document.body.classList.contains("dm") ? "rgba(139, 92, 246, 0.15)" : "#f5f3ff" },
+          { label: "Normal", icon: <ShieldCheck size={18} />, color: "#10b981", bg: document.body.classList.contains("dm") ? "rgba(16, 185, 129, 0.15)" : "#f0fdf4" }
         ].map((item, idx) => (
           <div key={idx} style={{ background: item.bg, border: "1px solid", borderColor: item.color + "33", borderRadius: 12, padding: "14px 10px", textAlign: "center" }}>
-            <div style={{ width: 32, height: 32, background: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", color: item.color, boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ width: 32, height: 32, background: document.body.classList.contains("dm") ? "#0f172a" : "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px", color: item.color, boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
               {item.icon}
             </div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: item.color }}>{item.label}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="dm-info-banner" style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span style={{ color: "#1e40af" }}>The model analyzes the MRI and estimates the likelihood of tumor presence.</span>
+      <div className="dm-info-banner" style={{ background: document.body.classList.contains("dm") ? "rgba(29, 181, 133, 0.1)" : "#f0faf7", border: `1px solid ${document.body.classList.contains("dm") ? "#0e9a6e" : "#a3e7d4"}`, borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, fontSize: 13 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1db585" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span style={{ color: document.body.classList.contains("dm") ? "#a3e7d4" : "#0a7a57" }}>The model analyzes the MRI and estimates the likelihood of tumor presence.</span>
       </div>
 
       {error && <div className="dm-error-banner" style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10, padding: "11px 14px", marginBottom: 16, fontSize: 13.5, color: "#dc2626" }}>{error}</div>}
 
       <div className="dm-grid-analysis">
         <SectionCard>
-          <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Upload MRI Image</div>
+              <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a" }}>Upload MRI Image</div>
             </div>
             {file && (
-              <span style={{ padding: "5px 11px", fontSize: 12, fontWeight: 500, background: "#eff6ff", color: "#1d4ed8", borderRadius: 999 }}>
+              <span style={{ padding: "5px 11px", fontSize: 12, fontWeight: 600, background: document.body.classList.contains("dm") ? "rgba(59, 130, 246, 0.15)" : "#eff6ff", color: "#3b82f6", borderRadius: 999 }}>
                 {file.name}
               </span>
             )}
@@ -211,7 +217,7 @@ export default function BrainTumorPrediction() {
           <form onSubmit={handleSubmit} style={{ padding: 20 }}>
             <div 
               className={isDragging ? "dm-upload-zone dm-upload-zone-active" : "dm-upload-zone"}
-              style={{ border: `2px dashed ${isDragging ? '#3b82f6' : '#cbd5e1'}`, borderRadius: 12, padding: 32, textAlign: "center", cursor: "pointer", transition: "border-color 0.2s", background: isDragging ? "#f8fafc" : "#fff" }}
+              style={{ border: `2px dashed ${isDragging ? '#3b82f6' : (document.body.classList.contains("dm") ? '#334155' : '#cbd5e1')}`, borderRadius: 12, padding: 32, textAlign: "center", cursor: "pointer", transition: "border-color 0.2s", background: isDragging ? (document.body.classList.contains("dm") ? '#0f172a' : '#f8fafc') : (document.body.classList.contains("dm") ? '#0f172a' : '#fff') }}
               onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={e => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]); }}
@@ -219,11 +225,11 @@ export default function BrainTumorPrediction() {
               <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleFileChange} style={{ display: 'none' }} id="image-upload" />
               <label htmlFor="image-upload" style={{ cursor: "pointer", display: "block" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-                  <div style={{ width: 64, height: 64, background: "#eff6ff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6" }}>
+                  <div style={{ width: 64, height: 64, background: document.body.classList.contains("dm") ? "rgba(59, 130, 246, 0.15)" : "#eff6ff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6" }}>
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                   </div>
                   <div>
-                    <div className="dm-soft-text" style={{ fontSize: 16, fontWeight: 500, color: "#475569" }}>Click or drag to upload brain MRI</div>
+                    <div className="dm-soft-text" style={{ fontSize: 16, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#475569" }}>Click or drag to upload brain MRI</div>
                     <div className="dm-soft-muted" style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>PNG, JPG, JPEG, or WEBP</div>
                   </div>
                 </div>
@@ -243,10 +249,10 @@ export default function BrainTumorPrediction() {
             )}
 
             <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-              <button type="submit" disabled={!file || loading} style={{ flex: 1, padding: "11px", background: (!file || loading) ? "#94a3b8" : "#3b82f6", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#fff", cursor: (!file || loading) ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <button type="submit" disabled={!file || loading} style={{ flex: 2, padding: "11px", background: (!file || loading) ? "#475569" : "#1db585", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#fff", cursor: (!file || loading) ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.2s" }} onMouseEnter={e => { if(!loading && file) e.currentTarget.style.background = "#0e9a6e"; }} onMouseLeave={e => { if(!loading && file) e.currentTarget.style.background = "#1db585"; }}>
                 {loading ? <><div style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }}></div>Analyzing...</> : "Analyze MRI"}
               </button>
-              <button type="button" onClick={resetForm} style={{ padding: "11px 20px", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontWeight: 500, color: "#64748b", cursor: "pointer", fontFamily: "inherit" }}>Reset</button>
+              <button type="button" onClick={resetForm} style={{ flex: 1, padding: "11px 20px", background: document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc", border: `1.5px solid ${document.body.classList.contains("dm") ? "#334155" : "#e2e8f0"}`, borderRadius: 10, fontSize: 14, fontWeight: 500, color: document.body.classList.contains("dm") ? "#94a3b8" : "#64748b", cursor: "pointer", fontFamily: "inherit" }}>Reset</button>
             </div>
           </form>
         </SectionCard>
@@ -269,23 +275,23 @@ export default function BrainTumorPrediction() {
                     </div>
                   )}
                 </div>
-                <div className="dm-stat-strip" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f8fafc", borderRadius: 10, marginBottom: 8 }}>
-                  <span className="dm-soft-muted" style={{ fontSize: 13, color: "#64748b" }}>Confidence Score</span>
-                  <span className="dm-page-title" style={{ fontSize: 15, fontWeight: 600, color: "#0f172a" }}>{prediction.probability}%</span>
+                <div className="dm-stat-strip" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: document.body.classList.contains("dm") ? "rgba(15,23,42,0.5)" : "#f8fafc", borderRadius: 10, marginBottom: 8, border: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "transparent"}` }}>
+                  <span className="dm-soft-muted" style={{ fontSize: 13, color: "#94a3b8" }}>Confidence Score</span>
+                  <span className="dm-page-title" style={{ fontSize: 15, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a" }}>{prediction.probability}%</span>
                 </div>
                 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 4 }}>
                   {Object.entries(prediction.probabilities || {}).map(([label, prob]) => (
-                    <div className="dm-prob-chip" key={label} style={{ padding: "8px 10px", background: "#f8fafc", borderRadius: 8, border: "1px solid #f1f5f9" }}>
-                      <div className="dm-soft-muted" style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", fontWeight: 600 }}>{label}</div>
-                      <div className="dm-soft-text" style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{prob}%</div>
+                    <div className="dm-prob-chip" key={label} style={{ padding: "8px 10px", background: document.body.classList.contains("dm") ? "#0f172a" : "#f8fafc", borderRadius: 8, border: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f1f5f9"}` }}>
+                      <div className="dm-soft-muted" style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>{label}</div>
+                      <div className="dm-soft-text" style={{ fontSize: 13, fontWeight: 600, color: document.body.classList.contains("dm") ? "#e2e8f0" : "#334155" }}>{prob}%</div>
                     </div>
                   ))}
                 </div>
                 
                 <button 
                   onClick={downloadReport}
-                  style={{ width: "100%", marginTop: 16, padding: "10px", background: "#0f172a", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                  style={{ width: "100%", marginTop: 16, padding: "10px", background: "#1db585", border: "none", borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
                   <Download size={16} />
                   Download Medical Report
@@ -311,9 +317,9 @@ export default function BrainTumorPrediction() {
       {/* History */}
       {history.length > 0 && (
         <SectionCard style={{ marginTop: 24 }}>
-          <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div className="dm-section-header" style={{ padding: "18px 20px", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
-              <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Prediction history</div>
+              <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a" }}>Prediction history</div>
               <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 1 }}>Recent assessments</div>
             </div>
             <button onClick={handleClearHistory} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#991b1b", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }} onMouseEnter={e=>{e.currentTarget.style.background="#fee2e2"}} onMouseLeave={e=>{e.currentTarget.style.background="#fef2f2"}}>
@@ -323,19 +329,19 @@ export default function BrainTumorPrediction() {
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead className="dm-table-head"><tr style={{ background: "#f8fafc" }}>
+              <thead className="dm-table-head"><tr style={{ background: document.body.classList.contains("dm") ? "rgba(15,23,42,0.5)" : "#f8fafc" }}>
                 {["Date", "Result", "Confidence", "Risk"].map(h => (
-                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #f1f5f9" }}>{h}</th>
+                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f1f5f9"}` }}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>
-                {history.map((r, i) => (
-                  <tr className="dm-table-row" key={i} style={{ borderBottom: "1px solid #f8fafc" }}>
-                    <td className="dm-table-cell dm-soft-muted" style={{ padding: "11px 16px", color: "#475569" }}>{new Date(r.createdAt).toLocaleDateString()}</td>
+                {history.slice(0, 10).map((r, i) => (
+                  <tr className="dm-table-row" key={i} style={{ borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}` }}>
+                    <td className="dm-table-cell dm-soft-muted" style={{ padding: "11px 16px", color: document.body.classList.contains("dm") ? "#94a3b8" : "#475569" }}>{new Date(r.createdAt).toLocaleDateString()}</td>
                     <td style={{ padding: "11px 16px" }}>
-                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 500, borderRadius: 999, background: (r.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(r.prediction)) ? "#fee2e2" : "#dcfce7", color: (r.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(r.prediction)) ? "#991b1b" : "#166534" }}>{r.prediction}</span>
+                      <span style={{ display: "inline-flex", padding: "3px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: (r.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(r.prediction)) ? (document.body.classList.contains("dm") ? "rgba(220, 38, 38, 0.15)" : "#fee2e2") : (document.body.classList.contains("dm") ? "rgba(22, 163, 74, 0.15)" : "#dcfce7"), color: (r.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(r.prediction)) ? (document.body.classList.contains("dm") ? "#ef4444" : "#991b1b") : (document.body.classList.contains("dm") ? "#10b981" : "#166534"), border: document.body.classList.contains("dm") ? `1px solid ${(r.prediction && !['No Tumor', 'Normal', 'Healthy'].includes(r.prediction)) ? "#ef4444" : "#10b981"}` : "none" }}>{r.prediction}</span>
                     </td>
-                    <td className="dm-table-cell dm-soft-text" style={{ padding: "11px 16px", color: "#1e293b", fontWeight: 500 }}>{r.probability}%</td>
+                    <td className="dm-table-cell dm-soft-text" style={{ padding: "11px 16px", color: document.body.classList.contains("dm") ? "#f1f5f9" : "#1e293b", fontWeight: 600 }}>{r.probability}%</td>
                     <td className="dm-table-cell dm-soft-muted" style={{ padding: "11px 16px", color: "#64748b" }}>{r.risk}</td>
                   </tr>
                 ))}

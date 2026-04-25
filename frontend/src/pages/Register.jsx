@@ -81,15 +81,15 @@ export default function Register() {
       {/* Right panel — form */}
       <div className="dm-auth-right" style={{ overflowY: "auto" }}>
         
-        {/* Mobile Logo Header */}
-        <div style={{ display: "none", alignItems: "center", gap: 10, marginBottom: 32, "@media (maxWidth: 900px)": { display: "flex" } }}>
-          <div style={{ width: 32, height: 32, background: "#10b981", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </div>
-          <span style={{ color: "#0f172a", fontWeight: 700, fontSize: 16 }}>Dr.AssistAI</span>
-        </div>
-
         <div style={{ maxWidth: 540, width: "100%", margin: "0 auto" }}>
+          {/* Mobile Logo Header */}
+          <div className="dm-auth-mobile-header">
+            <div style={{ width: 32, height: 32, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(16, 185, 129, 0.2)" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <span style={{ color: "#0f172a", fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em" }}>Dr.AssistAI</span>
+          </div>
+
           <div style={{ marginBottom: 40 }}>
             <h1 style={{ fontSize: "2rem", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.03em", marginBottom: 8 }}>Create your account</h1>
             <p style={{ fontSize: "1rem", color: "#64748b" }}>Join us today. It takes less than a minute to get started.</p>
@@ -187,9 +187,19 @@ export default function Register() {
           <p style={{ fontSize: 13, color: "#64748b", textAlign: "center", marginTop: 24, lineHeight: 1.6, fontWeight: 500 }}>
             By registering, you agree to our <a href="#" style={{ color: "#10b981", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={e=>e.target.style.color="#059669"} onMouseLeave={e=>e.target.style.color="#10b981"}>Terms of Service</a> and <a href="#" style={{ color: "#10b981", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={e=>e.target.style.color="#059669"} onMouseLeave={e=>e.target.style.color="#10b981"}>Privacy Policy</a>.
           </p>
+
+          <p style={{ fontSize: 14, color: "#64748b", textAlign: "center", marginTop: 24, fontWeight: 500 }}>
+            Already have an account? <Link to="/login" style={{ color: "#10b981", textDecoration: "none", fontWeight: 600, transition: "color 0.2s" }} onMouseEnter={e=>e.target.style.color="#059669"} onMouseLeave={e=>e.target.style.color="#10b981"}>Sign in here</Link>
+          </p>
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .dm-auth-mobile-header { display: none; align-items: center; gap: 10px; margin-bottom: 32px; }
+        @media (max-width: 1024px) {
+          .dm-auth-mobile-header { display: flex; }
+        }
+      `}</style>
     </div>
   );
 }

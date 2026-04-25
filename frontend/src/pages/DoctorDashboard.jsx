@@ -5,7 +5,7 @@ import VideoCall from "../components/VideoCall";
 import apiClient from "../services/apiClient";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
-import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader, MobileHeader } from "../components/UI";
+import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader, MobileHeader, ConfirmModal } from "../components/UI";
 import { 
   Home, Calendar, CalendarClock, Users, FileText, Pill, ClipboardList, 
   Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, MessageSquare,
@@ -114,27 +114,28 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
       <div className="dm-grid-two">
         {/* Today's Schedule */}
         <SectionCard>
-          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Today's Schedule</div>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}` }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a" }}>Today's Schedule</div>
           </div>
           <div style={{ padding: 16 }}>
             {todayAppointments.length === 0 ? <EmptyState icon={<Calendar size={24} color="#94a3b8" />} title="No appointments today" subtitle="Enjoy your free time." /> : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {todayAppointments.map(apt => {
                   const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
+                  const isDark = document.body.classList.contains("dm");
                   return (
-                    <div className="dm-card-row" key={apt._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <div>
-                          <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{apt.patientName}</div>
-                          <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8" }}>{apt.time}</div>
-                        </div>
-                        <span style={{ display: "inline-flex", padding: "2px 9px", fontSize: 11, fontWeight: 600, borderRadius: 999, background: bg, color }}>{apt.status}</span>
+                    <div className="dm-appointment-preview" key={apt._id} style={{ padding: "14px", border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 14, background: isDark ? "#111827" : "#f8fafc" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a" }}>{apt.patientName}</div>
+                        <span style={{ display: "inline-flex", padding: "2px 8px", fontSize: 10, fontWeight: 700, borderRadius: 999, background: isDark ? (apt.status === 'confirmed' ? 'rgba(29, 181, 133, 0.15)' : 'rgba(30, 41, 59, 0.5)') : bg, color: isDark ? (apt.status === 'confirmed' ? '#1db585' : '#94a3b8') : color, border: isDark ? `1px solid ${apt.status === 'confirmed' ? '#1db585' : '#334155'}` : 'none', textTransform: "uppercase" }}>{apt.status}</span>
+                      </div>
+                      <div className="dm-soft-muted" style={{ fontSize: 12, color: isDark ? "#94a3b8" : "#64748b", display: "flex", gap: 10 }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Clock size={12} /> {apt.time}</span>
                       </div>
                       {apt.status === "confirmed" && (
-                        <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
-                          <Btn onClick={() => onStartCall(apt)} style={{ flex: 1 }} size="sm">Start Call</Btn>
-                          <Btn onClick={() => window.confirm("Mark complete?") && onUpdateStatus(apt._id, "completed")} variant="outline" style={{ flex: 1 }} size="sm">Mark Complete</Btn>
+                        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                          <Btn onClick={() => onStartCall(apt)} style={{ flex: 2, fontWeight: 600 }} size="sm">Start Call</Btn>
+                          <Btn onClick={() => onUpdateStatus(apt._id, "completed")} variant="outline" style={{ flex: 1, fontWeight: 600 }} size="sm">Mark Done</Btn>
                         </div>
                       )}
                     </div>
@@ -147,21 +148,21 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
 
         {/* Pending Feedbacks */}
         <SectionCard>
-          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Pending Feedbacks</div>
-            <button onClick={onViewHealth} style={{ fontSize: 12, color: "#1db585", background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>View All</button>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: `1px solid ${document.body.classList.contains("dm") ? "#1e293b" : "#f8fafc"}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 600, color: document.body.classList.contains("dm") ? "#f1f5f9" : "#0f172a" }}>Pending Feedbacks</div>
+            <button onClick={onViewHealth} style={{ fontSize: 12, color: "#1db585", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>View All</button>
           </div>
           <div style={{ padding: 16 }}>
             {pendingFeedbacks.length === 0 ? <EmptyState icon={<ClipboardCheck size={24} color="#94a3b8" />} title="All feedback completed" subtitle="Great job! You're all caught up." /> : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {pendingFeedbacks.map(rec => (
-                  <div className="dm-card-row" key={rec._id} style={{ padding: "12px 14px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa" }}>
+                  <div className="dm-card-row" key={rec._id} style={{ padding: "12px 14px", border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 12, background: isDark ? "#0f172a" : "#fafafa" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                      <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{rec.title}</div>
-                      <span style={{ fontSize: 11, padding: "2px 8px", background: "#fef9c3", color: "#854d0e", borderRadius: 999, fontWeight: 600 }}>Needs Review</span>
+                      <div className="dm-soft-text" style={{ fontSize: 13.5, fontWeight: 600, color: isDark ? "#f1f5f9" : "#1e293b" }}>{rec.title}</div>
+                      <span style={{ fontSize: 11, padding: "2px 8px", background: isDark ? "rgba(234, 179, 8, 0.15)" : "#fef9c3", color: isDark ? "#eab308" : "#854d0e", borderRadius: 999, fontWeight: 700, border: isDark ? "1px solid #eab308" : "none" }}>Needs Review</span>
                     </div>
-                    <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#64748b" }}>Patient: {rec.patientId?.name || "Patient"}</div>
-                    <div className="dm-soft-muted" style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 2 }}>{new Date(rec.createdAt).toLocaleDateString()}</div>
+                    <div className="dm-soft-muted" style={{ fontSize: 12.5, color: isDark ? "#94a3b8" : "#64748b" }}>Patient: {rec.patientId?.name || "Patient"}</div>
+                    <div className="dm-soft-muted" style={{ fontSize: 11.5, color: isDark ? "#475569" : "#94a3b8", marginTop: 2 }}>{new Date(rec.createdAt).toLocaleDateString()}</div>
                   </div>
                 ))}
               </div>
@@ -187,10 +188,10 @@ function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
           <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Appointments</h1>
           <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Manage all your patient consultations.</p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, maxWidth: "100%", whiteSpace: "nowrap" }} className="dm-hide-scrollbar">
           {["all", "pending", "confirmed", "completed", "cancelled"].map(s => (
             <button className={filter === s ? "" : "dm-outline-btn"} key={s} onClick={() => setFilter(s)}
-              style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: filter === s ? 500 : 400, fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s", border: filter === s ? "none" : "1px solid #e2e8f0", background: filter === s ? "#1db585" : "#fff", color: filter === s ? "#fff" : "#475569" }}
+              style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: filter === s ? 500 : 400, fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s", border: filter === s ? "none" : "1px solid #e2e8f0", background: filter === s ? "#1db585" : "#fff", color: filter === s ? "#fff" : "#475569", flexShrink: 0 }}
             >
               {s.charAt(0).toUpperCase() + s.slice(1)}
             </button>
@@ -201,34 +202,49 @@ function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
       <SectionCard>
         {filtered.length === 0 ? <EmptyState icon={<Calendar size={24} color="#94a3b8" />} title="No appointments found" subtitle="Try changing your filters." /> : (
           <div style={{ padding: 16 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {filtered.map(apt => {
                 const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
+                const isDark = document.body.classList.contains("dm");
                 return (
-                  <div className="dm-card-row" key={apt._id} style={{ padding: "16px", border: "1px solid #f1f5f9", borderRadius: 12, background: "#fafafa", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-                    <div style={{ flex: 1, minWidth: 200 }}>
-                      <div className="dm-soft-text" style={{ fontSize: 15, fontWeight: 500, color: "#1e293b" }}>{apt.patientName}</div>
-                      <div className="dm-soft-muted" style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{new Date(apt.date).toLocaleDateString()} at {apt.time}</div>
-                      {apt.reason && <div className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8", marginTop: 4 }}>{apt.reason}</div>}
+                  <div className="dm-appointment-card" key={apt._id} style={{ padding: "16px", border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 20, background: isDark ? "#111827" : "#f8fafc", display: "flex", flexDirection: "column", gap: 16, position: "relative" }}>
+                    {/* Status Badge - Pinned to top right */}
+                    <div style={{ position: "absolute", top: 16, right: 16 }}>
+                      <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 10, fontWeight: 700, borderRadius: 999, background: isDark ? (apt.status === 'confirmed' ? 'rgba(29, 181, 133, 0.15)' : 'rgba(30, 41, 59, 0.5)') : bg, color: isDark ? (apt.status === 'confirmed' ? '#1db585' : '#94a3b8') : color, border: isDark ? `1px solid ${apt.status === 'confirmed' ? '#1db585' : '#334155'}` : 'none', textTransform: "uppercase", letterSpacing: "0.02em" }}>{apt.status}</span>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0, paddingRight: 80 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 13, flexShrink: 0 }}>{apt.patientName?.charAt(0)}</div>
+                        <div className="dm-soft-text" style={{ fontSize: 15, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{apt.patientName}</div>
+                      </div>
+                      
+                      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 16px", fontSize: 13, color: isDark ? "#94a3b8" : "#64748b" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}><Calendar size={14} /> {new Date(apt.date).toLocaleDateString()}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}><Clock size={14} /> {apt.time}</div>
+                      </div>
+                      
+                      {apt.reason && (
+                        <div className="dm-soft-muted" style={{ fontSize: 12.5, color: isDark ? "#94a3b8" : "#64748b", marginTop: 10, padding: "10px 14px", background: isDark ? "rgba(30,41,59,0.5)" : "#fff", borderRadius: 12, border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}` }}>
+                          <span style={{ fontWeight: 600, color: isDark ? "#475569" : "#64748b", fontSize: 11, textTransform: "uppercase", display: "block", marginBottom: 3 }}>Reason for visit</span>
+                          {apt.reason}
+                        </div>
+                      )}
                     </div>
                     
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
-                      <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 12, fontWeight: 600, borderRadius: 999, background: bg, color }}>{apt.status.toUpperCase()}</span>
-                      
-                      <div style={{ display: "flex", gap: 8 }}>
-                        {apt.status === "confirmed" && (
-                          <>
-                            <Btn onClick={() => onStartCall(apt)} size="sm">Start Call</Btn>
-                            <Btn onClick={() => window.confirm("Mark complete?") && onUpdateStatus(apt._id, "completed")} variant="outline" size="sm">Complete</Btn>
-                          </>
-                        )}
-                        {apt.status === "pending" && (
-                          <>
-                            <Btn onClick={() => onUpdateStatus(apt._id, "confirmed")} variant="success" size="sm">Confirm</Btn>
-                            <Btn onClick={() => onUpdateStatus(apt._id, "cancelled")} variant="danger" size="sm">Decline</Btn>
-                          </>
-                        )}
-                      </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                      {apt.status === "confirmed" && (
+                        <>
+                          <Btn onClick={() => onStartCall(apt)} style={{ flex: 2, fontWeight: 700, borderRadius: 10 }} size="sm">Start Consultation</Btn>
+                          <Btn onClick={() => onUpdateStatus(apt._id, "completed")} variant="outline" style={{ flex: 1, fontWeight: 600, borderRadius: 10 }} size="sm">Mark Done</Btn>
+                        </>
+                      )}
+                      {apt.status === "pending" && (
+                        <>
+                          <Btn onClick={() => onUpdateStatus(apt._id, "confirmed")} variant="success" style={{ flex: 2, fontWeight: 700, borderRadius: 10 }} size="sm">Accept Request</Btn>
+                          <Btn onClick={() => onUpdateStatus(apt._id, "cancelled")} variant="danger" style={{ flex: 1, fontWeight: 600, borderRadius: 10 }} size="sm">Decline</Btn>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -275,7 +291,7 @@ function PatientList({ appointments, doctorPatients }) {
       
       <SectionCard>
         {patientList.length === 0 ? <EmptyState icon={<Users size={24} color="#94a3b8" />} title="No patients yet" subtitle="Patients will appear here after booking." /> : (
-          <div style={{ padding: 24, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+          <div className="dm-grid-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, padding: 24 }}>
             {patientList.map((p, i) => (
               <div className="dm-mini-panel" key={i} style={{ padding: 20, background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -398,12 +414,17 @@ export default function DoctorDashboard() {
   const [incomingCall, setIncomingCall] = useState(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ open: false, id: null, status: null, title: "", message: "" });
+  const isMounted = useRef(true);
+  useEffect(() => { return () => { isMounted.current = false; }; }, []);
 
   const addToast = useCallback((t) => {
-    const id = Date.now();
+    const id = typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev, { id, ...t }]);
     if (t.autoClose) {
-      setTimeout(() => setToasts((prev) => prev.filter((n) => n.id !== id)), 5000);
+      setTimeout(() => {
+        if (isMounted.current) setToasts((prev) => prev.filter((n) => n.id !== id));
+      }, 5000);
     }
   }, []);
 
@@ -573,8 +594,20 @@ export default function DoctorDashboard() {
   };
 
   const updateStatus = async (appointmentId, status) => {
+    const messages = {
+      completed: { title: "Mark Completed", msg: "Mark this consultation as completed?" },
+      confirmed: { title: "Confirm Appointment", msg: "Confirm this appointment request?" },
+      cancelled: { title: "Decline Appointment", msg: "Are you sure you want to decline this request?" }
+    };
+    const m = messages[status] || { title: "Update Status", msg: `Update appointment status to ${status}?` };
+    setConfirmModal({ open: true, id: appointmentId, status, title: m.title, message: m.msg });
+  };
+
+  const handleConfirmStatus = async () => {
+    const { id, status } = confirmModal;
+    if (!id || !status) return;
     try {
-      await apiClient.patch(`/appointments/${appointmentId}`, { status });
+      await apiClient.patch(`/appointments/${id}`, { status });
       fetchDashboardData();
       addToast({ type: "success", title: "Status Updated", message: `Appointment ${status}`, autoClose: true });
     } catch {
@@ -609,6 +642,15 @@ export default function DoctorDashboard() {
   return (
     <div className="dm-page-shell" style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
       <ToastStack toasts={toasts} onDismiss={dismissToast} onAction={handleToastAction} />
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        onClose={() => setConfirmModal({ open: false, id: null, status: null, title: "", message: "" })}
+        onConfirm={handleConfirmStatus}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText="Confirm"
+        variant={confirmModal.status === "cancelled" ? "danger" : "primary"}
+      />
 
       {incomingCall && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}>

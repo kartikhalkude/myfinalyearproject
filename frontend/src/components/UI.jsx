@@ -144,8 +144,11 @@ const DM_CSS = `
   body.dm .dm-toast-title   { color:#f8fafc!important; }
   body.dm .dm-toast-message { color:#94a3b8!important; }
   body.dm .dm-toast-secondary { background:#1e293b!important; border-color:#334155!important; color:#cbd5e1!important; }
-  body.dm .dm-outline-btn   { background:#111827!important; border-color:#334155!important; color:#cbd5e1!important; }
-  body.dm .dm-outline-btn:hover { border-color:#475569!important; }
+  body.dm .dm-outline-btn   { background:#0f172a!important; border-color:#334155!important; color:#cbd5e1!important; }
+  body.dm .dm-outline-btn:hover { background:#1e293b!important; border-color:#475569!important; }
+  body.dm .dm-danger-btn    { background:#2d1a1a!important; border-color:#ef444466!important; color:#f87171!important; }
+  body.dm .dm-ghost-btn     { background:transparent!important; color:#94a3b8!important; }
+  body.dm .dm-ghost-btn:hover { background:#1e293b!important; color:#e2e8f0!important; }
   body.dm .dm-surface-card,
   body.dm .dm-list-surface,
   body.dm .dm-modal-surface,
@@ -190,6 +193,7 @@ const DM_CSS = `
   body.dm .dm-logout-btn    { color:#f87171!important; }
   body.dm .dm-logout-btn:hover { background:#2d1a1a!important; }
   body.dm .dm-section-card  { background:#111827!important; border-color:#1e293b!important; }
+  body.dm .dm-appointment-card { background:#111827!important; border-color:#1e293b!important; }
   body.dm input, body.dm select, body.dm textarea {
     background:#1a2236!important; border-color:#2d3e55!important; color:#e2e8f0!important;
   }
@@ -201,6 +205,16 @@ const DM_CSS = `
   body.dm td { border-color:#1e293b!important; }
   body.dm tr:hover td { background:#1a2236!important; }
 `;
+
+export function useDarkMode() {
+  const [dark, setDark] = useState(document.body.classList.contains("dm"));
+  useEffect(() => {
+    const handler = (e) => setDark(e.detail.dark);
+    window.addEventListener("darkmodechange", handler);
+    return () => window.removeEventListener("darkmodechange", handler);
+  }, []);
+  return dark;
+}
 
 function injectDM() {
   if (document.getElementById("dm-css")) return;
@@ -425,13 +439,13 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
   useEffect(() => { injectDM(); document.body.classList.toggle("dm", dark); }, []); // eslint-disable-line
   useEffect(() => { if (!gtBooted.current) { gtBooted.current = true; bootGoogleTranslate(); } }, []);
 
-  const toggleDark = () => setDark((prev) => {
-    const next = !prev;
+  const toggleDark = () => {
+    const next = !dark;
+    setDark(next);
     document.body.classList.toggle("dm", next);
     localStorage.setItem("dm", next ? "1" : "0");
-    window.dispatchEvent(new Event("dm-change"));
-    return next;
-  });
+    window.dispatchEvent(new CustomEvent("darkmodechange", { detail: { dark: next } }));
+  };
 
   const avatarColors = ["#1db585", "#3b82f6", "#8b5cf6", "#f59e0b", "#f43f5e"];
   const aColor = avatarColors[(user?.name?.charCodeAt(0) || 0) % avatarColors.length];
@@ -517,7 +531,7 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
               onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = dark ? "#94a3b8" : "#64748b"; } }}>
               <span style={{ width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
               <span style={{ flex: 1 }}>{item.label}</span>
-              {item.badge > 0 && <span style={{ background: isActive ? "#1db585" : "#ef4444", color: "#fff", fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 999, minWidth: 18, textAlign: "center" }}>{item.badge}</span>}
+              {item.badge > 0 && <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 999, minWidth: 18, textAlign: "center" }}>{item.badge}</span>}
               {item.tag && <span style={{ background: dark ? "#1e293b" : "#f0faf7", color: dark ? "#34d399" : "#0a7a57", fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 999, border: `1px solid ${dark ? "#1a5c42" : "#a3e7d4"}` }}>{item.tag}</span>}
             </button>
           );
@@ -564,12 +578,14 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
 ══════════════════════════════════════════════════════════════════ */
 export function PageHeader({ title, subtitle, action }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
-      <div>
+    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
+      <div style={{ minWidth: 200, flex: 1 }}>
         <h1 className='dm-page-title' style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em", marginBottom: 3 }}>{title}</h1>
-        {subtitle && <p style={{ fontSize: 13.5, color: "#64748b" }}>{subtitle}</p>}
+        {subtitle && <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b" }}>{subtitle}</p>}
       </div>
-      {action}
+      <div style={{ display: "flex", alignItems: "center" }}>
+        {action}
+      </div>
     </div>
   );
 }
@@ -607,8 +623,9 @@ export function Badge({ children, color = "slate" }) {
 export function Btn({ onClick, disabled, loading, variant="primary", size="md", children, style={} }) {
   const sizes = { sm:{padding:"6px 14px",fontSize:13}, md:{padding:"9px 18px",fontSize:14}, lg:{padding:"12px 28px",fontSize:15} };
   const variants = { primary:{background:"#1db585",color:"#fff",border:"none"}, outline:{background:"#fff",color:"#475569",border:"1.5px solid #e2e8f0"}, ghost:{background:"transparent",color:"#64748b",border:"none"}, danger:{background:"#fff",color:"#dc2626",border:"1.5px solid #fca5a5"}, success:{background:"#16a34a",color:"#fff",border:"none"} };
+  const cls = `dm-${variant}-btn`;
   return (
-    <button onClick={onClick} disabled={disabled||loading} style={{...(variants[variant]||variants.primary),...(sizes[size]||sizes.md),borderRadius:10,cursor:disabled||loading?"not-allowed":"pointer",opacity:disabled?0.5:1,fontFamily:"'DM Sans',sans-serif",fontWeight:500,display:"inline-flex",alignItems:"center",gap:7,transition:"all 0.15s",...style}}>
+    <button onClick={onClick} disabled={disabled||loading} className={cls} style={{...(variants[variant]||variants.primary),...(sizes[size]||sizes.md),borderRadius:10,cursor:disabled||loading?"not-allowed":"pointer",opacity:disabled?0.5:1,fontFamily:"'DM Sans',sans-serif",fontWeight:500,display:"inline-flex",alignItems:"center",gap:7,transition:"all 0.15s",...style}}>
       {loading && <div style={{width:14,height:14,border:"2px solid rgba(0,0,0,0.1)",borderTop:"2px solid currentColor",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>}
       {children}
     </button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import apiClient from "../services/apiClient";
 import websocketService from "../services/websocket";
-import { SectionCard, EmptyState, Loader, PageHeader } from "./UI";
+import { SectionCard, EmptyState, Loader, PageHeader, Btn, useDarkMode } from "./UI";
 import { X, Plus, Edit2, Trash2, FileText, AlertCircle, CheckCircle, Search, Activity, Thermometer, Heart, ClipboardList, Calendar, MessageSquare, ChevronRight, Bell } from "lucide-react";
 
 function EntitySearch({ entities, value, onChange, placeholder = "Search..." }) {
@@ -19,7 +19,7 @@ function EntitySearch({ entities, value, onChange, placeholder = "Search..." }) 
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const isDark = document.body.classList.contains("dm");
+  const dark = useDarkMode();
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <div
@@ -256,12 +256,16 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
     setViewingRecord(record);
     if (user?.role === "patient" && !record.readByPatient) {
       try {
-        // Update locally immediately for better UX
         setRecords(prev => prev.map(r => r._id === record._id ? { ...r, readByPatient: true } : r));
         setViewingRecord(prev => ({ ...prev, readByPatient: true }));
-
         await apiClient.patch(`/health-records/${record._id}/read`);
-        // Increased delay to ensure DB aggregation (stats) is fully synchronized
+        setTimeout(() => { if (onRefresh) onRefresh(); }, 800);
+      } catch (err) { console.error("Failed to mark as read"); }
+    } else if (user?.role === "doctor" && !record.readByDoctor) {
+      try {
+        setRecords(prev => prev.map(r => r._id === record._id ? { ...r, readByDoctor: true } : r));
+        setViewingRecord(prev => ({ ...prev, readByDoctor: true }));
+        await apiClient.patch(`/health-records/${record._id}/doctor-read`);
         setTimeout(() => { if (onRefresh) onRefresh(); }, 800);
       } catch (err) { console.error("Failed to mark as read"); }
     }
@@ -321,11 +325,9 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
     <div style={{ fontFamily: "'Inter', 'DM Sans', sans-serif" }}>
       <PageHeader title="Health Records" subtitle={user?.role === "doctor" ? "Manage and view patient health records securely." : "View your medical history and send reports to your doctor."}
         action={(
-          <button onClick={() => { setEditingRecord(null); setFormData(EMPTY_FORM); setShowModal(true); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "#10b981", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#059669"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(16, 185, 129, 0.3)"; }} onMouseLeave={e => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.2)"; }}>
-            <Plus size={18} />
-            {user?.role === "doctor" ? "New Record" : "Send Report"}
-          </button>
+          <Btn variant="primary" size="md" onClick={() => { setEditingRecord(null); setFormData(EMPTY_FORM); setShowModal(true); }} style={{ borderRadius: 12, fontWeight: 600 }}>
+            <Plus size={18} /> {user?.role === "doctor" ? "New Record" : "Send Report"}
+          </Btn>
         )}
       />
 
@@ -333,9 +335,9 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
       {success && <div className="dm-success-banner" style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 14, color: "#166534", boxShadow: "0 2px 8px rgba(22, 163, 74, 0.05)" }}>{success}</div>}
 
       <div className="dm-hide-scrollbar" style={{ display: "flex", overflowX: "auto", gap: 8, marginBottom: 24, paddingBottom: 4, whiteSpace: "nowrap" }}>
-        <button className={filterType === "all" ? "" : "dm-outline-btn"} onClick={() => setFilterType("all")} style={{ flexShrink: 0, padding: "8px 16px", fontSize: 13, fontWeight: filterType === "all" ? 600 : 500, background: filterType === "all" ? "#10b981" : "#fff", color: filterType === "all" ? "#fff" : "#475569", border: filterType === "all" ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}>All</button>
+        <button className={filterType === "all" ? "" : "dm-outline-btn"} onClick={() => setFilterType("all")} style={{ flexShrink: 0, padding: "8px 16px", fontSize: 13, fontWeight: filterType === "all" ? 600 : 500, background: filterType === "all" ? "#10b981" : (dark ? "#111827" : "#fff"), color: filterType === "all" ? "#fff" : (dark ? "#94a3b8" : "#475569"), border: filterType === "all" ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}>All</button>
         {RECORD_TYPES.map(rt => (
-          <button className={filterType === rt.value ? "" : "dm-outline-btn"} key={rt.value} onClick={() => setFilterType(rt.value)} style={{ flexShrink: 0, padding: "8px 16px", fontSize: 13, fontWeight: filterType === rt.value ? 600 : 500, background: filterType === rt.value ? "#10b981" : "#fff", color: filterType === rt.value ? "#fff" : "#475569", border: filterType === rt.value ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 6 }}>
+          <button className={filterType === rt.value ? "" : "dm-outline-btn"} key={rt.value} onClick={() => setFilterType(rt.value)} style={{ flexShrink: 0, padding: "8px 16px", fontSize: 13, fontWeight: filterType === rt.value ? 600 : 500, background: filterType === rt.value ? "#10b981" : (dark ? "#111827" : "#fff"), color: filterType === rt.value ? "#fff" : (dark ? "#94a3b8" : "#475569"), border: filterType === rt.value ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 6 }}>
             {filterType === rt.value ? <CheckCircle size={14} /> : null} {rt.label}
           </button>
         ))}
@@ -348,7 +350,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
           {filteredRecords.map((record, idx) => {
             const rType = RECORD_TYPES.find(t => t.value === (record.type || record.recordType)) || RECORD_TYPES[5];
             const severityStyle = SEVERITY_COLORS[record.severity || "normal"] || SEVERITY_COLORS.normal;
-            const isNew = user?.role === "patient" && !record.readByPatient;
+            const isNew = (user?.role === "patient" && !record.readByPatient) || (user?.role === "doctor" && !record.readByDoctor);
 
             return (
               <div

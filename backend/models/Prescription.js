@@ -15,7 +15,9 @@ const prescriptionSchema = new mongoose.Schema({
   status:        { type: String, enum: ['active', 'expired', 'cancelled'], default: 'active' },
   prescribedDate:{ type: Date, default: Date.now },
   validUntil:    { type: Date },
-  readByPatient: { type: Boolean, default: false }
+  readByPatient: { type: Boolean, default: false },
+  readByDoctor:  { type: Boolean, default: false },
+  refillRequested: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('Prescription', prescriptionSchema);

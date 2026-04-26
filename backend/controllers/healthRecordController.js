@@ -386,6 +386,37 @@ const markAsRead = async (req, res) => {
   }
 };
 
+const markAsReadByDoctor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const record = await HealthRecord.findById(id);
+    if (!record) return res.status(404).json({ error: 'Record not found' });
+    
+    // Only assigned doctor can mark as read
+    if (req.userRole !== 'doctor' || String(record.doctorId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    record.readByDoctor = true;
+    await record.save();
+    
+    const populated = await HealthRecord.findById(id)
+      .populate('doctorId', 'name specialization email')
+      .populate('patientId', 'name email');
+
+    // Notify all doctor's tabs
+    getIo().to(`user:${req.userId}`).emit('health-record:updated', {
+      type:   'updated',
+      record: populated,
+      initiatorId: req.userId
+    });
+
+    res.json({ success: true, record: populated });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to mark as read' });
+  }
+};
+
 module.exports = {
   getHealthRecords,
   getHealthRecordById,
@@ -396,5 +427,6 @@ module.exports = {
   getPatientRecords,
   addVitalSign,
   getHealthRecordFile,
-  markAsRead
+  markAsRead,
+  markAsReadByDoctor
 };

@@ -13,6 +13,7 @@ const healthRecordSchema = new mongoose.Schema({
   fileName:    { type: String }, // Original name of the uploaded file
   date:        { type: Date, default: Date.now },
   readByPatient: { type: Boolean, default: false },
+  readByDoctor:  { type: Boolean, default: false },
   // Legacy fields for backward compatibility
   recordType:  { type: String },
   description: { type: String },

@@ -5,16 +5,16 @@ import VideoCall from "../components/VideoCall";
 import apiClient from "../services/apiClient";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
-import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader, MobileHeader, ConfirmModal } from "../components/UI";
+import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader, MobileHeader, ConfirmModal, useDarkMode } from "../components/UI";
 import { 
   Home, Calendar, CalendarClock, Users, FileText, Pill, ClipboardList, 
   Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, MessageSquare,
-  ClipboardCheck
+  ClipboardCheck, Clock
 } from "lucide-react";
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
-function getNavItems(apptCount, feedbackCount) {
+function getNavItems(apptCount, feedbackCount, prescriptionCount) {
   return [
     { section: "Main" },
     { id: "overview",  label: "Overview",        icon: <Home size={18} /> },
@@ -24,7 +24,7 @@ function getNavItems(apptCount, feedbackCount) {
     { id: "patients",  label: "My Patients",     icon: <Users size={18} /> },
     { id: "reports",   label: "Reports",         icon: <FileText size={18} /> },
     { section: "Medical" },
-    { id: "prescriptions", label: "Prescriptions", icon: <Pill size={18} /> },
+    { id: "prescriptions", label: "Prescriptions", icon: <Pill size={18} />, badge: prescriptionCount },
     { id: "health-records", label: "Health Records", icon: <ClipboardList size={18} />, badge: feedbackCount },
   ];
 }
@@ -88,6 +88,7 @@ function Toast({ toast, onDismiss, onAction }) {
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
 function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdateStatus, onRefresh, onViewHealth }) {
+  const isDark = useDarkMode();
   const todayAppointments = appointments.filter(apt => new Date(apt.date).toDateString() === new Date().toDateString());
   const pendingAppointments = appointments.filter(apt => apt.status === "pending").slice(0, 5);
   const statusBadge = { confirmed: ["#dcfce7","#166534"], pending: ["#fef9c3","#854d0e"], completed: ["#dbeafe","#1e40af"], cancelled: ["#fee2e2","#991b1b"] };
@@ -122,7 +123,6 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {todayAppointments.map(apt => {
                   const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
-                  const isDark = document.body.classList.contains("dm");
                   return (
                     <div className="dm-appointment-preview" key={apt._id} style={{ padding: "14px", border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 14, background: isDark ? "#111827" : "#f8fafc" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -177,6 +177,7 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
 // ─── Appointment Management tab ──────────────────────────────────────────────────
 
 function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
+  const isDark = useDarkMode();
   const [filter, setFilter] = useState("all");
   const filtered = filter === "all" ? appointments : appointments.filter(a => a.status === filter);
   const statusBadge = { confirmed: ["#dcfce7","#166534"], pending: ["#fef9c3","#854d0e"], completed: ["#dbeafe","#1e40af"], cancelled: ["#fee2e2","#991b1b"] };
@@ -189,10 +190,10 @@ function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
           <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Manage all your patient consultations.</p>
         </div>
         <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, maxWidth: "100%", whiteSpace: "nowrap" }} className="dm-hide-scrollbar">
-          {["all", "pending", "confirmed", "completed", "cancelled"].map(s => (
-            <button className={filter === s ? "" : "dm-outline-btn"} key={s} onClick={() => setFilter(s)}
-              style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: filter === s ? 500 : 400, fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s", border: filter === s ? "none" : "1px solid #e2e8f0", background: filter === s ? "#1db585" : "#fff", color: filter === s ? "#fff" : "#475569", flexShrink: 0 }}
-            >
+            {["all", "pending", "confirmed", "completed", "cancelled"].map(s => (
+              <button className={filter === s ? "" : "dm-outline-btn"} key={s} onClick={() => setFilter(s)}
+                style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: filter === s ? 500 : 400, fontFamily: "inherit", cursor: "pointer", transition: "all 0.15s", border: filter === s ? "none" : "1px solid #e2e8f0", background: filter === s ? "#1db585" : (isDark ? "#111827" : "#fff"), color: filter === s ? "#fff" : (isDark ? "#94a3b8" : "#475569"), flexShrink: 0 }}
+              >
               {s.charAt(0).toUpperCase() + s.slice(1)}
             </button>
           ))}
@@ -205,7 +206,6 @@ function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {filtered.map(apt => {
                 const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
-                const isDark = document.body.classList.contains("dm");
                 return (
                   <div className="dm-appointment-card" key={apt._id} style={{ padding: "16px", border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 20, background: isDark ? "#111827" : "#f8fafc", display: "flex", flexDirection: "column", gap: 16, position: "relative" }}>
                     {/* Status Badge - Pinned to top right */}
@@ -686,8 +686,9 @@ export default function DoctorDashboard() {
       <Sidebar 
         user={user} 
         navItems={getNavItems(
-          appointments.filter((a) => a.status === "pending").length,
-          stats?.pendingFeedback || 0
+          stats?.pendingAppointments || appointments.filter((a) => a.status === "pending").length,
+          stats?.pendingFeedback || 0,
+          stats?.pendingPrescriptions || 0
         )} 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 

@@ -42,12 +42,14 @@ const getStats = async (req, res) => {
     const today    = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [appointmentCount, todayCount, patientIds, providedCount, pendingCount] = await Promise.all([
+    const [appointmentCount, todayCount, patientIds, providedCount, pendingCount, pendingAppointments, pendingPrescriptions] = await Promise.all([
       Appointment.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId) }),
       Appointment.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), date: { $gte: today, $lt: tomorrow } }),
       Appointment.distinct('patientId', { doctorId: new mongoose.Types.ObjectId(req.userId) }),
       HealthRecord.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), notes: { $ne: null, $ne: "" } }),
-      HealthRecord.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), $or: [{ notes: null }, { notes: "" }] })
+      HealthRecord.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), readByDoctor: { $ne: true } }),
+      Appointment.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), status: 'pending' }),
+      Prescription.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), $or: [{ readByDoctor: false }, { refillRequested: true }] })
     ]);
     
     res.json({
@@ -55,7 +57,9 @@ const getStats = async (req, res) => {
       todayAppointments: todayCount,
       totalPatients:     patientIds.length,
       feedbackProvided:  providedCount,
-      pendingFeedback:   pendingCount
+      pendingFeedback:   pendingCount,
+      pendingAppointments: pendingAppointments,
+      pendingPrescriptions: pendingPrescriptions
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch stats' });

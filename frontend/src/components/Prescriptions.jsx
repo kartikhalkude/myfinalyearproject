@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import apiClient from "../services/apiClient";
 import websocketService from "../services/websocket";
-import { SectionCard, Badge, EmptyState, Loader, PageHeader } from "./UI";
+import { SectionCard, Badge, EmptyState, Loader, PageHeader, Btn, useDarkMode } from "./UI";
 import { X, Pill, Search, Calendar, User, Clock, FileText, Edit2, Trash2, Plus, CheckCircle, AlertCircle, ChevronRight, Bell, ClipboardList } from "lucide-react";
 
 function PatientSearch({ patients, value, onChange }) {
@@ -69,7 +69,7 @@ const onBlur = e => { e.target.style.background = "#f8fafc"; e.target.style.bord
 
 export default function Prescriptions({ doctorPatients, onRefresh }) {
   const { user } = useAuth();
-  const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1" || document.body.classList.contains("dm"));
+  const dark = useDarkMode();
   const [prescriptions, setPrescriptions] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,20 +81,6 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [refillLoading, setRefillLoading] = useState({});
-
-  useEffect(() => {
-    const syncDark = () => setDark(localStorage.getItem("dm") === "1" || document.body.classList.contains("dm"));
-    syncDark();
-    const observer = new MutationObserver(syncDark);
-    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-    window.addEventListener("dm-change", syncDark);
-    window.addEventListener("storage", syncDark);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("dm-change", syncDark);
-      window.removeEventListener("storage", syncDark);
-    };
-  }, []);
 
   const extractArr = (data, keys) => { if (Array.isArray(data)) return data; for (const k of keys) { if (Array.isArray(data?.[k])) return data[k]; } return []; };
 
@@ -199,11 +185,9 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
     <div style={{ fontFamily: "'Inter', 'DM Sans', sans-serif" }}>
       <PageHeader title="Prescriptions" subtitle={user?.role === "doctor" ? "Manage prescriptions for your patients" : "View your prescriptions and request refills"}
         action={user?.role === "doctor" && (
-          <button onClick={() => { setEditing(null); setForm(EMPTY_FORM); setShowModal(true); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "#10b981", border: "none", borderRadius: 12, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#059669"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(16, 185, 129, 0.3)"; }} onMouseLeave={e => { e.currentTarget.style.background = "#10b981"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.2)"; }}>
-            <Plus size={18} />
-            New prescription
-          </button>
+          <Btn variant="primary" size="md" onClick={() => { setEditing(null); setForm(EMPTY_FORM); setShowModal(true); }} style={{ borderRadius: 12, fontWeight: 600 }}>
+            <Plus size={18} /> New Prescription
+          </Btn>
         )}
       />
 
@@ -231,7 +215,7 @@ export default function Prescriptions({ doctorPatients, onRefresh }) {
       {/* Filter tabs */}
       <div className="dm-hide-scrollbar" style={{ display: "flex", overflowX: "auto", gap: 8, marginBottom: 24, paddingBottom: 4, whiteSpace: "nowrap" }}>
         {["all", "active", "expired", "cancelled"].map(s => (
-          <button className={filter === s ? "" : "dm-outline-btn"} key={s} onClick={() => setFilter(s)} style={{ flexShrink: 0, padding: "8px 16px", fontSize: 13, fontWeight: filter === s ? 600 : 500, background: filter === s ? "#10b981" : "#fff", color: filter === s ? "#fff" : "#475569", border: filter === s ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}>
+          <button className={filter === s ? "" : "dm-outline-btn"} key={s} onClick={() => setFilter(s)} style={{ flexShrink: 0, padding: "8px 16px", fontSize: 13, fontWeight: filter === s ? 600 : 500, background: filter === s ? "#10b981" : (dark ? "#111827" : "#fff"), color: filter === s ? "#fff" : (dark ? "#94a3b8" : "#475569"), border: filter === s ? "1px solid #10b981" : "1px solid #e2e8f0", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s" }}>
             {s.charAt(0).toUpperCase() + s.slice(1)}
           </button>
         ))}

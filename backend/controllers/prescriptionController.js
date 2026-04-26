@@ -79,6 +79,7 @@ const createPrescription = async (req, res) => {
       advice,
       validUntil: validUntil || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days default
       status: 'active',
+      readByDoctor: true,
     }).save();
 
     const populated = await Prescription.findById(prescription._id)
@@ -202,6 +203,10 @@ const requestRefill = async (req, res) => {
     if (prescription.patientId.toString() !== req.userId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
+
+    prescription.refillRequested = true;
+    prescription.readByDoctor = false;
+    await prescription.save();
 
     const patient = await User.findById(req.userId).select('name');
     getIo().to(`user:${prescription.doctorId}`).emit('prescription:refill-request', {

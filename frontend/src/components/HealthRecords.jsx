@@ -19,7 +19,7 @@ function EntitySearch({ entities, value, onChange, placeholder = "Search..." }) 
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const dark = useDarkMode();
+  const isDark = useDarkMode();
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <div

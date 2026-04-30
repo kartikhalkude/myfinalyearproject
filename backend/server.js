@@ -14,6 +14,7 @@ const predictionRoutes = require('./routes/predictions');
 const healthRecordRoutes = require('./routes/healthRecords');
 const prescriptionRoutes = require('./routes/prescriptions');
 const statsRoutes = require('./routes/stats');
+const messageRoutes = require('./routes/messages');
 
 // ─── CORS origins ─────────────────────────────────────────────────────────────
 const parseClientUrl = () => {
@@ -52,6 +53,7 @@ app.use('/api', predictionRoutes);
 app.use('/api/health-records', healthRecordRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/messages', messageRoutes);
 
 // ─── Global error handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "../services/apiClient";
+import websocketService from "../services/websocket";
 import { SectionCard, Badge, Btn, EmptyState, Loader } from "./UI";
 import { Stethoscope } from "lucide-react";
 
@@ -13,10 +14,44 @@ export default function AppointmentBooking({ onBookingComplete }) {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [fetchingSlots, setFetchingSlots] = useState(false);
 
   useEffect(() => {
     apiClient.get("/doctors").then(r => setDoctors(r.data)).catch(() => setError("Failed to load doctors.")).finally(() => setFetching(false));
   }, []);
+
+  useEffect(() => {
+    if (selected && form.date) {
+      setFetchingSlots(true);
+      apiClient.get(`/appointments/booked-slots?doctorId=${selected._id}&date=${form.date}`)
+        .then(r => {
+          setBookedSlots(r.data);
+          setForm(p => r.data.includes(p.time) ? { ...p, time: "" } : p);
+        })
+        .catch(() => setBookedSlots([]))
+        .finally(() => setFetchingSlots(false));
+    } else {
+      setBookedSlots([]);
+    }
+  }, [selected, form.date]);
+
+  useEffect(() => {
+    const handleSlotBooked = (data) => {
+      if (selected && data.doctorId === selected._id && data.date === form.date) {
+        setBookedSlots(prev => [...prev, data.time]);
+        setForm(p => {
+          if (p.time === data.time) {
+            setError("The slot you were looking at was just booked by someone else.");
+            return { ...p, time: "" };
+          }
+          return p;
+        });
+      }
+    };
+    websocketService.onSlotBooked(handleSlotBooked);
+    return () => websocketService.offSlotBooked(handleSlotBooked);
+  }, [selected, form.date]);
 
   const minDate = () => {
     const d = new Date();
@@ -128,14 +163,15 @@ export default function AppointmentBooking({ onBookingComplete }) {
                 </div>
 
                 <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: document.body.classList.contains("dm") ? "#94a3b8" : "#475569", marginBottom: 8 }}>Time slot *</label>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: document.body.classList.contains("dm") ? "#94a3b8" : "#475569", marginBottom: 8 }}>Time slot * {fetchingSlots && <span style={{ fontSize: 11, color: "#1db585" }}>(Checking availability...)</span>}</label>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))", gap: 6 }}>
                     {TIME_SLOTS.map(slot => {
                       const isSelected = form.time === slot;
+                      const isBooked = bookedSlots.includes(slot);
                       const isDark = document.body.classList.contains("dm");
                       return (
-                        <button key={slot} type="button" onClick={() => setForm(p => ({ ...p, time: slot }))}
-                          style={{ padding: "8px 2px", fontSize: 12, fontFamily: "inherit", fontWeight: isSelected ? 600 : 400, textAlign: "center", border: isSelected ? "2px solid #1db585" : `1.5px solid ${isDark ? "#1e293b" : "#e2e8f0"}`, borderRadius: 8, cursor: "pointer", background: isSelected ? (isDark ? "rgba(29, 181, 133, 0.1)" : "#f0faf7") : (isDark ? "#0f172a" : "#fff"), color: isSelected ? "#1db585" : (isDark ? "#64748b" : "#475569"), transition: "all 0.15s" }}>
+                        <button key={slot} type="button" onClick={() => !isBooked && setForm(p => ({ ...p, time: slot }))} disabled={isBooked}
+                          style={{ padding: "8px 2px", fontSize: 12, fontFamily: "inherit", fontWeight: isSelected ? 600 : 400, textAlign: "center", border: isSelected ? "2px solid #1db585" : `1.5px solid ${isDark ? "#1e293b" : "#e2e8f0"}`, borderRadius: 8, cursor: isBooked ? "not-allowed" : "pointer", background: isBooked ? (isDark ? "#1e293b" : "#f1f5f9") : isSelected ? (isDark ? "rgba(29, 181, 133, 0.1)" : "#f0faf7") : (isDark ? "#0f172a" : "#fff"), color: isBooked ? (isDark ? "#475569" : "#94a3b8") : isSelected ? "#1db585" : (isDark ? "#64748b" : "#475569"), transition: "all 0.15s", opacity: isBooked ? 0.6 : 1, textDecoration: isBooked ? "line-through" : "none" }}>
                           {slot}
                         </button>
                       );

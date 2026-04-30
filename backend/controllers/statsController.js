@@ -6,11 +6,12 @@ const PneumoniaPrediction    = require('../models/PneumoniaPrediction');
 const BrainTumorPrediction   = require('../models/BrainTumorPrediction');
 const HealthRecord           = require('../models/HealthRecord');
 const Prescription         = require('../models/Prescription');
+const Message              = require('../models/Message');
 
 const getStats = async (req, res) => {
   try {
     if (req.userRole === 'patient') {
-      const [appointmentCount, diabetesCount, heartCount, pneumoniaCount, tumorCount, upcomingCount, unreadRecords, unreadPrescriptions] = await Promise.all([
+      const [appointmentCount, diabetesCount, heartCount, pneumoniaCount, tumorCount, upcomingCount, unreadRecords, unreadPrescriptions, unreadMessages] = await Promise.all([
         Appointment.countDocuments({ patientId: new mongoose.Types.ObjectId(req.userId) }),
         DiabetesPrediction.countDocuments({ userId: new mongoose.Types.ObjectId(req.userId) }),
         HeartDiseasePrediction.countDocuments({ userId: new mongoose.Types.ObjectId(req.userId) }),
@@ -22,7 +23,8 @@ const getStats = async (req, res) => {
           date: { $gte: new Date() }
         }),
         HealthRecord.countDocuments({ patientId: new mongoose.Types.ObjectId(req.userId), readByPatient: { $ne: true } }),
-        Prescription.countDocuments({ patientId: new mongoose.Types.ObjectId(req.userId), readByPatient: { $ne: true } })
+        Prescription.countDocuments({ patientId: new mongoose.Types.ObjectId(req.userId), readByPatient: { $ne: true } }),
+        Message.countDocuments({ receiver: new mongoose.Types.ObjectId(req.userId), isRead: false })
       ]);
 
       return res.json({
@@ -34,7 +36,8 @@ const getStats = async (req, res) => {
         totalTumorPredictions:   tumorCount,
         upcomingAppointments:    upcomingCount,
         unreadHealthRecords:     unreadRecords,
-        unreadPrescriptions:     unreadPrescriptions
+        unreadPrescriptions:     unreadPrescriptions,
+        unreadMessages:          unreadMessages
       });
     }
 
@@ -42,14 +45,15 @@ const getStats = async (req, res) => {
     const today    = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [appointmentCount, todayCount, patientIds, providedCount, pendingCount, pendingAppointments, pendingPrescriptions] = await Promise.all([
+    const [appointmentCount, todayCount, patientIds, providedCount, pendingCount, pendingAppointments, pendingPrescriptions, unreadMessages] = await Promise.all([
       Appointment.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId) }),
       Appointment.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), date: { $gte: today, $lt: tomorrow } }),
       Appointment.distinct('patientId', { doctorId: new mongoose.Types.ObjectId(req.userId) }),
       HealthRecord.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), notes: { $ne: null, $ne: "" } }),
       HealthRecord.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), readByDoctor: { $ne: true } }),
       Appointment.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), status: 'pending' }),
-      Prescription.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), $or: [{ readByDoctor: false }, { refillRequested: true }] })
+      Prescription.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), $or: [{ readByDoctor: false }, { refillRequested: true }] }),
+      Message.countDocuments({ receiver: new mongoose.Types.ObjectId(req.userId), isRead: false })
     ]);
     
     res.json({
@@ -59,7 +63,8 @@ const getStats = async (req, res) => {
       feedbackProvided:  providedCount,
       pendingFeedback:   pendingCount,
       pendingAppointments: pendingAppointments,
-      pendingPrescriptions: pendingPrescriptions
+      pendingPrescriptions: pendingPrescriptions,
+      unreadMessages: unreadMessages
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch stats' });

@@ -176,6 +176,18 @@ class WebSocketService {
   offHealthRecordCreated(cb) { this.off('health-record:created', cb); }
   offHealthRecordUpdated(cb) { this.off('health-record:updated', cb); }
   offHealthRecordDeleted(cb) { this.off('health-record:deleted', cb); }
+  
+  onChatMessage(cb)          { return this.on('chat:message', cb); }
+  offChatMessage(cb)         { this.off('chat:message', cb); }
+  
+  onSlotBooked(cb)           { return this.on('slot:booked', cb); }
+  offSlotBooked(cb)          { this.off('slot:booked', cb); }
+  
+  onChatCleared(cb)          { return this.on('chat:cleared', cb); }
+  offChatCleared(cb)         { this.off('chat:cleared', cb); }
+
+  onAppointmentDeleted(cb)   { return this.on('appointment:deleted', cb); }
+  offAppointmentDeleted(cb)  { this.off('appointment:deleted', cb); }
 }
 
 export default new WebSocketService();

@@ -23,6 +23,11 @@ const broadcastAppointmentUpdate = async (appointment, eventType, initiatorId = 
     io.to(`user:${patientId}`).emit(socketEvent, updateData);
     io.to(`user:${doctorId}`).emit(socketEvent, updateData);
 
+    // Global broadcast to update availability UI for anyone looking at this doctor's slots
+    if (eventType === 'created') {
+      io.emit('slot:booked', { doctorId, date: populatedApt.date, time: populatedApt.time });
+    }
+
     console.log(`✓ Appointment update broadcasted to room user:${patientId} and user:${doctorId}: ${socketEvent}`);
   } catch (error) {
     console.error('Error broadcasting appointment update:', error);

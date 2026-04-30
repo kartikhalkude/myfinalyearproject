@@ -10,12 +10,28 @@ import AppointmentBooking from "../components/AppointmentBooking";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
 import BrainTumorPrediction from "../components/BrainTumorPrediction";
-import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, MobileHeader, ConfirmModal } from "../components/UI";
+import Chat from "../components/Chat";
+import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, MobileHeader, ConfirmModal, Btn } from "../components/UI";
 import { 
   Home, Brain, HeartPulse, Stethoscope, CalendarPlus, Calendar, 
   ClipboardList, Pill, Smile, Phone, CheckCircle, XCircle, Info, X, Check, Clock,
-  Droplet, Footprints, Moon, Salad, MessageSquare
+  Droplet, Footprints, Moon, Salad, MessageSquare, Trash2
 } from "lucide-react";
+
+// ─── Helper Functions ─────────────────────────────────────────────────────────
+
+const parseAppointmentDateTime = (dateStr, timeStr) => {
+  const d = new Date(dateStr);
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return d;
+  let hours = parseInt(match[1]);
+  const mins = parseInt(match[2]);
+  const isPM = match[3].toUpperCase() === "PM";
+  if (isPM && hours < 12) hours += 12;
+  if (!isPM && hours === 12) hours = 0;
+  d.setHours(hours, mins, 0, 0);
+  return d;
+};
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
@@ -59,11 +75,12 @@ function Toast({ toast, onDismiss, onAction }) {
       case 'error': return <XCircle size={16} color="#dc2626" />;
       case 'prescription': return <Pill size={16} color="#7c3aed" />;
       case 'record': return <ClipboardList size={16} color="#0891b2" />;
+      case 'chat': return <MessageSquare size={16} color="#3b82f6" />;
       default: return <Info size={16} color="#64748b" />;
     }
   };
 
-  const typeColor = { call: "#16a34a", appointment: "#2563eb", success: "#16a34a", error: "#dc2626", prescription: "#7c3aed", record: "#0891b2", info: "#64748b" };
+  const typeColor = { call: "#16a34a", appointment: "#2563eb", success: "#16a34a", error: "#dc2626", prescription: "#7c3aed", record: "#0891b2", chat: "#3b82f6", info: "#64748b" };
   
   return (
     <div className="dm-toast" style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "14px 16px", boxShadow: "0 8px 24px rgba(15,23,42,0.12)", transition: "all 0.25s", opacity: exit ? 0 : 1, transform: exit ? "translateX(24px)" : "translateX(0)", animation: "slideRight 0.25s ease" }}>
@@ -95,7 +112,7 @@ function Toast({ toast, onDismiss, onAction }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
-function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh }) {
+function Overview({ stats, appointments, onStartCall, onCancelAppt, onMessage, onRefresh }) {
   const upcoming = appointments.filter(a => new Date(a.date) >= new Date() && a.status !== "cancelled").slice(0, 4);
   const statusBadge = { confirmed: ["#dcfce7","#166534"], pending: ["#fef9c3","#854d0e"], completed: ["#dbeafe","#1e40af"], cancelled: ["#fee2e2","#991b1b"] };
 
@@ -116,7 +133,7 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
         <StatCard label="Total appointments" value={stats?.totalAppointments || 0} sub="All time" icon={<Calendar size={18} color="#1db585" />} />
         <StatCard label="Upcoming" value={stats?.upcomingAppointments || 0} sub="Scheduled" color="#3b82f6" icon={<CalendarPlus size={18} color="#3b82f6" />} />
         <StatCard label="Health checks" value={stats?.totalPredictions || 0} sub="AI screenings" color="#8b5cf6" icon={<Brain size={18} color="#8b5cf6" />} />
-        <StatCard label="New Medical Data" value={(stats?.unreadHealthRecords || 0) + (stats?.unreadPrescriptions || 0)} sub="Unread items" color="#10b981" icon={<MessageSquare size={18} color="#10b981" />} />
+        <StatCard label="Unread Messages" value={stats?.unreadMessages || 0} sub="New chats" color="#f59e0b" icon={<MessageSquare size={18} color="#f59e0b" />} />
       </div>
       <div className="dm-grid-two">
         {/* Upcoming appointments */}
@@ -143,7 +160,8 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
                       </div>
                       {apt.status === "confirmed" && (
                         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                          <button onClick={() => onStartCall(apt)} style={{ flex: 2, padding: "8px", fontSize: 12.5, fontWeight: 600, background: "#1db585", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Join call</button>
+                          <button onClick={() => onStartCall(apt)} style={{ flex: 1, padding: "8px", fontSize: 12.5, fontWeight: 600, background: "#1db585", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Join call</button>
+                          <button onClick={() => onMessage({ appointmentId: apt._id, id: apt.doctorId?._id || apt.doctorId, name: apt.doctorName })} style={{ flex: 1, padding: "8px", fontSize: 12.5, fontWeight: 600, background: "#3b82f6", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Message</button>
                           <button onClick={() => onCancelAppt(apt._id)} style={{ flex: 1, padding: "8px", fontSize: 12.5, background: isDark ? "#1e293b" : "#fff", color: "#ef4444", border: `1px solid ${isDark ? "#334155" : "#fca5a5"}`, borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
                         </div>
                       )}
@@ -187,7 +205,7 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onRefresh })
 
 // ─── Appointment history tab ──────────────────────────────────────────────────
 
-function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh }) {
+function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onMessage, onRefresh, onDelete }) {
   const statusStyle = { confirmed: ["#dcfce7","#166534"], pending: ["#fef9c3","#854d0e"], completed: ["#dbeafe","#1e40af"], cancelled: ["#fee2e2","#991b1b"] };
   return (
     <div>
@@ -210,8 +228,12 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
                 const isDark = document.body.classList.contains("dm");
                 return (
                   <div className="dm-appointment-card" key={apt._id} style={{ padding: "16px", background: isDark ? "#111827" : "#f8fafc", border: `1px solid ${isDark ? "#1e293b" : "#e2e8f0"}`, borderRadius: 16, display: "flex", flexDirection: "column", gap: 16, position: "relative" }}>
-                    {/* Status Badge - Pinned to top right */}
-                    <div style={{ position: "absolute", top: 16, right: 16 }}>
+                    <div style={{ position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                      {(apt.status === "completed" || apt.status === "cancelled") && (
+                        <button onClick={() => onDelete(apt._id)} style={{ padding: "4px", background: "transparent", color: isDark ? "#ef4444" : "#dc2626", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Delete Record">
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                       <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 10, fontWeight: 700, borderRadius: 999, background: isDark ? (apt.status === 'confirmed' ? 'rgba(29, 181, 133, 0.15)' : 'rgba(30, 41, 59, 0.5)') : bg, color: isDark ? (apt.status === 'confirmed' ? '#1db585' : '#94a3b8') : color, border: isDark ? `1px solid ${apt.status === 'confirmed' ? '#1db585' : '#334155'}` : 'none', textTransform: "uppercase", letterSpacing: "0.02em" }}>{apt.status}</span>
                     </div>
 
@@ -219,6 +241,11 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                         <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 12, flexShrink: 0 }}>{apt.doctorName?.charAt(0)}</div>
                         <div className="dm-soft-text" style={{ fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{apt.doctorName}</div>
+                        {apt.unreadCount > 0 && (
+                          <div style={{ padding: "2px 8px", background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 10, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                            <MessageSquare size={10} /> {apt.unreadCount} New
+                          </div>
+                        )}
                       </div>
                       
                       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 16px", fontSize: 12.5, color: isDark ? "#94a3b8" : "#64748b" }}>
@@ -235,11 +262,12 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
                     <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                       {apt.status === "confirmed" && (
                         <>
-                          <button onClick={() => onStartCall(apt)} style={{ flex: 2, padding: "10px", fontSize: 13, fontWeight: 700, background: "#1db585", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", transition: "transform 0.1s" }} onMouseDown={e => e.currentTarget.style.transform = "scale(0.98)"} onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}>Join call</button>
+                          <button onClick={() => onStartCall(apt)} style={{ flex: 1, padding: "10px", fontSize: 13, fontWeight: 700, background: "#1db585", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", transition: "transform 0.1s" }} onMouseDown={e => e.currentTarget.style.transform = "scale(0.98)"} onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}>Join call</button>
+                          <button onClick={() => onMessage({ appointmentId: apt._id, id: apt.doctorId?._id || apt.doctorId, name: apt.doctorName })} style={{ flex: 1, padding: "10px", fontSize: 13, fontWeight: 700, background: "#3b82f6", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", transition: "transform 0.1s" }} onMouseDown={e => e.currentTarget.style.transform = "scale(0.98)"} onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}>Message</button>
                           <button onClick={() => onCancelAppt(apt._id)} style={{ flex: 1, padding: "10px", fontSize: 13, fontWeight: 500, background: isDark ? "#1e293b" : "#fff", color: "#ef4444", border: `1px solid ${isDark ? "#334155" : "#fca5a5"}`, borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
                         </>
                       )}
-                      {(apt.status === "pending") && (
+                      {apt.status === "pending" && (
                         <button onClick={() => onCancelAppt(apt._id)} style={{ flex: 1, padding: "10px", fontSize: 13, fontWeight: 500, background: isDark ? "#1e293b" : "#fff", color: "#ef4444", border: `1px solid ${isDark ? "#334155" : "#fca5a5"}`, borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}>Cancel Request</button>
                       )}
                     </div>
@@ -254,8 +282,6 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onRefresh
   );
 }
 
-
-
 // ─── Main dashboard ───────────────────────────────────────────────────────────
 
 export default function PatientDashboard() {
@@ -265,8 +291,12 @@ export default function PatientDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
+  const [activeChat, setActiveChat] = useState(null);
+  const activeChatRef = useRef(null);
+  useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
   const activeCallRef = useRef(null);
   useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
+  const remindedAppts = useRef(new Set());
   const [toasts, setToasts] = useState([]);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState({ open: false, id: null });
@@ -289,6 +319,7 @@ export default function PatientDashboard() {
     else if (type === "decline" && data?.callData) websocketService.emit("call:reject", { appointmentId: data.callData.appointmentId, userId: user.id });
     else if (type === "view-prescriptions") setTab("prescriptions");
     else if (type === "view-health") setTab("health");
+    else if (type === "reply") setActiveChat({ appointmentId: data.appointmentId, id: data.senderId, name: data.senderName });
   }, [user?.id]);
 
   const fetchData = useCallback(async () => {
@@ -302,6 +333,16 @@ export default function PatientDashboard() {
     finally { setLoading(false); }
   }, [addToast]);
 
+  const deleteAppointment = async (id) => {
+    try {
+      await apiClient.delete(`/appointments/${id}`);
+      fetchData();
+      addToast({ type: "success", title: "Appointment Deleted", message: "The completed appointment was removed.", autoClose: true });
+    } catch (err) {
+      addToast({ type: "error", title: "Failed to delete", message: "Could not remove appointment.", autoClose: true });
+    }
+  };
+
   useEffect(() => {
     fetchData();
     if (user?.id) websocketService.notifyOnline(user.id);
@@ -311,11 +352,10 @@ export default function PatientDashboard() {
       addToast({ type: "appointment", title: "Appointment updated", message: `Status: ${d.appointment?.status}`, autoClose: true }); 
     };
     const onCall = d => {
-      // Don't show if already in a call for this specific appointment
       if (activeCallRef.current?.appointmentId?.toString() === d.appointmentId?.toString()) {
         return;
       }
-      if (activeCallRef.current) return; // Don't show if in another call already
+      if (activeCallRef.current) return;
       const apt = apptRef.current.find(a => a._id === d.appointmentId);
       addToast({ type: "call", title: "Incoming call", message: `${d.callerName} is calling`, autoClose: false, actions: [{ label: "Accept", type: "accept", primary: true, data: { appointment: apt, callData: d } }, { label: "Decline", type: "decline", data: { callData: d } }] });
     };
@@ -349,14 +389,45 @@ export default function PatientDashboard() {
       if (d?.initiatorId === user?.id) return;
       addToast({ type: "record", title: "Health record removed", autoClose: true });
     };
+    const onChatMessage = d => {
+      fetchData();
+      if (activeChatRef.current?.appointmentId?.toString() === d.appointmentId?.toString()) return;
+      addToast({ type: "chat", title: `New message from ${d.senderName}`, message: d.content.length > 40 ? d.content.substring(0, 40) + '...' : d.content, autoClose: true, actions: [{ label: "Reply", type: "reply", primary: true, data: { appointmentId: d.appointmentId, senderId: d.sender, senderName: d.senderName } }] });
+    };
     websocketService.onAppointmentUpdated(onApptUpdate);
     websocketService.on("call:incoming", onCall);
     websocketService.onPrescriptionCreated(onRxCreated); websocketService.onPrescriptionUpdated(onRxUpdated); websocketService.onPrescriptionDeleted(onRxDeleted);
     websocketService.onHealthRecordCreated(onRecCreated); websocketService.onHealthRecordUpdated(onRecUpdated); websocketService.onHealthRecordDeleted(onRecDeleted);
+    websocketService.onChatMessage(onChatMessage);
+
+    const interval = setInterval(() => fetchData(), 30000);
+
+    const checkUpcomingInterval = setInterval(() => {
+      const now = new Date();
+      appointments.forEach(apt => {
+        if (apt.status === "confirmed") {
+          const aptDate = parseAppointmentDateTime(apt.date, apt.time);
+          const diffMs = aptDate - now;
+          if (diffMs > 0 && diffMs <= 5 * 60 * 1000 && !remindedAppts.current.has(apt._id)) {
+            remindedAppts.current.add(apt._id);
+            addToast({
+              type: "appointment",
+              title: "Upcoming Appointment",
+              message: `Your appointment with ${apt.doctorName} starts in 5 minutes!`,
+              autoClose: false
+            });
+          }
+        }
+      });
+    }, 60000);
+
     return () => {
+      clearInterval(interval);
+      clearInterval(checkUpcomingInterval);
       websocketService.off("appointment:updated", onApptUpdate); websocketService.off("call:incoming", onCall);
       websocketService.offPrescriptionCreated(onRxCreated); websocketService.offPrescriptionUpdated(onRxUpdated); websocketService.offPrescriptionDeleted(onRxDeleted);
       websocketService.offHealthRecordCreated(onRecCreated); websocketService.offHealthRecordUpdated(onRecUpdated); websocketService.offHealthRecordDeleted(onRecDeleted);
+      websocketService.offChatMessage(onChatMessage);
     };
   }, [fetchData, addToast]);
 
@@ -382,14 +453,14 @@ export default function PatientDashboard() {
 
   const renderTab = () => {
     switch (tab) {
-      case "overview":    return <Overview stats={stats} appointments={appointments} onStartCall={startCall} onCancelAppt={cancelAppt} onRefresh={() => fetchData()} />;
+      case "overview":    return <Overview stats={stats} appointments={appointments} onStartCall={startCall} onCancelAppt={cancelAppt} onMessage={setActiveChat} onRefresh={() => fetchData()} />;
       case "diabetes":    return <DiabetesPrediction />;
       case "heart":       return <HeartDiseasePrediction />;
       case "pneumonia":   return <PneumoniaPrediction />;
       case "tumor":       return <BrainTumorPrediction />;
 
       case "book":        return <AppointmentBooking onBookingComplete={() => { fetchData(); addToast({ type: "success", title: "Appointment booked", message: "Doctor will confirm within 24 hours.", autoClose: true }); }} />;
-      case "history":     return <AppointmentHistory appointments={appointments} onStartCall={startCall} onCancelAppt={cancelAppt} onRefresh={() => fetchData()} />;
+      case "history":     return <AppointmentHistory appointments={appointments} onStartCall={startCall} onCancelAppt={cancelAppt} onMessage={setActiveChat} onRefresh={() => fetchData()} onDelete={deleteAppointment} />;
       case "health":      return <HealthRecords onRefresh={fetchData} />;
       case "prescriptions": return <Prescriptions onRefresh={fetchData} />;
 
@@ -400,6 +471,7 @@ export default function PatientDashboard() {
   return (
     <div className="dm-page-shell" style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
       {activeCall && <VideoCall {...activeCall} onCallEnd={() => { setActiveCall(null); fetchData(); addToast({ type: "info", title: "Call ended", autoClose: true }); }} />}
+      {activeChat && <Chat appointmentId={activeChat.appointmentId} receiverId={activeChat.id} receiverName={activeChat.name} onClose={() => setActiveChat(null)} onRead={() => fetchData()} />}
       <ToastStack toasts={toasts} onDismiss={dismissToast} onAction={handleToastAction} />
       <ConfirmModal 
         isOpen={confirmCancel.open} 

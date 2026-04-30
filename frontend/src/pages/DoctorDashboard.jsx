@@ -5,12 +5,28 @@ import VideoCall from "../components/VideoCall";
 import apiClient from "../services/apiClient";
 import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
+import Chat from "../components/Chat";
 import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHeader, MobileHeader, ConfirmModal, useDarkMode } from "../components/UI";
 import { 
   Home, Calendar, CalendarClock, Users, FileText, Pill, ClipboardList, 
   Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, MessageSquare,
-  ClipboardCheck, Clock
+  ClipboardCheck, Clock, Trash2
 } from "lucide-react";
+
+// ─── Helper Functions ─────────────────────────────────────────────────────────
+
+const parseAppointmentDateTime = (dateStr, timeStr) => {
+  const d = new Date(dateStr);
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return d;
+  let hours = parseInt(match[1]);
+  const mins = parseInt(match[2]);
+  const isPM = match[3].toUpperCase() === "PM";
+  if (isPM && hours < 12) hours += 12;
+  if (!isPM && hours === 12) hours = 0;
+  d.setHours(hours, mins, 0, 0);
+  return d;
+};
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
@@ -51,11 +67,12 @@ function Toast({ toast, onDismiss, onAction }) {
       case 'error': return <XCircle size={16} color="#dc2626" />;
       case 'prescription': return <Pill size={16} color="#7c3aed" />;
       case 'record': return <ClipboardList size={16} color="#0891b2" />;
+      case 'chat': return <MessageSquare size={16} color="#3b82f6" />;
       default: return <Info size={16} color="#64748b" />;
     }
   };
 
-  const typeColor = { call: "#16a34a", appointment: "#2563eb", success: "#16a34a", error: "#dc2626", prescription: "#7c3aed", record: "#0891b2", info: "#64748b" };
+  const typeColor = { call: "#16a34a", appointment: "#2563eb", success: "#16a34a", error: "#dc2626", prescription: "#7c3aed", record: "#0891b2", chat: "#3b82f6", info: "#64748b" };
   
   return (
     <div className="dm-toast" style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "14px 16px", boxShadow: "0 8px 24px rgba(15,23,42,0.12)", transition: "all 0.25s", opacity: exit ? 0 : 1, transform: exit ? "translateX(24px)" : "translateX(0)", animation: "slideRight 0.25s ease" }}>
@@ -87,7 +104,7 @@ function Toast({ toast, onDismiss, onAction }) {
 
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
-function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdateStatus, onRefresh, onViewHealth }) {
+function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdateStatus, onMessage, onRefresh, onViewHealth }) {
   const isDark = useDarkMode();
   const todayAppointments = appointments.filter(apt => new Date(apt.date).toDateString() === new Date().toDateString());
   const pendingAppointments = appointments.filter(apt => apt.status === "pending").slice(0, 5);
@@ -107,9 +124,9 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
       <div className="dm-grid-stats" style={{ marginBottom: 24 }}>
         <StatCard label="Today's Appointments" value={stats?.todayAppointments || 0} icon={<CalendarDays size={18} color="#1db585" />} color="#1db585" />
         <StatCard label="Total Patients" value={stats?.totalPatients || 0} icon={<Users size={18} color="#3b82f6" />} color="#3b82f6" />
+        <StatCard label="Unread Messages" value={stats?.unreadMessages || 0} icon={<MessageSquare size={18} color="#f59e0b" />} color="#f59e0b" />
         <StatCard label="Pending Feedback" value={stats?.pendingFeedback || 0} icon={<ClipboardList size={18} color="#eab308" />} color="#eab308" />
         <StatCard label="Total Appointments" value={stats?.totalAppointments || 0} icon={<Calendar size={18} color="#8b5cf6" />} color="#8b5cf6" />
-        <StatCard label="Feedback Given" value={stats?.feedbackProvided || 0} icon={<MessageSquare size={18} color="#10b981" />} color="#10b981" />
       </div>
       
       <div className="dm-grid-two">
@@ -135,6 +152,7 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
                       {apt.status === "confirmed" && (
                         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                           <Btn onClick={() => onStartCall(apt)} style={{ flex: 2, fontWeight: 600 }} size="sm">Start Call</Btn>
+                          <Btn onClick={() => onMessage({ appointmentId: apt._id, id: apt.patientId?._id || apt.patientId, name: apt.patientName })} style={{ flex: 1, fontWeight: 600, background: "#3b82f6" }} size="sm">Message</Btn>
                           <Btn onClick={() => onUpdateStatus(apt._id, "completed")} variant="outline" style={{ flex: 1, fontWeight: 600 }} size="sm">Mark Done</Btn>
                         </div>
                       )}
@@ -176,7 +194,7 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
 
 // ─── Appointment Management tab ──────────────────────────────────────────────────
 
-function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
+function AppointmentManagement({ appointments, onStartCall, onMessage, onUpdateStatus, onDelete }) {
   const isDark = useDarkMode();
   const [filter, setFilter] = useState("all");
   const filtered = filter === "all" ? appointments : appointments.filter(a => a.status === filter);
@@ -208,8 +226,13 @@ function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
                 const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
                 return (
                   <div className="dm-appointment-card" key={apt._id} style={{ padding: "16px", border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 20, background: isDark ? "#111827" : "#f8fafc", display: "flex", flexDirection: "column", gap: 16, position: "relative" }}>
-                    {/* Status Badge - Pinned to top right */}
-                    <div style={{ position: "absolute", top: 16, right: 16 }}>
+                    {/* Status Badge & Actions - Pinned to top right */}
+                    <div style={{ position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                      {(apt.status === "completed" || apt.status === "cancelled") && (
+                        <button onClick={() => onDelete(apt._id)} style={{ padding: "4px", background: "transparent", color: isDark ? "#ef4444" : "#dc2626", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Delete Record">
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                       <span style={{ display: "inline-flex", padding: "4px 10px", fontSize: 10, fontWeight: 700, borderRadius: 999, background: isDark ? (apt.status === 'confirmed' ? 'rgba(29, 181, 133, 0.15)' : 'rgba(30, 41, 59, 0.5)') : bg, color: isDark ? (apt.status === 'confirmed' ? '#1db585' : '#94a3b8') : color, border: isDark ? `1px solid ${apt.status === 'confirmed' ? '#1db585' : '#334155'}` : 'none', textTransform: "uppercase", letterSpacing: "0.02em" }}>{apt.status}</span>
                     </div>
 
@@ -217,6 +240,11 @@ function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                         <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#1db585", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 13, flexShrink: 0 }}>{apt.patientName?.charAt(0)}</div>
                         <div className="dm-soft-text" style={{ fontSize: 15, fontWeight: 700, color: isDark ? "#f8fafc" : "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{apt.patientName}</div>
+                        {apt.unreadCount > 0 && (
+                          <div style={{ padding: "2px 8px", background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 10, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                            <MessageSquare size={10} /> {apt.unreadCount} New
+                          </div>
+                        )}
                       </div>
                       
                       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 16px", fontSize: 13, color: isDark ? "#94a3b8" : "#64748b" }}>
@@ -236,6 +264,7 @@ function AppointmentManagement({ appointments, onStartCall, onUpdateStatus }) {
                       {apt.status === "confirmed" && (
                         <>
                           <Btn onClick={() => onStartCall(apt)} style={{ flex: 2, fontWeight: 700, borderRadius: 10 }} size="sm">Start Consultation</Btn>
+                          <Btn onClick={() => onMessage({ appointmentId: apt._id, id: apt.patientId?._id || apt.patientId, name: apt.patientName })} style={{ flex: 1, fontWeight: 700, borderRadius: 10, background: "#3b82f6" }} size="sm">Message</Btn>
                           <Btn onClick={() => onUpdateStatus(apt._id, "completed")} variant="outline" style={{ flex: 1, fontWeight: 600, borderRadius: 10 }} size="sm">Mark Done</Btn>
                         </>
                       )}
@@ -409,8 +438,12 @@ export default function DoctorDashboard() {
   const [doctorPatients, setDoctorPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
+  const [activeChat, setActiveChat] = useState(null);
+  const activeChatRef = useRef(null);
+  useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
   const activeCallRef = useRef(null);
   useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
+  const remindedAppts = useRef(new Set());
   const [incomingCall, setIncomingCall] = useState(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -442,6 +475,8 @@ export default function DoctorDashboard() {
           userId: user?.id,
         });
         setIncomingCall(null);
+      } else if (actionType === "reply") {
+        setActiveChat({ appointmentId: data.appointmentId, id: data.senderId, name: data.senderName });
       }
     },
     [user?.id],
@@ -537,25 +572,61 @@ export default function DoctorDashboard() {
       addToast({ type: "record", title: "Record Updated", message: `Health record updated by patient`, autoClose: true });
     };
 
+    const handleChatMessage = (data) => {
+      fetchDashboardData();
+      if (activeChatRef.current?.appointmentId?.toString() === data.appointmentId?.toString()) return;
+      addToast({ type: "chat", title: `New message from ${data.senderName}`, message: data.content.length > 40 ? data.content.substring(0, 40) + '...' : data.content, autoClose: true, actions: [{ label: "Reply", type: "reply", primary: true, data: { appointmentId: data.appointmentId, senderId: data.sender, senderName: data.senderName } }] });
+    };
+
+    const handleAppointmentDeleted = (data) => {
+      fetchDashboardData();
+      if (data?.initiatorId === user?.id) return;
+      addToast({ type: "info", title: "Appointment Removed", message: "An appointment was deleted by the patient.", autoClose: true });
+    };
+
     websocketService.onAppointmentUpdated(handleAppointmentUpdate);
     websocketService.on("appointment:created", handleNewAppointment);
+    websocketService.onAppointmentDeleted(handleAppointmentDeleted);
     websocketService.on("call:incoming", handleIncomingCall);
     websocketService.onPrescriptionCreated(handlePrescriptionCreated);
     websocketService.onPrescriptionUpdated(handlePrescriptionUpdated);
     websocketService.onHealthRecordCreated(handleHealthRecordCreated);
     websocketService.onHealthRecordUpdated(handleHealthRecordUpdated);
+    websocketService.onChatMessage(handleChatMessage);
 
     const interval = setInterval(() => fetchDashboardData(), 30000);
+
+    const checkUpcomingInterval = setInterval(() => {
+      const now = new Date();
+      appointments.forEach(apt => {
+        if (apt.status === "confirmed") {
+          const aptDate = parseAppointmentDateTime(apt.date, apt.time);
+          const diffMs = aptDate - now;
+          if (diffMs > 0 && diffMs <= 5 * 60 * 1000 && !remindedAppts.current.has(apt._id)) {
+            remindedAppts.current.add(apt._id);
+            addToast({
+              type: "appointment",
+              title: "Upcoming Appointment",
+              message: `You have an appointment with ${apt.patientName} in 5 minutes!`,
+              autoClose: false
+            });
+          }
+        }
+      });
+    }, 60000);
 
     return () => {
       websocketService.off("appointment:updated", handleAppointmentUpdate);
       websocketService.off("appointment:created", handleNewAppointment);
+      websocketService.offAppointmentDeleted(handleAppointmentDeleted);
       websocketService.off("call:incoming", handleIncomingCall);
       websocketService.offPrescriptionCreated(handlePrescriptionCreated);
       websocketService.offPrescriptionUpdated(handlePrescriptionUpdated);
       websocketService.offHealthRecordCreated(handleHealthRecordCreated);
       websocketService.offHealthRecordUpdated(handleHealthRecordUpdated);
+      websocketService.offChatMessage(handleChatMessage);
       clearInterval(interval);
+      clearInterval(checkUpcomingInterval);
     };
   }, [fetchDashboardData, addToast]);
 
@@ -610,8 +681,20 @@ export default function DoctorDashboard() {
       await apiClient.patch(`/appointments/${id}`, { status });
       fetchDashboardData();
       addToast({ type: "success", title: "Status Updated", message: `Appointment ${status}`, autoClose: true });
-    } catch {
-      addToast({ type: "error", title: "Error", message: "Failed to update appointment", autoClose: true });
+    } catch (err) {
+      console.error(err);
+      addToast({ type: "error", title: "Update Failed", message: "Could not update appointment status." });
+    }
+  };
+
+  const deleteAppointment = async (id) => {
+    try {
+      await apiClient.delete(`/appointments/${id}`);
+      fetchDashboardData();
+      addToast({ type: "success", title: "Appointment Deleted", message: "The completed appointment was removed.", autoClose: true });
+    } catch (err) {
+      console.error(err);
+      addToast({ type: "error", title: "Failed to delete", message: "Could not remove appointment.", autoClose: true });
     }
   };
 
@@ -624,11 +707,12 @@ export default function DoctorDashboard() {
           pendingFeedbacks={healthRecords.filter(r => !r.notes || r.notes.trim() === "").slice(0, 5)}
           onStartCall={startVideoCall} 
           onUpdateStatus={updateStatus} 
+          onMessage={setActiveChat}
           onRefresh={() => fetchDashboardData()} 
           onViewHealth={() => setActiveTab("health-records")}
         />
       );
-      case "appointments": return <AppointmentManagement appointments={appointments} onStartCall={startVideoCall} onUpdateStatus={updateStatus} />;
+      case "appointments": return <AppointmentManagement appointments={appointments} onStartCall={startVideoCall} onMessage={setActiveChat} onUpdateStatus={updateStatus} onDelete={deleteAppointment} />;
       case "patients": return <PatientList appointments={appointments} doctorPatients={doctorPatients} />;
       case "schedule": return <ScheduleView appointments={appointments} />;
       case "reports": return <Reports stats={stats} appointments={appointments} />;
@@ -641,6 +725,7 @@ export default function DoctorDashboard() {
 
   return (
     <div className="dm-page-shell" style={{ display: "flex", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
+      {activeChat && <Chat appointmentId={activeChat.appointmentId} receiverId={activeChat.id} receiverName={activeChat.name} onClose={() => setActiveChat(null)} onRead={() => fetchDashboardData()} />}
       <ToastStack toasts={toasts} onDismiss={dismissToast} onAction={handleToastAction} />
       <ConfirmModal
         isOpen={confirmModal.open}

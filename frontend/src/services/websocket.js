@@ -23,7 +23,7 @@ class WebSocketService {
 
   // ─── Public API ───────────────────────────────────────────────────────────
 
-  connect(url = 'http://localhost:5000') {
+  connect(url = (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000')) {
     if (this.socket?.connected) {
       console.log('WebSocket already connected');
       return;

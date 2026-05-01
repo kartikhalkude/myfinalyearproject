@@ -1,40 +1,29 @@
 services:
-  # --- Backend Web Service ---
   - type: web
-    name: dr-assist-backend
+    name: dr-assist-fullstack
     env: node
-    plan: free # Change to 'starter' if ML models need more RAM
-    region: singapore # Change to your preferred region
-    buildCommand: "cd backend && bash render-build.sh"
-    startCommand: "cd backend && npm start"
+    plan: free
+    region: singapore
+    buildCommand: "npm run build"
+    startCommand: "npm start"
     envVars:
       - key: NODE_VERSION
         value: 18.0.0
+      - key: NODE_ENV
+        value: production
       - key: MONGODB_URI
-        sync: false # User will provide this in Render dashboard
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: HF_API_URL
-        sync: false # User will provide this from Hugging Face Space URL
+        sync: false
       - key: CLIENT_URL
-        value: https://dr-assist-frontend.onrender.com # Update after first deploy
+        value: https://dr-assist-fullstack.onrender.com
+      - key: VITE_API_URL
+        value: https://dr-assist-fullstack.onrender.com/api
       - key: PORT
         value: 10000
       - key: PYTHON_CMD
         value: python3
       - key: PYTHON_VERSION
         value: 3.10.0
-
-  # --- Frontend Static Site ---
-  - type: web
-    name: dr-assist-frontend
-    runtime: static
-    buildCommand: "cd frontend && npm install && npm run build"
-    staticPublishPath: "frontend/dist"
-    envVars:
-      - key: VITE_API_URL
-        value: https://dr-assist-backend.onrender.com/api # Update after first deploy
-    routes:
-      - type: rewrite
-        source: "/*"
-        destination: "/index.html"

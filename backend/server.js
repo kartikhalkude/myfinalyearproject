@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 require('dotenv').config();
+const path = require('path');
+
 
 const connectDB = require('./config/db');
 const { initSocket } = require('./socket');
@@ -60,6 +62,22 @@ app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
+
+// ─── Frontend Static Files (Production) ──────────────────────────────────────
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendPath));
+
+  app.get('*', (req, res) => {
+    // If it's an API request that wasn't caught, return 404
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API route not found' });
+    }
+    // Otherwise serve index.html for SPA routing
+    res.sendFile(path.resolve(frontendPath, 'index.html'));
+  });
+}
+
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;

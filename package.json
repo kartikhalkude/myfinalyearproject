@@ -1,0 +1,17 @@
+{
+  "name": "myfinalyearproject",
+  "version": "1.0.0",
+  "description": "Fullstack Telemedicine Application",
+  "main": "backend/server.js",
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"npm run dev-backend\" \"npm run dev-frontend\"",
+    "dev-backend": "cd backend && npm run dev",
+    "dev-frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install && pip install -r requirements.txt",
+    "start": "cd backend && node server.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

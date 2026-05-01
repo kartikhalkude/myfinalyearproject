@@ -5,7 +5,7 @@ import websocketService from '../services/websocket';
 
 const AuthContext = createContext();
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://dr-assist-api.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://dr-assistai-api.onrender.com/api';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

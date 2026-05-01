@@ -31,22 +31,10 @@ const allowedOrigins = Array.isArray(parseClientUrl()) ? parseClientUrl() : [par
 const app = express();
 const server = http.createServer(app);
 
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-  crossOriginEmbedderPolicy: false,
-})); // Basic security headers with CORS flexibility
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after 15 minutes'
-});
-app.use('/api/', limiter); // Apply to all API routes
-
+// ─── Global Middleware ────────────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
@@ -58,6 +46,18 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false,
+})); // Basic security headers with CORS flexibility
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+app.use('/api/', limiter); // Apply to all API routes
+
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 

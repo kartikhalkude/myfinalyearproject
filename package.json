@@ -1,7 +1,7 @@
 {
   "name": "myfinalyearproject",
   "version": "1.0.0",
-  "description": "Fullstack Telemedicine Application",
+  "description": "Dr.Assist AI - Fullstack Telemedicine Application",
   "main": "backend/server.js",
   "scripts": {
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: dr-assist-fullstack
+    name: dr-assist-ai
     env: node
     plan: free
     region: singapore

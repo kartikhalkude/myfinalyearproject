@@ -26,7 +26,7 @@ class WebSocketService {
   connect(url) {
     if (!url) {
       console.warn('WebSocket URL not provided, falling back to production backend');
-      url = 'https://dr-assist-backend.onrender.com';
+      url = 'https://dr-assist-api.onrender.com';
     }
     if (this.socket?.connected) {
       console.log('WebSocket already connected');

@@ -1,7 +1,7 @@
 services:
   # --- Backend Web Service ---
   - type: web
-    name: dr-assist-backend
+    name: dr-assist-api
     env: node
     plan: free # Change to 'starter' if ML models need more RAM
     region: singapore # Change to your preferred region
@@ -17,7 +17,7 @@ services:
       - key: HF_API_URL
         sync: false # User will provide this from Hugging Face Space URL
       - key: CLIENT_URL
-        value: https://dr-assist-frontend.onrender.com # Update after first deploy
+        value: https://dr-assist-ai.onrender.com
       - key: PORT
         value: 10000
       - key: PYTHON_CMD
@@ -27,13 +27,13 @@ services:
 
   # --- Frontend Static Site ---
   - type: web
-    name: dr-assist-frontend
+    name: dr-assist-ai
     runtime: static
     buildCommand: "cd frontend && npm install && npm run build"
     staticPublishPath: "frontend/dist"
     envVars:
       - key: VITE_API_URL
-        value: https://dr-assist-backend.onrender.com/api # Update after first deploy
+        value: https://dr-assist-api.onrender.com/api # Update after first deploy
     routes:
       - type: rewrite
         source: "/*"

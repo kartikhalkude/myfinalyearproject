@@ -10,8 +10,9 @@ import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, Btn, PageHea
 import { 
   Home, Calendar, CalendarClock, Users, FileText, Pill, ClipboardList, 
   Phone, CheckCircle, XCircle, Info, X, Check, RefreshCw, CalendarDays, MessageSquare,
-  ClipboardCheck, Clock, Trash2
+  ClipboardCheck, Clock, Trash2, Settings, Wallet
 } from "lucide-react";
+
 
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
@@ -42,6 +43,9 @@ function getNavItems(apptCount, feedbackCount, prescriptionCount) {
     { section: "Medical" },
     { id: "prescriptions", label: "Prescriptions", icon: <Pill size={18} />, badge: prescriptionCount },
     { id: "health-records", label: "Health Records", icon: <ClipboardList size={18} />, badge: feedbackCount },
+    { section: "Settings & Finance" },
+    { id: "wallet", label: "Wallet & Earnings", icon: <Wallet size={18} /> },
+    { id: "settings", label: "Practice Settings", icon: <Settings size={18} /> },
   ];
 }
 
@@ -122,10 +126,10 @@ function Overview({ stats, appointments, pendingFeedbacks, onStartCall, onUpdate
         </Btn>
       </div>
       <div className="dm-grid-stats" style={{ marginBottom: 24 }}>
+        <StatCard label="Total Earnings" value={`$${stats?.totalEarnings || 0}`} icon={<span style={{ fontWeight: 800 }}>$</span>} color="#10b981" />
         <StatCard label="Today's Appointments" value={stats?.todayAppointments || 0} icon={<CalendarDays size={18} color="#1db585" />} color="#1db585" />
         <StatCard label="Total Patients" value={stats?.totalPatients || 0} icon={<Users size={18} color="#3b82f6" />} color="#3b82f6" />
         <StatCard label="Unread Messages" value={stats?.unreadMessages || 0} icon={<MessageSquare size={18} color="#f59e0b" />} color="#f59e0b" />
-        <StatCard label="Pending Feedback" value={stats?.pendingFeedback || 0} icon={<ClipboardList size={18} color="#eab308" />} color="#eab308" />
         <StatCard label="Total Appointments" value={stats?.totalAppointments || 0} icon={<Calendar size={18} color="#8b5cf6" />} color="#8b5cf6" />
       </div>
       
@@ -411,6 +415,7 @@ function Reports({ stats, appointments }) {
           </div>
           <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
             {[
+              ["Total Earnings", `$${stats?.totalEarnings || 0}`],
               ["Total Consultations", stats?.totalAppointments || 0],
               ["Active Patients", stats?.totalPatients || 0],
               ["Completed Consultations", completedApts]
@@ -427,13 +432,192 @@ function Reports({ stats, appointments }) {
   );
 }
 
+// ─── Settings tab ────────────────────────────────────────────────────────────
+
+function SettingsView({ user, onSave }) {
+  const isDark = useDarkMode();
+  const [formData, setFormData] = useState({
+    daysOff: user?.availability?.daysOff || [0, 6],
+    startTime: user?.availability?.startTime || "09:00",
+    endTime: user?.availability?.endTime || "17:00",
+    slotDuration: user?.availability?.slotDuration || 30,
+    consultationFee: user?.availability?.consultationFee || 50
+  });
+
+  const toggleDay = (day) => {
+    setFormData(p => ({
+      ...p,
+      daysOff: p.daysOff.includes(day) ? p.daysOff.filter(d => d !== day) : [...p.daysOff, day]
+    }));
+  };
+
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Practice Settings</h1>
+        <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Manage your availability and consultation fees.</p>
+      </div>
+
+      <SectionCard>
+        <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: isDark ? "#cbd5e1" : "#475569", marginBottom: 8 }}>Days Off</label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {days.map((d, i) => (
+                <button
+                  key={d}
+                  onClick={() => toggleDay(i)}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, border: "1px solid #e2e8f0",
+                    background: formData.daysOff.includes(i) ? "#ef4444" : (isDark ? "#111827" : "#fff"),
+                    color: formData.daysOff.includes(i) ? "#fff" : (isDark ? "#94a3b8" : "#475569"),
+                    cursor: "pointer", fontWeight: 500, fontSize: 13, transition: "all 0.2s"
+                  }}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>Patients cannot book appointments on these days.</p>
+          </div>
+
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: isDark ? "#cbd5e1" : "#475569", marginBottom: 8 }}>Start Time</label>
+              <input type="time" value={formData.startTime} onChange={e => setFormData({...formData, startTime: e.target.value})}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, background: isDark ? "#0f172a" : "#fff", color: isDark ? "#f1f5f9" : "#0f172a" }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: isDark ? "#cbd5e1" : "#475569", marginBottom: 8 }}>End Time</label>
+              <input type="time" value={formData.endTime} onChange={e => setFormData({...formData, endTime: e.target.value})}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, background: isDark ? "#0f172a" : "#fff", color: isDark ? "#f1f5f9" : "#0f172a" }} />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: isDark ? "#cbd5e1" : "#475569", marginBottom: 8 }}>Slot Duration (minutes)</label>
+              <select value={formData.slotDuration} onChange={e => setFormData({...formData, slotDuration: Number(e.target.value)})}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, background: isDark ? "#0f172a" : "#fff", color: isDark ? "#f1f5f9" : "#0f172a" }}>
+                <option value={15}>15 Minutes</option>
+                <option value={30}>30 Minutes</option>
+                <option value={45}>45 Minutes</option>
+                <option value={60}>60 Minutes</option>
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: isDark ? "#cbd5e1" : "#475569", marginBottom: 8 }}>Consultation Fee ($)</label>
+              <input type="number" min="0" value={formData.consultationFee} onChange={e => setFormData({...formData, consultationFee: Number(e.target.value)})}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`, background: isDark ? "#0f172a" : "#fff", color: isDark ? "#f1f5f9" : "#0f172a" }} />
+            </div>
+          </div>
+          
+          <div style={{ marginTop: 8 }}>
+            <Btn onClick={() => onSave(formData)} style={{ padding: "10px 24px" }}>Save Settings</Btn>
+          </div>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+// ─── Wallet tab ──────────────────────────────────────────────────────────────
+
+function WalletView({ stats, transactions, onRefresh, addToast }) {
+  const isDark = useDarkMode();
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawn, setWithdrawn] = useState(false);
+  const balance = stats?.totalEarnings || 0;
+
+  const handleWithdraw = async () => {
+    if (balance <= 0) return;
+    setWithdrawing(true);
+    try {
+      await apiClient.post("/doctors/withdraw", { amount: balance });
+      setWithdrawn(true);
+      if (onRefresh) onRefresh();
+      addToast({ type: "success", title: "Withdrawal Successful", message: "Funds will appear in 2-3 business days.", autoClose: true });
+    } catch (err) {
+      addToast({ type: "error", title: "Withdrawal Failed", message: "Could not process your withdrawal." });
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
+  const recentTransactions = transactions.slice(0, 10);
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Wallet & Earnings</h1>
+        <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Manage your consultation revenue and withdraw funds.</p>
+      </div>
+
+      <div className="dm-grid-two">
+        <SectionCard>
+          <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{ padding: 24, borderRadius: 16, background: "linear-gradient(135deg, #1db585 0%, #10b981 100%)", color: "#fff", display: "flex", flexDirection: "column", gap: 8, position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", right: -20, top: -20, opacity: 0.1 }}>
+                <Wallet size={120} />
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 500, opacity: 0.9 }}>Available Balance</div>
+              <div style={{ fontSize: 42, fontWeight: 700, letterSpacing: "-0.02em" }}>${withdrawn ? 0 : balance}</div>
+              <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>Ready for withdrawal to your linked bank account.</div>
+            </div>
+
+            <Btn onClick={handleWithdraw} disabled={withdrawing || withdrawn || balance === 0} style={{ width: "100%", justifyContent: "center", padding: "14px", fontSize: 15, fontWeight: 600 }}>
+              {withdrawing ? "Processing Withdrawal..." : withdrawn ? "Funds Withdrawn" : "Withdraw Funds"}
+            </Btn>
+            {withdrawn && <div style={{ fontSize: 13, color: "#10b981", textAlign: "center", fontWeight: 500 }}>Withdrawal successful! Funds will appear in 2-3 business days.</div>}
+          </div>
+        </SectionCard>
+
+        <SectionCard>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: `1px solid ${isDark ? "#1e293b" : "#f8fafc"}` }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 600, color: isDark ? "#f1f5f9" : "#0f172a" }}>Recent Transactions</div>
+          </div>
+          <div style={{ padding: 16 }}>
+            {recentTransactions.length === 0 ? <EmptyState icon={<Wallet size={24} color="#94a3b8" />} title="No transactions yet" subtitle="Completed consultations and withdrawals will appear here." /> : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {recentTransactions.map(tx => {
+                  const isWithdrawal = tx.type === 'withdrawal';
+                  return (
+                    <div key={tx._id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 14, border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 12, background: isDark ? "#111827" : "#fff" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: isWithdrawal ? "#fee2e2" : "#dcfce7", color: isWithdrawal ? "#dc2626" : "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ fontWeight: 700 }}>{isWithdrawal ? '↑' : '$'}</span>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: isDark ? "#f8fafc" : "#0f172a" }}>{tx.description || (isWithdrawal ? "Withdrawal" : "Consultation Earning")}</div>
+                          <div style={{ fontSize: 12, color: isDark ? "#94a3b8" : "#64748b", marginTop: 2 }}>{new Date(tx.createdAt).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: isWithdrawal ? (isDark ? "#ef4444" : "#dc2626") : (isDark ? "#10b981" : "#16a34a") }}>{isWithdrawal ? '-' : '+'}${tx.amount}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: isWithdrawal ? "#dc2626" : "#64748b", textTransform: "uppercase", marginTop: 4 }}>{tx.status}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 
 export default function DoctorDashboard() {
-  const { user, logout, wsConnected } = useAuth();
+  const { user, setUser, logout, wsConnected } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState({ todayAppointments: 0, totalPatients: 0, totalAppointments: 0, feedbackProvided: 0, pendingFeedback: 0 });
   const [appointments, setAppointments] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [healthRecords, setHealthRecords] = useState([]);
   const [doctorPatients, setDoctorPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -517,8 +701,18 @@ export default function DoctorDashboard() {
     }
   }, []);
 
+  const fetchTransactions = useCallback(async () => {
+    try {
+      const res = await apiClient.get("/doctors/transactions");
+      setTransactions(res.data);
+    } catch (err) {
+      console.error("Failed to fetch transactions:", err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchDashboardData();
+    fetchTransactions();
     if (user?.id) websocketService.notifyOnline(user.id);
 
     const handleAppointmentUpdate = (data) => {
@@ -594,7 +788,7 @@ export default function DoctorDashboard() {
     websocketService.onHealthRecordUpdated(handleHealthRecordUpdated);
     websocketService.onChatMessage(handleChatMessage);
 
-    const interval = setInterval(() => fetchDashboardData(), 30000);
+    const interval = setInterval(() => { fetchDashboardData(); fetchTransactions(); }, 30000);
 
     const checkUpcomingInterval = setInterval(() => {
       const now = new Date();
@@ -628,7 +822,7 @@ export default function DoctorDashboard() {
       clearInterval(interval);
       clearInterval(checkUpcomingInterval);
     };
-  }, [fetchDashboardData, addToast]);
+  }, [fetchDashboardData, fetchTransactions, addToast]);
 
   const startVideoCall = (apt) => {
     const callObj = {
@@ -698,6 +892,17 @@ export default function DoctorDashboard() {
     }
   };
 
+  const saveSettings = async (availability) => {
+    try {
+      const { data } = await apiClient.put("/doctors/settings", { availability });
+      setUser(data);
+      addToast({ type: "success", title: "Settings Saved", message: "Your availability schedule has been updated.", autoClose: true });
+    } catch (err) {
+      console.error(err);
+      addToast({ type: "error", title: "Save Failed", message: "Could not update settings." });
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "overview": return (
@@ -718,6 +923,8 @@ export default function DoctorDashboard() {
       case "reports": return <Reports stats={stats} appointments={appointments} />;
       case "prescriptions": return <Prescriptions doctorPatients={doctorPatients} onRefresh={() => fetchDashboardData()} />;
       case "health-records": return <HealthRecords doctorPatients={doctorPatients} onRefresh={() => fetchDashboardData()} />;
+      case "wallet": return <WalletView stats={stats} transactions={transactions} onRefresh={() => { fetchDashboardData(); fetchTransactions(); }} addToast={addToast} />;
+      case "settings": return <SettingsView user={user} onSave={saveSettings} />;
 
       default: return null;
     }
@@ -776,7 +983,15 @@ export default function DoctorDashboard() {
           stats?.pendingPrescriptions || 0
         )} 
         activeTab={activeTab} 
-        onTabChange={setActiveTab} 
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          if (tab === "messages" && stats?.unreadMessages > 0) {
+            setStats(prev => ({ ...prev, unreadMessages: 0 }));
+          }
+          if (tab === "health-records" && stats?.pendingFeedback > 0) {
+            setStats(prev => ({ ...prev, pendingFeedback: 0 }));
+          }
+        }} 
         onLogout={logout} 
         wsConnected={wsConnected} 
         mobileOpen={mobileNavOpen}

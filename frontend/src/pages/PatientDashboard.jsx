@@ -11,7 +11,7 @@ import Prescriptions from "../components/Prescriptions";
 import HealthRecords from "../components/HealthRecords";
 import BrainTumorPrediction from "../components/BrainTumorPrediction";
 import Chat from "../components/Chat";
-import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, MobileHeader, ConfirmModal, Btn } from "../components/UI";
+import { Sidebar, StatCard, EmptyState, SectionCard, Badge, Loader, MobileHeader, ConfirmModal, Btn, useDarkMode } from "../components/UI";
 import { 
   Home, Brain, HeartPulse, Stethoscope, CalendarPlus, Calendar, 
   ClipboardList, Pill, Smile, Phone, CheckCircle, XCircle, Info, X, Check, Clock,
@@ -113,6 +113,7 @@ function Toast({ toast, onDismiss, onAction }) {
 // ─── Overview tab ─────────────────────────────────────────────────────────────
 
 function Overview({ stats, appointments, onStartCall, onCancelAppt, onMessage, onRefresh }) {
+  const isDark = useDarkMode();
   const upcoming = appointments.filter(a => new Date(a.date) >= new Date() && a.status !== "cancelled").slice(0, 4);
   const statusBadge = { confirmed: ["#dcfce7","#166534"], pending: ["#fef9c3","#854d0e"], completed: ["#dbeafe","#1e40af"], cancelled: ["#fee2e2","#991b1b"] };
 
@@ -120,11 +121,11 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onMessage, o
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: "#0f172a", letterSpacing: "-0.01em" }}>Dashboard</h1>
-          <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: "#64748b", marginTop: 2 }}>Here's your health overview at a glance.</p>
+          <h1 className="dm-page-title" style={{ fontSize: "1.375rem", fontWeight: 500, color: isDark ? "#f8fafc" : "#0f172a", letterSpacing: "-0.01em" }}>Dashboard</h1>
+          <p className="dm-page-subtitle" style={{ fontSize: 13.5, color: isDark ? "#94a3b8" : "#64748b", marginTop: 2 }}>Here's your health overview at a glance.</p>
         </div>
-        <button className="dm-outline-btn" onClick={onRefresh} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 13.5, fontWeight: 500, color: "#475569", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = "#cbd5e1"} onMouseLeave={e => e.currentTarget.style.borderColor = "#e2e8f0"}>
+        <button className="dm-outline-btn" onClick={onRefresh} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", background: isDark ? "#1e293b" : "#fff", border: `1.5px solid ${isDark ? "#334155" : "#e2e8f0"}`, borderRadius: 10, fontSize: 13.5, fontWeight: 500, color: isDark ? "#cbd5e1" : "#475569", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = isDark ? "#475569" : "#cbd5e1"} onMouseLeave={e => e.currentTarget.style.borderColor = isDark ? "#334155" : "#e2e8f0"}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" strokeLinecap="round" strokeLinejoin="round"/></svg>
           Refresh
         </button>
@@ -138,8 +139,8 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onMessage, o
       <div className="dm-grid-two">
         {/* Upcoming appointments */}
         <SectionCard>
-          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Upcoming appointments</div>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: `1px solid ${isDark ? "#1e293b" : "#f8fafc"}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: isDark ? "#f8fafc" : "#0f172a" }}>Upcoming appointments</div>
             <span className="dm-soft-muted" style={{ fontSize: 12.5, color: "#94a3b8" }}>{upcoming.length} scheduled</span>
           </div>
           <div style={{ padding: 16 }}>
@@ -147,7 +148,6 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onMessage, o
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {upcoming.map(apt => {
                   const [bg, color] = statusBadge[apt.status] || statusBadge.pending;
-                  const isDark = document.body.classList.contains("dm");
                   return (
                     <div className="dm-appointment-preview" key={apt._id} style={{ padding: "14px", border: `1px solid ${isDark ? "#1e293b" : "#f1f5f9"}`, borderRadius: 14, background: isDark ? "#111827" : "#f8fafc" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -175,8 +175,8 @@ function Overview({ stats, appointments, onStartCall, onCancelAppt, onMessage, o
 
         {/* Health tips */}
         <SectionCard>
-          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: "1px solid #f8fafc" }}>
-            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: "#0f172a" }}>Daily health tips</div>
+          <div className="dm-section-header" style={{ padding: "16px 20px", borderBottom: `1px solid ${isDark ? "#1e293b" : "#f8fafc"}` }}>
+            <div className="dm-page-title" style={{ fontSize: 14, fontWeight: 500, color: isDark ? "#f8fafc" : "#0f172a" }}>Daily health tips</div>
           </div>
           <div style={{ padding: 16 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -486,7 +486,18 @@ export default function PatientDashboard() {
         appointments.filter(a => a.status === "confirmed" || a.status === "pending").length,
         stats?.unreadHealthRecords || 0,
         stats?.unreadPrescriptions || 0
-      )} activeTab={tab} onTabChange={setTab} onLogout={logout} wsConnected={wsConnected} mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
+      )} activeTab={tab} onTabChange={(t) => {
+        setTab(t);
+        if (t === "health" && stats?.unreadHealthRecords > 0) {
+          setStats(prev => ({ ...prev, unreadHealthRecords: 0 }));
+        }
+        if (t === "prescriptions" && stats?.unreadPrescriptions > 0) {
+          setStats(prev => ({ ...prev, unreadPrescriptions: 0 }));
+        }
+        if (t === "messages" && stats?.unreadMessages > 0) {
+          setStats(prev => ({ ...prev, unreadMessages: 0 }));
+        }
+      }} onLogout={logout} wsConnected={wsConnected} mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} />
       <div className="dm-page-content">
         <div className="dm-page-inner">
           {loading ? <Loader message="Loading your dashboard…" /> : renderTab()}

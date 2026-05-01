@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 
 const register = async (req, res) => {
   try {
-    const { name, email, password, role, specialization, phone } = req.body;
+    const { name, email, password, role, specialization, phone, gender, birthDate, licenseNumber } = req.body;
     if (!name || !email || !password || !role)
       return res.status(400).json({ error: 'Missing required fields' });
 
@@ -14,10 +14,17 @@ const register = async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await new User({
-      name, email, password: hashedPassword, role,
-      specialization: role === 'doctor' ? specialization : undefined, phone
-    }).save();
+    const userData = {
+      name, email, password: hashedPassword, role, phone, gender, birthDate
+    };
+
+    if (role === 'doctor') {
+      userData.specialization = specialization;
+      userData.licenseNumber = licenseNumber;
+      userData.licenseStatus = 'pending';
+    }
+
+    const user = await new User(userData).save();
 
     const token = jwt.sign({ userId: user._id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 

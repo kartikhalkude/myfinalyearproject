@@ -88,6 +88,9 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [paymentData, setPaymentData] = useState({ card: "", expiry: "", cvc: "" });
   const [editingRecord, setEditingRecord] = useState(null);
   const [viewingRecord, setViewingRecord] = useState(null);
   const [filterType, setFilterType] = useState("all");
@@ -271,10 +274,41 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
     }
   };
 
-  const handleSubmit = async e => {
+  const handleInitialSubmit = (e) => {
     e.preventDefault(); setError(""); setSuccess("");
     if (!formData.title.trim()) { setError("Title is required."); return; }
     if (!formData.content.trim()) { setError("Content is required."); return; }
+    
+    // If patient is sending a new record to a doctor, charge a fee
+    if (user?.role === "patient" && formData.patientId && !editingRecord) {
+      setShowPayment(true);
+    } else {
+      executeSubmit();
+    }
+  };
+
+  const handleCardChange = (e) => {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.length > 16) val = val.slice(0, 16);
+    let formatted = val.match(/.{1,4}/g)?.join(" ") || val;
+    setPaymentData({ ...paymentData, card: formatted });
+  };
+  
+  const handleExpiryChange = (e) => {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.length > 4) val = val.slice(0, 4);
+    if (val.length >= 3) val = `${val.slice(0,2)}/${val.slice(2)}`;
+    setPaymentData({ ...paymentData, expiry: val });
+  };
+  
+  const handleCvcChange = (e) => {
+    let val = e.target.value.replace(/\D/g, "");
+    if (val.length > 4) val = val.slice(0, 4);
+    setPaymentData({ ...paymentData, cvc: val });
+  };
+
+  const executeSubmit = async () => {
+    setPaying(true);
     try {
       const data = new FormData();
       Object.keys(formData).forEach(key => {
@@ -290,9 +324,6 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
       if (file) data.append("file", file);
 
       if (editingRecord) {
-        // PATCH with FormData might be tricky depending on backend, 
-        // but for now let's focus on creation.
-        // If editing doesn't support file update yet, we can fall back to JSON if no file.
         const res = await apiClient.patch(`/health-records/${editingRecord._id}`, formData);
         setRecords(prev => prev.map(r => (r._id === editingRecord._id ? res.data.record || res.data : r)));
         setSuccess("Health record updated successfully");
@@ -303,10 +334,19 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
         setRecords(prev => [res.data.record || res.data, ...prev]);
         setSuccess(user?.role === "doctor" ? "Health record created successfully" : "Report sent to doctor successfully");
       }
-      setShowModal(false); setFile(null);
+      setShowModal(false); setShowPayment(false); setFile(null);
       if (onRefresh) onRefresh();
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) { setError(err.response?.data?.error || "Failed to save record"); }
+    finally { setPaying(false); }
+  };
+
+  const handlePaymentSubmit = (e) => {
+    e.preventDefault();
+    setPaying(true);
+    setTimeout(() => {
+      executeSubmit();
+    }, 2000);
   };
 
   const handleDelete = async id => {
@@ -476,7 +516,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ padding: 24 }}>
+            <form onSubmit={handleInitialSubmit} style={{ padding: 24 }}>
               {!editingRecord && (
                 <div style={{ marginBottom: 24 }}>
                   <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: c.textColor, marginBottom: 8 }}>{user?.role === "doctor" ? "Select Patient *" : "Select Doctor (Optional)"}</label>
@@ -549,6 +589,67 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
           </div>
         </div>
       )}
+
+      {/* Payment Modal for Sending Record to Doctor */}
+      {showPayment && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}>
+          <div style={{ background: dark ? "#1e293b" : "#fff", borderRadius: 20, width: "100%", maxWidth: 400, overflow: "hidden", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}>
+            <div style={{ background: "#10b981", padding: "20px 24px", color: "#fff" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Secure Checkout</h3>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              </div>
+              <p style={{ margin: 0, fontSize: 13, opacity: 0.9 }}>Pay the review fee to send this report to your doctor.</p>
+            </div>
+            
+            <form onSubmit={handlePaymentSubmit} style={{ padding: 24 }}>
+              <div style={{ marginBottom: 20, padding: 16, background: dark ? "#0f172a" : "#f8fafc", borderRadius: 12, border: `1px solid ${dark ? "#334155" : "#e2e8f0"}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14 }}>
+                  <span style={{ color: dark ? "#94a3b8" : "#64748b" }}>Record Review Fee</span>
+                  <span style={{ fontWeight: 600, color: dark ? "#f8fafc" : "#0f172a" }}>$10</span>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: dark ? "#cbd5e1" : "#475569" }}>Card Information</label>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <svg width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="16" rx="2" fill="#1A1F36"/><path d="M9.135 11.23H7.425L8.52 4H10.155L9.135 11.23ZM14.94 4.21C14.64 4.105 14.175 4 13.62 4C11.955 4 10.8 4.885 10.785 6.13C10.77 7.045 11.61 7.565 12.24 7.865C12.885 8.18 13.11 8.39 13.11 8.675C13.11 9.11 12.585 9.305 12.015 9.305C11.34 9.305 10.95 9.125 10.425 8.87L10.05 10.61C10.575 10.85 11.34 11.045 12.135 11.06C13.92 11.06 15.06 10.175 15.075 8.87C15.09 8.15 14.61 7.61 13.635 7.145C13.065 6.875 12.72 6.695 12.72 6.38C12.705 6.095 13.035 5.78 13.635 5.78C14.16 5.765 14.535 5.885 14.835 6.005L14.94 4.21ZM19.26 11.23H20.73C20.895 11.23 21.03 11.14 21.09 10.99L22.86 4.015H21.255C21.03 4.015 20.865 4.135 20.79 4.345L17.76 11.23H19.26ZM16.32 4H14.88C14.685 4 14.535 4.09 14.445 4.285L12.33 11.23H14.07L14.415 10.27H16.53L16.725 11.23H18.285L16.32 4ZM14.925 8.86L15.795 6.43L16.29 8.86H14.925Z" fill="white"/></svg>
+                    <svg width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="16" rx="2" fill="#FF5F00"/><path d="M10.231 10.825c1.472-1.048 2.428-2.766 2.428-4.717 0-1.95-.956-3.668-2.428-4.716a5.576 5.576 0 00-2.023 6.942 5.576 5.576 0 002.023 2.491z" fill="#EB001B"/><path d="M16.53 11.684a5.576 5.576 0 01-6.3-8.083 5.577 5.577 0 016.3 8.083z" fill="#F79E1B"/></svg>
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 1, border: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, borderRadius: 8, overflow: "hidden" }}>
+                  <input type="text" required placeholder="Card number" value={paymentData.card} onChange={handleCardChange}
+                    style={{ width: "100%", padding: "12px 14px", border: "none", borderBottom: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, background: dark ? "#0f172a" : "#fff", color: dark ? "#f1f5f9" : "#0f172a", outline: "none", fontSize: 14, fontFamily: "monospace" }} />
+                  <div style={{ display: "flex" }}>
+                    <input type="text" required placeholder="MM / YY" value={paymentData.expiry} onChange={handleExpiryChange}
+                      style={{ flex: 1, padding: "12px 14px", border: "none", borderRight: `1px solid ${dark ? "#334155" : "#e2e8f0"}`, background: dark ? "#0f172a" : "#fff", color: dark ? "#f1f5f9" : "#0f172a", outline: "none", fontSize: 14, fontFamily: "monospace" }} />
+                    <input type="text" required placeholder="CVC" value={paymentData.cvc} onChange={handleCvcChange}
+                      style={{ flex: 1, padding: "12px 14px", border: "none", background: dark ? "#0f172a" : "#fff", color: dark ? "#f1f5f9" : "#0f172a", outline: "none", fontSize: 14, fontFamily: "monospace", WebkitTextSecurity: "disc" }} />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+                <Btn type="button" variant="outline" onClick={() => setShowPayment(false)} disabled={paying} style={{ flex: 1, justifyContent: "center" }}>Cancel</Btn>
+                <Btn type="submit" variant="primary" disabled={paying} style={{ flex: 2, justifyContent: "center", position: "relative" }}>
+                  {paying ? (
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <svg className="spinner" viewBox="0 0 50 50" style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }}><circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5" strokeDasharray="90 150" strokeLinecap="round"></circle></svg>
+                      Processing...
+                    </span>
+                  ) : `Pay $10`}
+                </Btn>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

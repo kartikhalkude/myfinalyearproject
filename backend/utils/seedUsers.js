@@ -8,7 +8,8 @@ const createDefaultUsers = async () => {
       await new User({
         name: 'Dr. James Wilson', email: 'doctor@test.com',
         password: hashed, role: 'doctor',
-        specialization: 'General Practitioner', phone: '+1-555-0100'
+        specialization: 'General Practitioner', phone: '+1-555-0100',
+        licenseStatus: 'verified'
       }).save();
       console.log('✓ Default doctor created: doctor@test.com (password: doctor123)');
     }
@@ -21,6 +22,8 @@ const createDefaultUsers = async () => {
       }).save();
       console.log('✓ Default patient created: patient@test.com (password: patient123)');
     }
+
+
   } catch (error) {
     console.error('Error creating default users:', error);
   }

@@ -1,6 +1,7 @@
 const HealthRecord = require('../models/HealthRecord');
-const User        = require('../models/User');
-const { getIo } = require('../socket');
+const User         = require('../models/User');
+const Transaction  = require('../models/Transaction');
+const { getIo }    = require('../socket');
 
 // ─── Get All Health Records ───────────────────────────────────────────────────
 
@@ -100,6 +101,13 @@ const createHealthRecord = async (req, res) => {
       }
     }
 
+    let fee = 0;
+    let paymentStatus = 'pending';
+    if (!isDoctor && resolvedDoctorId) {
+      fee = 10; // $10 fee for health record review
+      paymentStatus = 'paid'; // assuming paid during sharing
+    }
+
     const record = await new HealthRecord({
       patientId:  resolvedPatientId,
       doctorId:   resolvedDoctorId,
@@ -108,6 +116,8 @@ const createHealthRecord = async (req, res) => {
       content,
       severity:   severity || 'normal',
       notes,
+      fee,
+      paymentStatus,
       fileData:    req.file ? req.file.buffer : undefined,
       fileContentType: req.file ? req.file.mimetype : undefined,
       fileName:   req.file ? req.file.originalname : undefined,
@@ -118,6 +128,16 @@ const createHealthRecord = async (req, res) => {
     const populated = await HealthRecord.findById(record._id)
       .populate('doctorId', 'name specialization email')
       .populate('patientId', 'name email');
+
+    if (fee > 0) {
+      await new Transaction({
+        userId: resolvedDoctorId,
+        type: 'earning',
+        amount: fee,
+        description: `Medical record review fee for ${populated?.patientId?.name || 'Patient'}`,
+        relatedId: record._id
+      }).save();
+    }
 
     // Notification logic
     if (isDoctor) {
@@ -231,6 +251,18 @@ const deleteHealthRecord = async (req, res) => {
     const wasCreatedByDoctor = !!record.doctorId;
 
     await HealthRecord.findByIdAndDelete(id);
+
+    // If the record was a paid one, log a refund/withdrawal transaction
+    if (record.fee > 0 && record.paymentStatus === 'paid' && record.doctorId) {
+      await new Transaction({
+        userId: record.doctorId,
+        type: 'withdrawal',
+        amount: record.fee,
+        description: `Refund for deleted health record review (${record.title})`,
+        relatedId: record._id,
+        status: 'completed'
+      }).save();
+    }
 
     // Notify patient when a doctor deletes their record
     if (wasCreatedByDoctor) {

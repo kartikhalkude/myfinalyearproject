@@ -9,6 +9,8 @@ const appointmentSchema = new mongoose.Schema({
   time:        { type: String, required: true },
   reason:      { type: String },
   status:      { type: String, enum: ['pending', 'confirmed', 'completed', 'cancelled'], default: 'pending' },
+  fee:         { type: Number, default: 0 },
+  paymentStatus:{ type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },
   readByDoctor: { type: Boolean, default: false },
   createdAt:   { type: Date, default: Date.now }
 });

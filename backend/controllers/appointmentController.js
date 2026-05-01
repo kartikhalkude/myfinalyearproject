@@ -1,5 +1,6 @@
 const Appointment                  = require('../models/Appointment');
 const User                         = require('../models/User');
+const Transaction                  = require('../models/Transaction');
 const { broadcastAppointmentUpdate } = require('../socket');
 
 const createAppointment = async (req, res) => {
@@ -19,11 +20,24 @@ const createAppointment = async (req, res) => {
       return res.status(409).json({ error: 'This time slot is already booked.' });
     }
 
+    const fee = doctor.availability?.consultationFee ?? 50;
+
     const appointment = await new Appointment({
       patientId: req.userId, doctorId,
       patientName: patient.name, doctorName: doctor.name,
-      date, time, reason: reason || ''
+      date, time, reason: reason || '',
+      fee, paymentStatus: fee > 0 ? 'paid' : 'pending'
     }).save();
+
+    if (fee > 0) {
+      await new Transaction({
+        userId: doctorId,
+        type: 'earning',
+        amount: fee,
+        description: `Consultation fee from ${patient.name}`,
+        relatedId: appointment._id
+      }).save();
+    }
 
     await broadcastAppointmentUpdate(appointment, 'created', req.userId);
     res.status(201).json(appointment);
@@ -79,6 +93,22 @@ const updateAppointment = async (req, res) => {
     if (req.userRole === 'doctor' && appointment.doctorId.toString() !== req.userId)
       return res.status(403).json({ error: 'Unauthorized' });
 
+    if (status === 'cancelled') {
+      // Only refund if the appointment was still in 'pending' state
+      if (appointment.status === 'pending') {
+        appointment.paymentStatus = 'refunded';
+        
+        // Log a refund transaction to offset the initial earning
+        await new Transaction({
+          userId: appointment.doctorId,
+          type: 'withdrawal', // We use withdrawal type to subtract from balance
+          amount: appointment.fee,
+          description: `Refund for cancelled appointment (${appointment.patientName})`,
+          relatedId: appointment._id,
+          status: 'completed'
+        }).save();
+      }
+    }
     appointment.status = status;
     await appointment.save();
 

@@ -284,6 +284,34 @@ export const statsAPI = {
   },
 };
 
+// ─── Admin API ────────────────────────────────────────────────────────────────
+export const adminAPI = {
+  getUsers: async () => {
+    try {
+      const response = await apiClient.get('/admin/users');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Failed to fetch users' };
+    }
+  },
+  verifyDoctor: async (userId, status) => {
+    try {
+      const response = await apiClient.post('/admin/verify-doctor', { userId, status });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Failed to verify doctor' };
+    }
+  },
+  deleteUser: async (id) => {
+    try {
+      const response = await apiClient.delete(`/admin/users/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'Failed to delete user' };
+    }
+  },
+};
+
 
 
 // Also export as default for legacy imports

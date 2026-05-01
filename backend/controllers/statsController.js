@@ -41,11 +41,23 @@ const getStats = async (req, res) => {
       });
     }
 
+
+
     // Doctor stats
     const today    = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [appointmentCount, todayCount, patientIds, providedCount, pendingCount, pendingAppointments, pendingPrescriptions, unreadMessages] = await Promise.all([
+    const [
+      appointmentCount, 
+      todayCount, 
+      patientIds, 
+      providedCount, 
+      pendingCount, 
+      pendingAppointments, 
+      pendingPrescriptions, 
+      unreadMessages,
+      balanceResult
+    ] = await Promise.all([
       Appointment.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId) }),
       Appointment.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), date: { $gte: today, $lt: tomorrow } }),
       Appointment.distinct('patientId', { doctorId: new mongoose.Types.ObjectId(req.userId) }),
@@ -53,8 +65,20 @@ const getStats = async (req, res) => {
       HealthRecord.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), readByDoctor: { $ne: true } }),
       Appointment.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), status: 'pending' }),
       Prescription.countDocuments({ doctorId: new mongoose.Types.ObjectId(req.userId), $or: [{ readByDoctor: false }, { refillRequested: true }] }),
-      Message.countDocuments({ receiver: new mongoose.Types.ObjectId(req.userId), isRead: false })
+      Message.countDocuments({ receiver: new mongoose.Types.ObjectId(req.userId), isRead: false }),
+      mongoose.model('Transaction').aggregate([
+        { $match: { userId: new mongoose.Types.ObjectId(req.userId) } },
+        { $group: {
+            _id: null,
+            earnings: { $sum: { $cond: [{ $eq: ["$type", "earning"] }, "$amount", 0] } },
+            withdrawals: { $sum: { $cond: [{ $eq: ["$type", "withdrawal"] }, "$amount", 0] } }
+        }}
+      ])
     ]);
+    
+    const balance = balanceResult.length > 0 
+      ? (balanceResult[0].earnings - balanceResult[0].withdrawals) 
+      : 0;
     
     res.json({
       totalAppointments: appointmentCount,
@@ -64,11 +88,47 @@ const getStats = async (req, res) => {
       pendingFeedback:   pendingCount,
       pendingAppointments: pendingAppointments,
       pendingPrescriptions: pendingPrescriptions,
-      unreadMessages: unreadMessages
+      unreadMessages: unreadMessages,
+      totalEarnings: balance
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 };
 
-module.exports = { getStats };
+const clearDatabase = async (req, res) => {
+  try {
+    // For security in a real app, you'd check for an admin role.
+    // For testing/development, we'll allow it if authorized.
+    
+    // List of models to clear
+    const models = [
+      'Appointment',
+      'DiabetesPrediction',
+      'HeartDiseasePrediction',
+      'PneumoniaPrediction',
+      'BrainTumorPrediction',
+      'HealthRecord',
+      'Prescription',
+      'Message',
+      'Transaction'
+    ];
+
+    for (const modelName of models) {
+      if (mongoose.models[modelName]) {
+        await mongoose.models[modelName].deleteMany({});
+      }
+    }
+
+    // Also reset doctor withdrawal amounts
+    const User = mongoose.model('User');
+    await User.updateMany({}, { $set: { "availability.withdrawnAmount": 0 } });
+
+    res.json({ message: 'Database cleared successfully. All transactions and records removed.' });
+  } catch (error) {
+    console.error("Clear database error:", error);
+    res.status(500).json({ error: 'Failed to clear database' });
+  }
+};
+
+module.exports = { getStats, clearDatabase };

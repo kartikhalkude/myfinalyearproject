@@ -4,7 +4,11 @@ import { useAuth } from "../contexts/AuthContext";
 import { Video, Brain, FileText, Pill, User, Stethoscope, Activity } from "lucide-react";
 
 export default function Register() {
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "", role: "patient", specialization: "", phone: "" });
+  const [formData, setFormData] = useState({ 
+    name: "", email: "", password: "", confirmPassword: "", 
+    role: "patient", specialization: "", phone: "",
+    gender: "male", birthDate: "", licenseNumber: ""
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -18,7 +22,10 @@ export default function Register() {
     if (!formData.name || !formData.email || !formData.password) { setError("Please fill in all required fields."); return; }
     if (formData.password !== formData.confirmPassword) { setError("Passwords do not match."); return; }
     if (formData.password.length < 6) { setError("Password must be at least 6 characters."); return; }
-    if (formData.role === "doctor" && !formData.specialization) { setError("Specialization is required for doctors."); return; }
+    if (formData.role === "doctor") {
+      if (!formData.specialization) { setError("Specialization is required for doctors."); return; }
+      if (!formData.licenseNumber) { setError("Medical license number is required."); return; }
+    }
     setLoading(true);
     const { confirmPassword, ...data } = formData;
     const result = await register(data);
@@ -81,7 +88,7 @@ export default function Register() {
       {/* Right panel — form */}
       <div className="dm-auth-right" style={{ overflowY: "auto" }}>
         
-        <div style={{ maxWidth: 540, width: "100%", margin: "0 auto" }}>
+        <div style={{ maxWidth: 540, width: "100%", margin: "0 auto", padding: "40px 0" }}>
           {/* Mobile Logo Header */}
           <div className="dm-auth-mobile-header">
             <div style={{ width: 32, height: 32, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(16, 185, 129, 0.2)" }}>
@@ -153,15 +160,36 @@ export default function Register() {
               </div>
             </div>
 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Gender</label>
+                <select name="gender" value={formData.gender} onChange={handleChange} disabled={loading} style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Birth Date</label>
+                <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} disabled={loading} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+              </div>
+            </div>
+
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Email address *</label>
               <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="you@example.com" required disabled={loading} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
             </div>
 
             {formData.role === "doctor" && (
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Specialization *</label>
-                <input type="text" name="specialization" value={formData.specialization} onChange={handleChange} placeholder="e.g. Cardiology, Pediatrics" required={formData.role === "doctor"} disabled={loading} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Specialization *</label>
+                  <input type="text" name="specialization" value={formData.specialization} onChange={handleChange} placeholder="e.g. Cardiology" required={formData.role === "doctor"} disabled={loading} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 8 }}>Medical License # *</label>
+                  <input type="text" name="licenseNumber" value={formData.licenseNumber} onChange={handleChange} placeholder="ABC-12345" required={formData.role === "doctor"} disabled={loading} style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                </div>
               </div>
             )}
 

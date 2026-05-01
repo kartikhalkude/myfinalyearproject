@@ -19,6 +19,8 @@ const healthRecordSchema = new mongoose.Schema({
   description: { type: String },
   diagnosis:   { type: String },
   vitals:      [{ name: String, value: String, unit: String }],
+  fee:         { type: Number, default: 0 },
+  paymentStatus: { type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },
   createdAt:   { type: Date, default: Date.now },
   updatedAt:   { type: Date, default: Date.now }
 });

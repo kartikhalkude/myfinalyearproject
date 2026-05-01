@@ -5,7 +5,9 @@ const authMiddleware = (req, res, next) => {
   if (!token) return res.status(401).json({ error: 'Authentication required' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this');
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error("JWT_SECRET missing");
+    const decoded = jwt.verify(token, secret);
     req.userId   = decoded.userId;
     req.userRole = decoded.role;
     next();

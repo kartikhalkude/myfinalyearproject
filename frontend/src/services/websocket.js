@@ -23,7 +23,11 @@ class WebSocketService {
 
   // ─── Public API ───────────────────────────────────────────────────────────
 
-  connect(url = 'http://localhost:5000') {
+  connect(url) {
+    if (!url) {
+      console.warn('WebSocket URL not provided, falling back to window.location.origin');
+      url = window.location.origin;
+    }
     if (this.socket?.connected) {
       console.log('WebSocket already connected');
       return;

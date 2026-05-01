@@ -1,6 +1,8 @@
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const connectDB = require('./config/db');
@@ -26,6 +28,14 @@ const allowedOrigins = parseClientUrl();
 // ─── App setup ────────────────────────────────────────────────────────────────
 const app = express();
 const server = http.createServer(app);
+
+app.use(helmet()); // Basic security headers
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+app.use('/api/', limiter); // Apply to all API routes
 
 app.use(cors({
   origin: allowedOrigins,
@@ -66,7 +76,6 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready`);
-  console.log(`🔗 MongoDB: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/telemedicine'}`);
 });
 
 // ─── Unhandled error handlers ─────────────────────────────────────────────────

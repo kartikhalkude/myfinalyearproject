@@ -1,8 +1,8 @@
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-require('dotenv').config();
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 
 const connectDB = require('./config/db');
@@ -37,7 +37,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // ─── Socket.IO ────────────────────────────────────────────────────────────────
 initSocket(server, allowedOrigins);

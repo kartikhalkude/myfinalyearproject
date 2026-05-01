@@ -8,7 +8,7 @@
     "dev": "concurrently \"npm run dev-backend\" \"npm run dev-frontend\"",
     "dev-backend": "cd backend && npm run dev",
     "dev-frontend": "cd frontend && npm run dev",
-    "build": "npm install && cd frontend && npm install && npm run build && cd .. && pip install -r backend/requirements.txt",
+    "build": "npm install && cd frontend && npm install --include=dev && npm run build && cd .. && pip install -r backend/requirements.txt",
     "start": "node backend/server.js"
   },
   "dependencies": {

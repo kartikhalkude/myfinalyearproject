@@ -21,15 +21,20 @@ const messageRoutes = require('./routes/messages');
 // ─── CORS origins ─────────────────────────────────────────────────────────────
 const parseClientUrl = () => {
   const raw = process.env.CLIENT_URL || 'http://localhost:3000,http://localhost:5173,http://localhost:5174';
-  return typeof raw === 'string' ? raw.split(',').map(u => u.trim()) : raw;
+  return typeof raw === 'string' 
+    ? raw.split(',').map(u => u.trim().replace(/\/$/, '')) 
+    : raw;
 };
-const allowedOrigins = parseClientUrl();
+const allowedOrigins = Array.isArray(parseClientUrl()) ? parseClientUrl() : [parseClientUrl()];
 
 // ─── App setup ────────────────────────────────────────────────────────────────
 const app = express();
 const server = http.createServer(app);
 
-app.use(helmet()); // Basic security headers
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false,
+})); // Basic security headers with CORS flexibility
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
@@ -38,9 +43,18 @@ const limiter = rateLimit({
 app.use('/api/', limiter); // Apply to all API routes
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  // FIX: Added 'PUT' — authController uses PUT /profile, missing caused CORS preflight failures
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));

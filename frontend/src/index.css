@@ -325,9 +325,15 @@ h3 { font-size: 1.125rem; }
 
 /* Responsive Grids */
 .dm-grid-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+}
+
+.dm-grid-stats > * {
+  flex: 1 1 300px;
+  max-width: 380px;
 }
 
 .dm-grid-two {

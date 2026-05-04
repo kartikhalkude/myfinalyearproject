@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Landing from './pages/Landing';
@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import PatientDashboard from './pages/PatientDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
+import apiClient from './services/apiClient';
 
 function PrivateRoute({ children, requiredRole }) {
   const { user, loading } = useAuth();
@@ -31,6 +32,19 @@ function PrivateRoute({ children, requiredRole }) {
 }
 
 function App() {
+  // Pre-warm the backend on load to wake it up from Render sleep
+  useEffect(() => {
+    const wakeUpBackend = async () => {
+      try {
+        console.log('--- Waking up backend ---');
+        await apiClient.get('/health');
+      } catch (err) {
+        console.warn('Backend wake-up ping failed (might still be booting):', err.message);
+      }
+    };
+    wakeUpBackend();
+  }, []);
+
   return (
     <AuthProvider>
       <Router>

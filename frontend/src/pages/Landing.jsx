@@ -189,13 +189,7 @@ export default function Landing() {
       <section className="dm-container reveal" style={{ position: "relative", padding: "160px 24px 100px", zIndex: 10 }}>
         <div className="hero-grid">
           <div style={{ position: "relative", zIndex: 2 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 999, padding: "6px 16px", fontSize: 13, fontWeight: 600, color: "#10b981", marginBottom: 32 }}>
-              <span style={{ position: "relative", display: "flex", width: 8, height: 8 }}>
-                <span style={{ animation: "ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite", position: "absolute", width: "100%", height: "100%", borderRadius: "50%", background: "#10b981", opacity: 0.75 }}></span>
-                <span style={{ position: "relative", width: 8, height: 8, background: "#10b981", borderRadius: "50%" }}></span>
-              </span>
-              Next-Gen AI Healthcare
-            </div>
+            
             
             <h1 style={{ fontSize: "clamp(2.5rem, 8vw, 4.5rem)", fontWeight: 700, lineHeight: 1.05, letterSpacing: "-0.04em", color: c.text, marginBottom: 24 }}>
               Your health,<br />

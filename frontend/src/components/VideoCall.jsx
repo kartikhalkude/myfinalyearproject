@@ -84,6 +84,8 @@ function VideoCall({
   const [isAudioOn, setIsAudioOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isPipMinimized, setIsPipMinimized] = useState(false);
+  const [mediaReady, setMediaReady] = useState(false);
+  const [isRequestingMedia, setIsRequestingMedia] = useState(false);
 
   // Video refs — always in DOM so ontrack always has a valid element
   const localVideoRef = useRef(null);
@@ -126,6 +128,7 @@ function VideoCall({
           audio: true,
         });
         localStreamRef.current = stream;
+        setMediaReady(true);
         // localVideoRef is always mounted, so this always works
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
@@ -134,9 +137,11 @@ function VideoCall({
         return stream;
       } catch (err) {
         setError("Failed to access camera/microphone: " + err.message);
+        setMediaReady(false);
         return null;
       } finally {
         mediaInitializationPromiseRef.current = null;
+        setIsRequestingMedia(false);
       }
     })();
 
@@ -253,6 +258,12 @@ function VideoCall({
     } catch (err) {
       setError("Failed to initiate call: " + err.message);
     }
+  };
+
+  const requestMediaAccess = async () => {
+    setError("");
+    setIsRequestingMedia(true);
+    await initializeMedia();
   };
 
   // ─── Incoming Call Handler ────────────────────────────────────────────────
@@ -444,6 +455,10 @@ function VideoCall({
   });
 
   const isCallActive = callState === "active";
+  const isMobilePwa =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true ||
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -602,6 +617,25 @@ function VideoCall({
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#10b981", animation: "vc-pulse 2s infinite" }} />
                   <span style={{ fontSize: 15, fontWeight: 600, color: "#f1f5f9" }}>Waiting for Host to Join…</span>
                 </div>
+              )}
+              {isMobilePwa && !mediaReady && (
+                <button
+                  onClick={requestMediaAccess}
+                  disabled={isRequestingMedia}
+                  style={{
+                    padding: "16px 24px",
+                    background: isRequestingMedia ? "rgba(16,185,129,.55)" : "linear-gradient(135deg,#10b981,#059669)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 16,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    cursor: isRequestingMedia ? "wait" : "pointer",
+                    boxShadow: "0 10px 25px rgba(16,185,129,.35)",
+                  }}
+                >
+                  {isRequestingMedia ? "Requesting Access..." : "Enable Camera & Mic"}
+                </button>
               )}
               <button
                 onClick={() => onCallEnd?.()}

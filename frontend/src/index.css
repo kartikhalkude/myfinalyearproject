@@ -301,6 +301,19 @@ h3 { font-size: 1.125rem; }
   background: var(--slate-50); 
   position: relative;
 }
+.dm-page-content,
+.dm-page-inner {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+body.dm .dm-page-content {
+  background: #0b1120;
+  color: #e2e8f0;
+}
+
+body.dm .dm-page-inner {
+  color: #e2e8f0;
+}
 .dm-page-inner { 
   padding: 24px; 
   width: 100%;
@@ -388,6 +401,9 @@ h3 { font-size: 1.125rem; }
   .dm-page-shell {
     flex-direction: column;
     padding-top: 60px; /* Space for fixed MobileHeader */
+  }
+  body.dm .dm-page-content {
+    background: #0b1120;
   }
   .dm-page-inner {
     padding: 16px;

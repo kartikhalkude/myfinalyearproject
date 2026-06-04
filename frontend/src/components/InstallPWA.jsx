@@ -28,6 +28,19 @@ export default function InstallPWA() {
     const syncStandalone = () => setIsStandaloneMode(getStandaloneMode());
     syncStandalone();
 
+    // If already installed, in standalone mode, or dismissed, do not register the install listener
+    if (
+      getStandaloneMode() ||
+      storage.getLocalItem('pwa-installed') === 'true' ||
+      storage.getSessionItem('pwa-banner-dismissed') === 'true'
+    ) {
+      if (getStandaloneMode()) {
+        setIsInstalled(true);
+        storage.setLocalItem('pwa-installed', 'true');
+      }
+      return undefined;
+    }
+
     const showIfAllowed = () => {
       if (storage.getSessionItem('pwa-banner-dismissed') !== 'true') {
         setVisible(true);
@@ -56,31 +69,18 @@ export default function InstallPWA() {
     window.addEventListener('resize', syncStandalone);
     window.addEventListener('orientationchange', syncStandalone);
 
-    if (getStandaloneMode()) {
-      setVisible(true);
-      setIsInstalled(true);
-      storage.setLocalItem('pwa-installed', 'true');
-    } else {
-      const timer = window.setTimeout(() => {
-        if (!promptRef.current && storage.getSessionItem('pwa-banner-dismissed') !== 'true') {
-          setVisible(true);
-        }
-      }, 1500);
-
-      return () => {
-        window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-        window.removeEventListener('appinstalled', handleInstalled);
-        window.removeEventListener('resize', syncStandalone);
-        window.removeEventListener('orientationchange', syncStandalone);
-        window.clearTimeout(timer);
-      };
-    }
+    const timer = window.setTimeout(() => {
+      if (!promptRef.current && storage.getSessionItem('pwa-banner-dismissed') !== 'true') {
+        setVisible(true);
+      }
+    }, 1500);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('appinstalled', handleInstalled);
       window.removeEventListener('resize', syncStandalone);
       window.removeEventListener('orientationchange', syncStandalone);
+      window.clearTimeout(timer);
     };
   }, []);
 

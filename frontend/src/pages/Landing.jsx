@@ -1,15 +1,39 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Video, Brain, Calendar, Pill, Folder, ArrowRight, ShieldCheck, Activity, Users, Star, CheckCircle, MessageSquare, ScanLine, Moon, Sun, ChevronDown, Quote, ArrowUp } from "lucide-react";
+import { useDarkMode } from "../components/UI";
+import storage from "../utils/storage";
 
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [dark, setDark] = useState(() => document.body.classList.contains("dm"));
+  const dark = useDarkMode();
+
+  const c = {
+    bg:          dark ? "#0f172a"                        : "#f8fafc",
+    text:        dark ? "#f8fafc"                        : "#0f172a",
+    muted:       dark ? "#94a3b8"                        : "#64748b",
+    cardBg:      dark ? "#1e293b"                        : "#fff",
+    cardBorder:  dark ? "rgba(255,255,255,0.1)"          : "rgba(226, 232, 240, 0.6)",
+    navBg:       dark ? "rgba(15, 23, 42, 0.9)"          : "rgba(255, 255, 255, 0.9)",
+    navBorder:   dark ? "rgba(255,255,255,0.05)"         : "rgba(226, 232, 240, 0.8)",
+    sectionAlt:  dark ? "#111827"                        : "#fff",
+    sectionAlt2: dark ? "#111827"                        : "#f8fafc",
+  };
+
   const [activeFaq, setActiveFaq] = useState(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showGoTop, setShowGoTop] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const isDm = storage.getLocalItem("dm") === "1";
+    if (isDm) {
+      document.body.classList.add("dm");
+    } else if (storage.getLocalItem("dm") === "0") {
+      document.body.classList.remove("dm");
+    }
+  }, []);
 
   useEffect(() => {
     const onScroll = () => {
@@ -39,10 +63,11 @@ export default function Landing() {
 
   const toggleTheme = () => {
     const newVal = !dark;
-    setDark(newVal);
     if (newVal) document.body.classList.add("dm");
     else document.body.classList.remove("dm");
-    window.dispatchEvent(new CustomEvent("dm-change"));
+    storage.setLocalItem("dm", newVal ? "1" : "0");
+    window.dispatchEvent(new CustomEvent("darkmodechange", { detail: { dark: newVal } }));
+    window.dispatchEvent(new CustomEvent("dm-change", { detail: { dark: newVal } }));
   };
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
@@ -82,18 +107,6 @@ export default function Landing() {
     { q: "Can I use this for emergencies?",      a: "No, Dr.AssistAI is for non-emergency consultations. In case of emergency, please call your local emergency number." },
     { q: "How do I receive my prescriptions?",   a: "After your consultation, digital prescriptions are sent directly to your dashboard and can be shared with pharmacies." },
   ];
-
-  const c = {
-    bg:          dark ? "#0f172a"                        : "#f8fafc",
-    text:        dark ? "#f8fafc"                        : "#0f172a",
-    muted:       dark ? "#94a3b8"                        : "#64748b",
-    cardBg:      dark ? "#1e293b"                        : "#fff",
-    cardBorder:  dark ? "rgba(255,255,255,0.1)"          : "rgba(226, 232, 240, 0.6)",
-    navBg:       dark ? "rgba(15, 23, 42, 0.9)"          : "rgba(255, 255, 255, 0.9)",
-    navBorder:   dark ? "rgba(255,255,255,0.05)"         : "rgba(226, 232, 240, 0.8)",
-    sectionAlt:  dark ? "#111827"                        : "#fff",
-    sectionAlt2: dark ? "#111827"                        : "#f8fafc",
-  };
 
   // ─── shared section style helpers ──────────────────────────────────────────
   // Hero gets true 100vh via CSS class; other sections use padding + auto height

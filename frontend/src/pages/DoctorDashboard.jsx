@@ -613,6 +613,7 @@ function WalletView({ stats, transactions, onRefresh, addToast }) {
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 
 export default function DoctorDashboard() {
+  const isDark = useDarkMode();
   const { user, setUser, logout, wsConnected } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState({ todayAppointments: 0, totalPatients: 0, totalAppointments: 0, feedbackProvided: 0, pendingFeedback: 0 });

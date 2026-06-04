@@ -211,8 +211,15 @@ export function useDarkMode() {
   const [dark, setDark] = useState(document.body.classList.contains("dm"));
   useEffect(() => {
     const handler = (e) => setDark(e.detail.dark);
+    const sync = () => setDark(document.body.classList.contains("dm"));
     window.addEventListener("darkmodechange", handler);
-    return () => window.removeEventListener("darkmodechange", handler);
+    window.addEventListener("dm-change", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("darkmodechange", handler);
+      window.removeEventListener("dm-change", sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
   return dark;
 }
@@ -377,13 +384,7 @@ function LangDropdown({ dark }) {
    MOBILE HEADER
 ══════════════════════════════════════════════════════════════════ */
 export function MobileHeader({ onMenuClick, user }) {
-  const [dark, setDark] = useState(() => storage.getLocalItem("dm") === "1");
-  
-  useEffect(() => {
-    const sync = () => setDark(document.body.classList.contains('dm'));
-    window.addEventListener('dm-change', sync);
-    return () => window.removeEventListener('dm-change', sync);
-  }, []);
+  const dark = useDarkMode();
 
   const avatarColors = ["#1db585", "#3b82f6", "#8b5cf6", "#f59e0b", "#f43f5e"];
   const aColor = avatarColors[(user?.name?.charCodeAt(0) || 0) % avatarColors.length];
@@ -446,6 +447,7 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
     document.body.classList.toggle("dm", next);
     storage.setLocalItem("dm", next ? "1" : "0");
     window.dispatchEvent(new CustomEvent("darkmodechange", { detail: { dark: next } }));
+    window.dispatchEvent(new CustomEvent("dm-change", { detail: { dark: next } }));
   };
 
   const avatarColors = ["#1db585", "#3b82f6", "#8b5cf6", "#f59e0b", "#f43f5e"];

@@ -285,6 +285,7 @@ function AppointmentHistory({ appointments, onStartCall, onCancelAppt, onMessage
 // ─── Main dashboard ───────────────────────────────────────────────────────────
 
 export default function PatientDashboard() {
+  const isDark = useDarkMode();
   const { user, logout, wsConnected } = useAuth();
   const [tab, setTab] = useState("overview");
   const [stats, setStats] = useState({ unreadHealthRecords: 0, unreadPrescriptions: 0, totalAppointments: 0, upcomingAppointments: 0, totalPredictions: 0 });

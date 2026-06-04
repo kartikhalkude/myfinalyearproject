@@ -96,33 +96,7 @@ export default function InstallPWA() {
       }
       setDeferredPrompt(null);
       promptRef.current = null;
-      return;
     }
-
-    // Fallback: Guide user to browser's install option
-    // Detect browser for specific instructions
-    const isEdge = navigator.userAgent.includes('Edg');
-    const isChrome = navigator.userAgent.includes('Chrome') && !isEdge;
-
-    let message = '';
-    if (isEdge) {
-      message =
-        'To install Dr.AssistAI:\n\n' +
-        '1. Click the ⋯ (three dots) menu in the top-right corner\n' +
-        '2. Go to "Apps"\n' +
-        '3. Click "Install this site as an app"';
-    } else if (isChrome) {
-      message =
-        'To install Dr.AssistAI:\n\n' +
-        '1. Click the ⋮ (three dots) menu in the top-right corner\n' +
-        '2. Click "Install Dr.AssistAI..." or "Install app"';
-    } else {
-      message =
-        'To install Dr.AssistAI:\n\n' +
-        'Look for an install or "Add to Home Screen" option in your browser\'s menu.';
-    }
-
-    alert(message);
   }, [deferredPrompt]);
 
   // Handle Dismiss
@@ -136,10 +110,20 @@ export default function InstallPWA() {
   }, []);
 
   // Detect standalone mode
-  const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
+                           window.navigator.standalone === true ||
+                           document.referrer.includes('android-app://') ||
+                           window.location.search.includes('utm_source=pwa');
+
+  // Check if running on mobile device
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   // If already running inside standalone app, do not show prompt banner
   if (isStandaloneMode) return null;
+
+  // On desktop browsers, once installed, we should not show the prompt to "Open App" at all
+  // to avoid redundant windows. We only allow "Open App" prompting on mobile devices.
+  if (isInstalled && !isMobileDevice) return null;
 
   // If user dismissed and we're not using the special "isInstalled" state override, hide
   if (!showBanner && !isInstalled) return null;
@@ -273,10 +257,14 @@ export default function InstallPWA() {
           {isInstalled ? (
             <button
               onClick={() => {
-                // To open PWA in its own standalone window app:
-                // If it's already installed, launching the URL in a new window/tab
-                // will trigger the browser's PWA launch/handling mechanism.
-                window.open(window.location.origin + '/', '_blank');
+                // To open the PWA in its own standalone-like app window on desktop:
+                // Passing layout feature constraints like menu/status/toolbar hides the browser chrome
+                // and opens it in a dedicated app frame matching the standalone display configuration.
+                window.open(
+                  window.location.origin + '/',
+                  'DrAssistAIPWA',
+                  'menubar=no,status=no,toolbar=no,location=no,personalbar=no,directories=no,resizable=yes,scrollbars=yes,width=1280,height=800'
+                );
                 handleDismiss();
               }}
               style={{

@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import PatientDashboard from './pages/PatientDashboard';
 import DoctorDashboard from './pages/DoctorDashboard';
+import InstallPWA from './components/InstallPWA';
 import apiClient from './services/apiClient';
 
 function PrivateRoute({ children, requiredRole }) {
@@ -36,10 +37,9 @@ function App() {
   useEffect(() => {
     const wakeUpBackend = async () => {
       try {
-        console.log('--- Waking up backend ---');
         await apiClient.get('/health');
       } catch (err) {
-        console.warn('Backend wake-up ping failed (might still be booting):', err.message);
+        // Keep warnings silent
       }
     };
     wakeUpBackend();
@@ -47,7 +47,7 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
@@ -69,6 +69,7 @@ function App() {
             }
           />
         </Routes>
+        <InstallPWA />
       </Router>
     </AuthProvider>
   );

@@ -7,9 +7,31 @@
     <title>Dr.Assist AI | Your Health, Intelligently Managed</title>
     <meta name="description" content="Next-gen AI healthcare platform connecting patients with doctors via HD video, offering ML-powered health screenings and secure records." />
     <meta name="theme-color" content="#10b981" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Dr.AssistAI" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
+    <!-- Microsoft PWA Meta Tags -->
+    <meta name="msapplication-TileColor" content="#10b981" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Register Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

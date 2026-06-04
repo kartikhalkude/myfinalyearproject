@@ -1,138 +1,148 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Download, X, ShieldCheck, Monitor } from 'lucide-react';
+import { Download, ShieldCheck, Monitor } from 'lucide-react';
+import storage from '../utils/storage';
+
+const isBrowser = typeof window !== 'undefined';
+
+const getStandaloneMode = () => {
+  if (!isBrowser) return false;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+    window.navigator.standalone === true
+  );
+};
 
 export default function InstallPWA() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showBanner, setShowBanner] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(() => {
-    return (
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true ||
-      localStorage.getItem('pwa-installed') === 'true'
-    );
-  });
+  const [visible, setVisible] = useState(false);
+  const [isStandaloneMode, setIsStandaloneMode] = useState(() => getStandaloneMode());
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(() => storage.getLocalItem('pwa-installed') === 'true');
   const promptRef = useRef(null);
+  const dismissedThisSession = storage.getSessionItem('pwa-banner-dismissed') === 'true';
 
   useEffect(() => {
-    // Check if already installed as standalone
-    if (
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true
-    ) {
+    if (!isBrowser) return undefined;
+
+    const syncStandalone = () => setIsStandaloneMode(getStandaloneMode());
+    syncStandalone();
+
+    const showIfAllowed = () => {
+      if (storage.getSessionItem('pwa-banner-dismissed') !== 'true') {
+        setVisible(true);
+      }
+    };
+
+    const handleBeforeInstall = (event) => {
+      event.preventDefault();
+      setDeferredPrompt(event);
+      promptRef.current = event;
+      showIfAllowed();
+    };
+
+    const handleInstalled = () => {
+      setIsStandaloneMode(true);
       setIsInstalled(true);
-      localStorage.setItem('pwa-installed', 'true');
-      return;
-    }
-
-    // Check if user previously dismissed (per session)
-    const dismissed = sessionStorage.getItem('pwa-install-dismissed');
-    if (dismissed && localStorage.getItem('pwa-installed') !== 'true') return;
-
-    // Listen for the native beforeinstallprompt
-    const handleBeforeInstall = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      promptRef.current = e;
-      // Show banner immediately since we have a native prompt
-      setShowBanner(true);
+      setDeferredPrompt(null);
+      promptRef.current = null;
+      setVisible(true);
+      storage.setLocalItem('pwa-installed', 'true');
+      storage.removeSessionItem('pwa-banner-dismissed');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-
-    // Listen for successful install
-    const handleInstalled = () => {
-      setIsInstalled(true);
-      localStorage.setItem('pwa-installed', 'true');
-      setShowBanner(true); // Keep banner open to show "Open App"
-      setDeferredPrompt(null);
-      promptRef.current = null;
-    };
     window.addEventListener('appinstalled', handleInstalled);
+    window.addEventListener('resize', syncStandalone);
+    window.addEventListener('orientationchange', syncStandalone);
 
-    // If it's already installed, show banner so user can "Open App"
-    if (localStorage.getItem('pwa-installed') === 'true') {
-      setShowBanner(true);
+    if (getStandaloneMode()) {
+      setVisible(true);
+      setIsInstalled(true);
+      storage.setLocalItem('pwa-installed', 'true');
     } else {
-      // Fallback: if beforeinstallprompt doesn't fire within 2 seconds,
-      // show a manual install banner anyway. This handles Edge and other
-      // Chromium browsers that may delay or skip the event on localhost/dev.
-      const fallbackTimer = setTimeout(() => {
-        if (!promptRef.current) {
-          // Just check that a manifest link exists in the document
-          const hasManifest = !!document.querySelector('link[rel="manifest"]');
-          if (hasManifest) {
-            setShowBanner(true);
-          }
+      const timer = window.setTimeout(() => {
+        if (!promptRef.current && storage.getSessionItem('pwa-banner-dismissed') !== 'true') {
+          setVisible(true);
         }
-      }, 2000);
+      }, 1500);
+
       return () => {
         window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
         window.removeEventListener('appinstalled', handleInstalled);
-        clearTimeout(fallbackTimer);
+        window.removeEventListener('resize', syncStandalone);
+        window.removeEventListener('orientationchange', syncStandalone);
+        window.clearTimeout(timer);
       };
     }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('appinstalled', handleInstalled);
+      window.removeEventListener('resize', syncStandalone);
+      window.removeEventListener('orientationchange', syncStandalone);
     };
   }, []);
 
   const handleInstall = useCallback(async () => {
-    // If we have the native prompt, use it
-    if (deferredPrompt) {
-      try {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          setIsInstalled(true);
-          localStorage.setItem('pwa-installed', 'true');
-          setShowBanner(true);
-        }
-      } catch (err) {
-        console.warn('Install prompt error:', err);
+    if (!deferredPrompt) return;
+
+    try {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        storage.setLocalItem('pwa-installed', 'true');
       }
+    } catch (err) {
+      console.warn('Install prompt error:', err);
+    } finally {
       setDeferredPrompt(null);
       promptRef.current = null;
     }
   }, [deferredPrompt]);
 
-  // Handle Dismiss
   const handleDismiss = useCallback(() => {
     setIsAnimatingOut(true);
-    setTimeout(() => {
-      setShowBanner(false);
+    window.setTimeout(() => {
+      setVisible(false);
       setIsAnimatingOut(false);
-      sessionStorage.setItem('pwa-install-dismissed', 'true');
-    }, 400);
+      storage.setSessionItem('pwa-banner-dismissed', 'true');
+    }, 350);
   }, []);
 
-  // Detect standalone mode
-  const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
-                           window.navigator.standalone === true ||
-                           document.referrer.includes('android-app://') ||
-                           window.location.search.includes('utm_source=pwa');
+  const handleOpenApp = useCallback(() => {
+    if (getStandaloneMode()) {
+      handleDismiss();
+      return;
+    }
 
-  // Check if running on mobile device
-  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const popup = window.open(
+      window.location.origin + '/',
+      'DrAssistAIPWA',
+      'popup=yes,width=1280,height=800,resizable=yes,scrollbars=yes'
+    );
 
-  // If already running inside standalone app, do not show prompt banner
-  if (isStandaloneMode) return null;
+    if (!popup) {
+      window.location.assign('/');
+    }
+    handleDismiss();
+  }, [handleDismiss]);
 
-  // On desktop browsers, once installed, we should not show the prompt to "Open App" at all
-  // to avoid redundant windows. We only allow "Open App" prompting on mobile devices.
-  if (isInstalled && !isMobileDevice) return null;
+  const shouldRender = !dismissedThisSession && (visible || Boolean(deferredPrompt) || isStandaloneMode);
+  if (!shouldRender) return null;
 
-  // If user dismissed and we're not using the special "isInstalled" state override, hide
-  if (!showBanner && !isInstalled) return null;
-
-  const dark = document.body.classList.contains('dm');
+  const dark = isBrowser && document.body.classList.contains('dm');
+  const title = isStandaloneMode ? 'Dr.AssistAI Open' : isInstalled ? 'Open Dr.AssistAI' : 'Install Dr.AssistAI';
+  const subtitle = isStandaloneMode
+    ? 'You are inside the app'
+    : isInstalled
+      ? 'Open the installed app on desktop'
+      : 'Faster, full-screen access';
+  const primaryLabel = deferredPrompt ? 'Install' : isStandaloneMode ? 'Close' : isInstalled ? 'Open App' : 'Install';
 
   return (
     <>
-      {/* Blurred overlay backdrop behind PWA prompt */}
       <div
         style={{
           position: 'fixed',
@@ -141,9 +151,8 @@ export default function InstallPWA() {
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
           zIndex: 9998,
-          animation: isAnimatingOut
-            ? 'pwa-fade-out 0.4s ease forwards'
-            : 'pwa-fade-in 0.5s ease forwards',
+          pointerEvents: 'auto',
+          animation: isAnimatingOut ? 'pwa-fade-out 0.35s ease forwards' : 'pwa-fade-in 0.35s ease forwards',
         }}
         onClick={handleDismiss}
       />
@@ -161,9 +170,7 @@ export default function InstallPWA() {
           alignItems: 'center',
           gap: 16,
           padding: '14px 20px 14px 16px',
-          background: dark
-            ? 'rgba(30, 41, 59, 0.96)'
-            : 'rgba(255, 255, 255, 0.98)',
+          background: dark ? 'rgba(30, 41, 59, 0.96)' : 'rgba(255, 255, 255, 0.98)',
           backdropFilter: 'blur(20px) saturate(180%)',
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
           borderRadius: 20,
@@ -171,14 +178,13 @@ export default function InstallPWA() {
             ? '0 20px 60px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08)'
             : '0 20px 60px -10px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(226, 232, 240, 0.8)',
           animation: isAnimatingOut
-            ? 'pwa-slide-down 0.4s cubic-bezier(0.4, 0, 1, 1) forwards'
-            : 'pwa-slide-up 0.6s cubic-bezier(0, 0, 0.2, 1) forwards',
+            ? 'pwa-slide-down 0.35s cubic-bezier(0.4, 0, 1, 1) forwards'
+            : 'pwa-slide-up 0.45s cubic-bezier(0, 0, 0.2, 1) forwards',
           maxWidth: 'calc(100vw - 32px)',
           width: '540px',
           fontFamily: "'Inter', 'DM Sans', sans-serif",
         }}
       >
-        {/* App Icon */}
         <div
           className="pwa-icon-resp"
           style={{
@@ -196,35 +202,16 @@ export default function InstallPWA() {
           <ShieldCheck size={22} color="#fff" strokeWidth={2.5} />
         </div>
 
-        {/* Text Content */}
         <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: 14,
-              color: dark ? '#f8fafc' : '#0f172a',
-              letterSpacing: '-0.01em',
-              lineHeight: 1.3,
-            }}
-          >
-            {isInstalled ? 'Dr.AssistAI Installed' : 'Install Dr.AssistAI'}
+          <div style={{ fontWeight: 700, fontSize: 14, color: dark ? '#f8fafc' : '#0f172a', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+            {title}
           </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: dark ? '#94a3b8' : '#64748b',
-              fontWeight: 500,
-              lineHeight: 1.3,
-              marginTop: 2,
-            }}
-          >
-            {isInstalled ? 'App is ready on your device' : 'Faster, full-screen access'}
+          <div style={{ fontSize: 12, color: dark ? '#94a3b8' : '#64748b', fontWeight: 500, lineHeight: 1.3, marginTop: 2 }}>
+            {subtitle}
           </div>
         </div>
 
-        {/* Action Group wrapper for stacking on mobile */}
         <div className="pwa-actions-wrap" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          {/* Skip / Close Button */}
           <button
             onClick={handleDismiss}
             style={{
@@ -239,94 +226,35 @@ export default function InstallPWA() {
               transition: 'all 0.2s',
               fontFamily: 'inherit',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = dark
-                ? 'rgba(255,255,255,0.1)'
-                : 'rgba(15, 23, 42, 0.08)';
-              e.currentTarget.style.color = dark ? '#fff' : '#0f172a';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = dark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(15, 23, 42, 0.04)';
-              e.currentTarget.style.color = dark ? '#cbd5e1' : '#475569';
-            }}
           >
-            {isInstalled ? 'Close' : 'Skip'}
+          {isStandaloneMode ? 'Close' : 'Skip'}
           </button>
 
-          {/* Action Button */}
-          {isInstalled ? (
-            <button
-              onClick={() => {
-                // To open the PWA in its own standalone-like app window on desktop:
-                // Passing layout feature constraints like menu/status/toolbar hides the browser chrome
-                // and opens it in a dedicated app frame matching the standalone display configuration.
-                window.open(
-                  window.location.origin + '/',
-                  'DrAssistAIPWA',
-                  'menubar=no,status=no,toolbar=no,location=no,personalbar=no,directories=no,resizable=yes,scrollbars=yes,width=1280,height=800'
-                );
-                handleDismiss();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 20px',
-                background: '#0284c7',
-                border: 'none',
-                borderRadius: 14,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: 'pointer',
-                color: '#fff',
-                fontFamily: 'inherit',
-                transition: 'all 0.25s',
-                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              <Monitor size={15} strokeWidth={2.5} />
-              Open App
-            </button>
-          ) : (
-            <button
-              onClick={handleInstall}
-              onMouseEnter={(e) => {
-                setIsHovered(true);
-                e.currentTarget.style.background = '#059669';
-                e.currentTarget.style.transform = 'scale(1.03)';
-                e.currentTarget.style.boxShadow =
-                  '0 6px 16px rgba(16, 185, 129, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                setIsHovered(false);
-                e.currentTarget.style.background = '#10b981';
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow =
-                  '0 4px 12px rgba(16, 185, 129, 0.25)';
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 20px',
-                background: '#10b981',
-                border: 'none',
-                borderRadius: 14,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: 'pointer',
-                color: '#fff',
-                fontFamily: 'inherit',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              <Download size={15} strokeWidth={2.5} />
-              Install
-            </button>
-          )}
+          <button
+            onClick={deferredPrompt ? handleInstall : isStandaloneMode ? handleDismiss : isInstalled ? handleOpenApp : handleInstall}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 20px',
+              background: deferredPrompt || isStandaloneMode ? '#10b981' : isInstalled ? '#0284c7' : '#10b981',
+              border: 'none',
+              borderRadius: 14,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              color: '#fff',
+              fontFamily: 'inherit',
+              transition: 'all 0.25s',
+              boxShadow: deferredPrompt || isStandaloneMode
+                ? '0 4px 12px rgba(16, 185, 129, 0.25)'
+                : '0 4px 12px rgba(2, 132, 199, 0.25)',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {deferredPrompt ? <Download size={15} strokeWidth={2.5} /> : <Monitor size={15} strokeWidth={2.5} />}
+            {primaryLabel}
+          </button>
         </div>
       </div>
 
@@ -340,24 +268,12 @@ export default function InstallPWA() {
           to { opacity: 0; }
         }
         @keyframes pwa-slide-up {
-          0% {
-            opacity: 0;
-            transform: translateX(-50%) translateY(80px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-          }
+          0% { opacity: 0; transform: translateX(-50%) translateY(80px); }
+          100% { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
         @keyframes pwa-slide-down {
-          0% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-          }
-          100% {
-            opacity: 0;
-            transform: translateX(-50%) translateY(80px);
-          }
+          0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+          100% { opacity: 0; transform: translateX(-50%) translateY(80px); }
         }
 
         @media (max-width: 580px) {

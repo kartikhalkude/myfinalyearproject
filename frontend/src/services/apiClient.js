@@ -1,5 +1,6 @@
 // frontend/src/services/apiClient.js
 import axios from 'axios';
+import storage from '../utils/storage';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://dr-assistai-api.onrender.com/api';
 
@@ -12,7 +13,7 @@ const apiClient = axios.create({
 // Request interceptor — attach JWT token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = storage.getLocalItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -26,7 +27,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
+      storage.removeLocalItem('token');
       window.location.href = '/login';
     }
     return Promise.reject(error);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import storage from "../utils/storage";
 
 /* ══════════════════════════════════════════════════════════════════
    LANGUAGES
@@ -376,7 +377,7 @@ function LangDropdown({ dark }) {
    MOBILE HEADER
 ══════════════════════════════════════════════════════════════════ */
 export function MobileHeader({ onMenuClick, user }) {
-  const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1");
+  const [dark, setDark] = useState(() => storage.getLocalItem("dm") === "1");
   
   useEffect(() => {
     const sync = () => setDark(document.body.classList.contains('dm'));
@@ -433,7 +434,7 @@ export function MobileHeader({ onMenuClick, user }) {
    SIDEBAR
 ══════════════════════════════════════════════════════════════════ */
 export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsConnected, mobileOpen, onMobileClose }) {
-  const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1");
+  const [dark, setDark] = useState(() => storage.getLocalItem("dm") === "1");
   const gtBooted = useRef(false);
 
   useEffect(() => { injectDM(); document.body.classList.toggle("dm", dark); }, []); // eslint-disable-line
@@ -443,7 +444,7 @@ export function Sidebar({ user, navItems, activeTab, onTabChange, onLogout, wsCo
     const next = !dark;
     setDark(next);
     document.body.classList.toggle("dm", next);
-    localStorage.setItem("dm", next ? "1" : "0");
+    storage.setLocalItem("dm", next ? "1" : "0");
     window.dispatchEvent(new CustomEvent("darkmodechange", { detail: { dark: next } }));
   };
 

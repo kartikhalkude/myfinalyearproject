@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { authAPI } from '../services/api';
 import websocketService from '../services/websocket';
+import storage from '../utils/storage';
 
 const AuthContext = createContext();
 
@@ -10,7 +11,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://dr-assistai-api.onrende
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(() => storage.getLocalItem('token'));
   const [error, setError] = useState(null);
   const [wsConnected, setWsConnected] = useState(false);
 
@@ -42,7 +43,7 @@ export const AuthProvider = ({ children }) => {
   // Check authentication on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const storedToken = localStorage.getItem('token');
+      const storedToken = storage.getLocalItem('token');
       if (storedToken) {
         try {
           const userData = await authAPI.getCurrentUser();
@@ -53,7 +54,7 @@ export const AuthProvider = ({ children }) => {
           connectWebSocket(normalizedUser.id);
         } catch (error) {
           console.error('Auth check failed:', error);
-          localStorage.removeItem('token');
+          storage.removeLocalItem('token');
           setToken(null);
           setUser(null);
         }
@@ -101,7 +102,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.login(email, password);
       const { token: newToken, user: userData } = response;
 
-      localStorage.setItem('token', newToken);
+      storage.setLocalItem('token', newToken);
       setToken(newToken);
       const normalizedUser = { ...userData, id: userData.id || userData._id };
       setUser(normalizedUser);
@@ -126,7 +127,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.register(userData);
       const { token: newToken, user: newUser } = response;
 
-      localStorage.setItem('token', newToken);
+      storage.setLocalItem('token', newToken);
       setToken(newToken);
       const normalizedUser = { ...newUser, id: newUser.id || newUser._id };
       setUser(normalizedUser);
@@ -151,7 +152,7 @@ export const AuthProvider = ({ children }) => {
       websocketService.cleanup();
       websocketService.disconnect();
 
-      localStorage.removeItem('token');
+      storage.removeLocalItem('token');
       setToken(null);
       setUser(null);
       setError(null);

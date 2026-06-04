@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import apiClient from "../services/apiClient";
 import websocketService from "../services/websocket";
+import storage from "../utils/storage";
 import { SectionCard, EmptyState, Loader, PageHeader, Btn, useDarkMode } from "./UI";
 import { X, Plus, Edit2, Trash2, FileText, AlertCircle, CheckCircle, Search, Activity, Thermometer, Heart, ClipboardList, Calendar, MessageSquare, ChevronRight, Bell } from "lucide-react";
 
@@ -83,7 +84,7 @@ const onBlur = e => { e.target.style.background = "#f8fafc"; e.target.style.bord
 
 export default function HealthRecords({ doctorPatients, onRefresh }) {
   const { user, API_URL } = useAuth();
-  const [dark, setDark] = useState(() => localStorage.getItem("dm") === "1" || document.body.classList.contains("dm"));
+  const [dark, setDark] = useState(() => storage.getLocalItem("dm") === "1" || document.body.classList.contains("dm"));
   const [records, setRecords] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -124,7 +125,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
   };
 
   useEffect(() => {
-    const syncDark = () => setDark(localStorage.getItem("dm") === "1" || document.body.classList.contains("dm"));
+    const syncDark = () => setDark(storage.getLocalItem("dm") === "1" || document.body.classList.contains("dm"));
     syncDark();
     const observer = new MutationObserver(syncDark);
     observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
@@ -488,7 +489,7 @@ export default function HealthRecords({ doctorPatients, onRefresh }) {
                     <div style={{ width: 36, height: 36, borderRadius: 8, background: dark ? "rgba(255,255,255,0.1)" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", color: "#3b82f6", flexShrink: 0 }}><FileText size={18} /></div>
                     <div style={{ fontSize: 14, fontWeight: 500, color: c.fileText, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{viewingRecord.fileName || "Medical Report"}</div>
                   </div>
-                  <a href={`${API_URL}/health-records/${viewingRecord._id}/file?token=${localStorage.getItem('token')}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`${API_URL}/health-records/${viewingRecord._id}/file?token=${storage.getLocalItem('token')}`} target="_blank" rel="noopener noreferrer"
                     style={{ padding: "8px 16px", background: "#3b82f6", color: "#fff", borderRadius: 10, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>View File</a>
                 </div>
               )}

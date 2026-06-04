@@ -20,7 +20,9 @@ export default function InstallPWA() {
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const [isInstalled, setIsInstalled] = useState(() => storage.getLocalItem('pwa-installed') === 'true');
   const promptRef = useRef(null);
-  const dismissedThisSession = storage.getSessionItem('pwa-banner-dismissed') === 'true';
+  const dismissedThisSession = 
+    storage.getSessionItem('pwa-banner-dismissed') === 'true' || 
+    storage.getLocalItem('pwa-banner-dismissed') === 'true';
 
   useEffect(() => {
     if (!isBrowser) return undefined;
@@ -28,11 +30,11 @@ export default function InstallPWA() {
     const syncStandalone = () => setIsStandaloneMode(getStandaloneMode());
     syncStandalone();
 
-    // If already installed, in standalone mode, or dismissed, do not register the install listener
+    // If already in standalone mode or dismissed, do not show the banner
     if (
       getStandaloneMode() ||
-      storage.getLocalItem('pwa-installed') === 'true' ||
-      storage.getSessionItem('pwa-banner-dismissed') === 'true'
+      storage.getSessionItem('pwa-banner-dismissed') === 'true' ||
+      storage.getLocalItem('pwa-banner-dismissed') === 'true'
     ) {
       if (getStandaloneMode()) {
         setIsInstalled(true);
@@ -42,7 +44,10 @@ export default function InstallPWA() {
     }
 
     const showIfAllowed = () => {
-      if (storage.getSessionItem('pwa-banner-dismissed') !== 'true') {
+      if (
+        storage.getSessionItem('pwa-banner-dismissed') !== 'true' &&
+        storage.getLocalItem('pwa-banner-dismissed') !== 'true'
+      ) {
         setVisible(true);
       }
     };
@@ -59,9 +64,8 @@ export default function InstallPWA() {
       setIsInstalled(true);
       setDeferredPrompt(null);
       promptRef.current = null;
-      setVisible(true);
+      setVisible(false); // Hide the banner if installed
       storage.setLocalItem('pwa-installed', 'true');
-      storage.removeSessionItem('pwa-banner-dismissed');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
@@ -70,7 +74,11 @@ export default function InstallPWA() {
     window.addEventListener('orientationchange', syncStandalone);
 
     const timer = window.setTimeout(() => {
-      if (!promptRef.current && storage.getSessionItem('pwa-banner-dismissed') !== 'true') {
+      if (
+        !promptRef.current && 
+        storage.getSessionItem('pwa-banner-dismissed') !== 'true' &&
+        storage.getLocalItem('pwa-banner-dismissed') !== 'true'
+      ) {
         setVisible(true);
       }
     }, 1500);
@@ -93,6 +101,7 @@ export default function InstallPWA() {
       if (outcome === 'accepted') {
         setIsInstalled(true);
         storage.setLocalItem('pwa-installed', 'true');
+        setVisible(false);
       }
     } catch (err) {
       console.warn('Install prompt error:', err);
@@ -108,10 +117,14 @@ export default function InstallPWA() {
       setVisible(false);
       setIsAnimatingOut(false);
       storage.setSessionItem('pwa-banner-dismissed', 'true');
+      storage.setLocalItem('pwa-banner-dismissed', 'true');
     }, 350);
   }, []);
 
   const handleOpenApp = useCallback(() => {
+    storage.setSessionItem('pwa-banner-dismissed', 'true');
+    storage.setLocalItem('pwa-banner-dismissed', 'true');
+
     if (getStandaloneMode()) {
       handleDismiss();
       return;
@@ -129,7 +142,7 @@ export default function InstallPWA() {
     handleDismiss();
   }, [handleDismiss]);
 
-  const shouldRender = !dismissedThisSession && (visible || Boolean(deferredPrompt) || isStandaloneMode);
+  const shouldRender = !isStandaloneMode && !dismissedThisSession && (visible || Boolean(deferredPrompt));
   if (!shouldRender) return null;
 
   const dark = isBrowser && document.body.classList.contains('dm');

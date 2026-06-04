@@ -519,7 +519,7 @@ export default function Landing() {
           gap: 48px;
         }
         .how-it-works-line {
-          display: none; /* hidden on mobile; shown on desktop via media query */
+          display: none;
         }
         @media (min-width: 769px) {
           .how-it-works-line {
@@ -532,13 +532,6 @@ export default function Landing() {
             background: linear-gradient(90deg, #10b981, rgba(16,185,129,0.3));
             z-index: 0;
           }
-        }
-
-        /* ── Nav links (hidden on tablet) ── */
-        .landing-nav-links {
-          display: flex;
-          gap: 32px;
-          align-items: center;
         }
 
         /* ── Reveal animation ── */
@@ -556,83 +549,30 @@ export default function Landing() {
            TABLET  ≤ 1024px
         ═══════════════════════════════════════════ */
         @media (max-width: 1024px) {
-          .hero-grid {
-            gap: 32px;
-          }
-          .landing-hero-image-wrap {
-            max-width: 360px !important;
-          }
-        }
-
-        /* ═══════════════════════════════════════════
-           TABLET  ≤ 900px
-        ═══════════════════════════════════════════ */
-        @media (max-width: 900px) {
-          .landing-nav-links { display: none !important; }
-          .hero-stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-          }
+          .hero-grid { gap: 32px; }
+          .landing-hero-image-wrap { max-width: 360px !important; }
         }
 
         /* ═══════════════════════════════════════════
            MOBILE  ≤ 768px
-           All sections → auto height, generous padding
         ═══════════════════════════════════════════ */
         @media (max-width: 768px) {
-          /* Hero: auto height on mobile, don't lock to 100vh */
-          .landing-hero-section {
-            height: auto !important;
-            min-height: 0 !important;
-            padding: 96px 16px 56px !important;
-          }
+          .landing-hero-section { height: 100vh !important; min-height: 100vh !important; padding: 96px 16px 56px !important; }
+          section[id], .landing-cta-section { min-height: 0 !important; }
+          section[id] { padding: 72px 16px !important; }
+          .landing-cta-section { padding: 48px 16px !important; }
 
-          /* All other sections: drop min-height, keep padding */
-          section[id], .landing-cta-section {
-            min-height: 0 !important;
-          }
+          .hero-grid { grid-template-columns: 1fr !important; gap: 0px !important; }
+          .hero-grid > div:first-child { order: 1; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+          .hero-grid > div:last-child { display: none !important; }
 
-          section[id] {
-            padding: 72px 16px !important;
-          }
-          .landing-cta-section {
-            padding: 48px 16px !important;
-          }
-
-          /* Hero grid → single column */
-          .hero-grid {
-            grid-template-columns: 1fr !important;
-            gap: 32px !important;
-          }
-          .hero-grid > div:first-child { order: 1; text-align: center; }
-          .hero-grid > div:last-child  { order: 2; }
-
-          /* Headings */
           .landing-hero-section h1 { text-align: center; }
-          .landing-hero-section p  { text-align: center; margin-left: auto; margin-right: auto; }
-
-          /* Hero buttons */
+          .landing-hero-section p { text-align: center; margin-left: auto; margin-right: auto; }
           .hero-buttons { justify-content: center; }
-
-          /* Hero image */
-          .landing-hero-image-wrap {
-            max-width: 260px !important;
-            transform: none !important;
-          }
-
-          /* Floating badges */
           .landing-floating { display: none !important; }
 
-          /* Stats */
-          .hero-stats-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 12px !important;
-            max-width: 320px;
-            margin: 24px auto 0 !important;
-          }
+          .hero-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 16px 12px !important; max-width: 320px; margin: 24px auto 0 auto !important; justify-items: center; }
           .hero-stat-item { display: flex; flex-direction: column; align-items: center; text-align: center; }
-          .hero-stat-header { justify-content: center; margin-bottom: 4px !important; }
-
           /* Feature / testimonial cards */
           .dm-grid-stats { grid-template-columns: 1fr !important; }
 

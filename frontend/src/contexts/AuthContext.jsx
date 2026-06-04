@@ -157,7 +157,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       setWsConnected(false);
 
-      window.location.href = '/login';
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
     }

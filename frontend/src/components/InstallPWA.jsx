@@ -255,8 +255,10 @@ export default function InstallPWA() {
           {isInstalled ? (
             <button
               onClick={() => {
-                // If supported, launch or remind user to open app from launcher
-                alert('Dr.AssistAI PWA is installed! You can launch it from your Desktop or Applications list.');
+                // To open PWA in its own standalone window app:
+                // If it's already installed, launching the URL in a new window/tab
+                // will trigger the browser's PWA launch/handling mechanism.
+                window.open(window.location.origin + '/', '_blank');
                 handleDismiss();
               }}
               style={{

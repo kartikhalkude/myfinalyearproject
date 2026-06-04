@@ -4,7 +4,13 @@ import { Download, X, ShieldCheck, Monitor } from 'lucide-react';
 export default function InstallPWA() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showBanner, setShowBanner] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(() => {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true ||
+      localStorage.getItem('pwa-installed') === 'true'
+    );
+  });
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const promptRef = useRef(null);
@@ -16,12 +22,13 @@ export default function InstallPWA() {
       window.navigator.standalone === true
     ) {
       setIsInstalled(true);
+      localStorage.setItem('pwa-installed', 'true');
       return;
     }
 
     // Check if user previously dismissed (per session)
     const dismissed = sessionStorage.getItem('pwa-install-dismissed');
-    if (dismissed) return;
+    if (dismissed && localStorage.getItem('pwa-installed') !== 'true') return;
 
     // Listen for the native beforeinstallprompt
     const handleBeforeInstall = (e) => {
@@ -37,29 +44,39 @@ export default function InstallPWA() {
     // Listen for successful install
     const handleInstalled = () => {
       setIsInstalled(true);
-      setShowBanner(false);
+      localStorage.setItem('pwa-installed', 'true');
+      setShowBanner(true); // Keep banner open to show "Open App"
       setDeferredPrompt(null);
       promptRef.current = null;
     };
     window.addEventListener('appinstalled', handleInstalled);
 
-    // Fallback: if beforeinstallprompt doesn't fire within 2 seconds,
-    // show a manual install banner anyway. This handles Edge and other
-    // Chromium browsers that may delay or skip the event on localhost/dev.
-    const fallbackTimer = setTimeout(() => {
-      if (!promptRef.current) {
-        // Just check that a manifest link exists in the document
-        const hasManifest = !!document.querySelector('link[rel="manifest"]');
-        if (hasManifest) {
-          setShowBanner(true);
+    // If it's already installed, show banner so user can "Open App"
+    if (localStorage.getItem('pwa-installed') === 'true') {
+      setShowBanner(true);
+    } else {
+      // Fallback: if beforeinstallprompt doesn't fire within 2 seconds,
+      // show a manual install banner anyway. This handles Edge and other
+      // Chromium browsers that may delay or skip the event on localhost/dev.
+      const fallbackTimer = setTimeout(() => {
+        if (!promptRef.current) {
+          // Just check that a manifest link exists in the document
+          const hasManifest = !!document.querySelector('link[rel="manifest"]');
+          if (hasManifest) {
+            setShowBanner(true);
+          }
         }
-      }
-    }, 2000);
+      }, 2000);
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+        window.removeEventListener('appinstalled', handleInstalled);
+        clearTimeout(fallbackTimer);
+      };
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('appinstalled', handleInstalled);
-      clearTimeout(fallbackTimer);
     };
   }, []);
 
@@ -71,13 +88,14 @@ export default function InstallPWA() {
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
           setIsInstalled(true);
+          localStorage.setItem('pwa-installed', 'true');
+          setShowBanner(true);
         }
       } catch (err) {
         console.warn('Install prompt error:', err);
       }
       setDeferredPrompt(null);
       promptRef.current = null;
-      handleDismiss();
       return;
     }
 
